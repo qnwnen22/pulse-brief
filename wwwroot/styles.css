@@ -496,6 +496,7 @@ h2 {
 
 .source-link strong,
 .source-link span,
+.source-link small,
 .source-link em,
 .source-empty {
   overflow-wrap: anywhere;
@@ -507,11 +508,20 @@ h2 {
 }
 
 .source-link span,
+.source-link small,
 .source-link em,
 .source-empty {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.35;
+}
+
+.source-link small {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #465366;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .source-link em {
@@ -557,6 +567,17 @@ h2 {
   line-height: 1.55;
 }
 
+.content-preview {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0 0 10px;
+  color: #334155;
+  font-size: 15px;
+  line-height: 1.65;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
 .summary-expand {
   margin-bottom: 10px;
 }
@@ -582,6 +603,33 @@ h2 {
 
 .summary-expand p {
   margin: 6px 0 0;
+}
+
+.summary-detail {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.summary-detail span {
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.summary-detail p {
+  margin: 0 0 8px;
+  color: #465366;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.summary-detail p:last-child {
+  margin-bottom: 0;
 }
 
 .card-bottom {

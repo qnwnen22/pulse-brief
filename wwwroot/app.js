@@ -114,12 +114,19 @@ function safeUrl(value) {
   }
 }
 
+function compactText(value, maxLength = 260) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength).replace(/[,\s.·-]+$/g, "")}...`;
+}
+
 function renderRelatedLinks(issue) {
   const links = (issue.relatedLinks || [])
     .map((link) => ({
       title: link.title || issue.title,
       source: link.source || issue.source,
       url: safeUrl(link.url),
+      contentPreview: compactText(link.contentPreview || "", 120),
       contentFetchStatus: link.contentFetchStatus || "",
       contentFetchError: link.contentFetchError || "",
     }))
@@ -135,6 +142,7 @@ function renderRelatedLinks(issue) {
         <a class="source-link" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">
           <strong>${escapeHtml(link.source)}</strong>
           <span>${escapeHtml(link.title)}</span>
+          ${link.contentPreview ? `<small>${escapeHtml(link.contentPreview)}</small>` : ""}
           ${link.contentFetchStatus === "failed" && link.contentFetchError ? `<em>${escapeHtml(link.contentFetchError)}</em>` : ""}
         </a>
       `;
@@ -146,7 +154,8 @@ function getVisibleIssues() {
   const query = (searchInput?.value || "").trim().toLowerCase();
   return issues.filter((issue) => {
     const matchesFilter = activeFilter === "전체" || issue.category === activeFilter;
-    const text = `${issue.title} ${issue.category} ${issue.source} ${issue.summary} ${issue.keywords.join(" ")}`.toLowerCase();
+    const relatedText = (issue.relatedLinks || []).map((link) => `${link.title} ${link.source} ${link.contentPreview}`).join(" ");
+    const text = `${issue.title} ${issue.category} ${issue.source} ${issue.summary} ${issue.contentPreview || ""} ${relatedText} ${issue.keywords.join(" ")}`.toLowerCase();
     return matchesFilter && (!query || text.includes(query));
   });
 }
@@ -171,6 +180,9 @@ function renderNews() {
   pageItems.forEach((issue) => {
     const card = document.createElement("article");
     card.className = "news-card";
+    const leadText = compactText(issue.contentPreview || issue.summary, 280);
+    const detailText = compactText(issue.contentPreview || issue.summary, 900);
+    const keywords = issue.keywords.map((keyword) => `#${escapeHtml(keyword)}`).join(" ");
     card.innerHTML = `
       <details class="source-picker">
         <summary class="signal-art" aria-label="관련 출처 링크 선택">
@@ -182,18 +194,23 @@ function renderNews() {
       </details>
       <div>
         <div class="card-meta">
-          <span class="badge ${issue.heat === "hot" ? "hot" : ""}">${issue.category}</span>
-          <span>${issue.source}</span>
+          <span class="badge ${issue.heat === "hot" ? "hot" : ""}">${escapeHtml(issue.category)}</span>
+          <span>${escapeHtml(issue.source)}</span>
           <span>${issue.minutes}분 전</span>
         </div>
-        <h3>${issue.title}</h3>
+        <h3>${escapeHtml(issue.title)}</h3>
+        ${leadText ? `<p class="content-preview">${escapeHtml(leadText)}</p>` : ""}
         <details class="summary-expand">
-          <summary>기사 내용 더보기</summary>
-          <p>${escapeHtml(issue.summary)}</p>
+          <summary>요약과 본문 보기</summary>
+          <div class="summary-detail">
+            <span>이슈 요약</span>
+            <p>${escapeHtml(issue.summary || "요약 정보가 없습니다.")}</p>
+            ${detailText ? `<span>본문 미리보기</span><p>${escapeHtml(detailText)}</p>` : ""}
+          </div>
         </details>
         <div class="card-bottom">
           <span class="impact">중요도 ${issue.impact}</span>
-          <span>${issue.keywords.map((keyword) => `#${keyword}`).join(" ")}</span>
+          <span>${keywords}</span>
         </div>
       </div>
     `;
