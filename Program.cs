@@ -120,6 +120,32 @@ app.MapPost("/api/admin/fetch-missing-content", async (HttpContext context, int?
     });
 });
 
+app.MapPost("/api/admin/fetch-missing-images", async (HttpContext context, int? limit, IArticleStore store, ArticleContentFetcher contentFetcher, CancellationToken cancellationToken) =>
+{
+    if (context.Connection.RemoteIpAddress is not { } remoteIpAddress || !IPAddress.IsLoopback(remoteIpAddress))
+    {
+        return Results.Forbid();
+    }
+
+    var articles = await store.ReadArticlesAsync();
+    var targetLimit = Math.Clamp(limit.GetValueOrDefault(500), 1, 2000);
+    var beforeMissing = articles.Count(article => string.IsNullOrWhiteSpace(article.ImageUrl));
+
+    await contentFetcher.EnrichMissingImagesAsync(articles, targetLimit, cancellationToken);
+    await store.SaveArticlesAsync(articles);
+
+    var afterMissing = articles.Count(article => string.IsNullOrWhiteSpace(article.ImageUrl));
+
+    return Results.Ok(new
+    {
+        requested = targetLimit,
+        processed = Math.Min(targetLimit, beforeMissing),
+        beforeMissing,
+        afterMissing,
+        withImage = articles.Count - afterMissing
+    });
+});
+
 app.MapFallbackToFile("index.html");
 
 app.Run();

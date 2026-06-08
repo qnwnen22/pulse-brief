@@ -77,6 +77,8 @@ const updateTime = document.querySelector("#updateTime");
 const metricGrid = document.querySelector(".metric-grid");
 const categoryFilters = document.querySelector("#categoryFilters");
 const paginationControls = document.querySelector("#paginationControls");
+const topPaginationControls = document.querySelector("#topPaginationControls");
+const paginationContainers = [topPaginationControls, paginationControls].filter(Boolean);
 const categorySummary = document.querySelector("#categorySummary");
 const weeklySummary = document.querySelector("#weeklySummary");
 const weeklyCategoryTabs = document.querySelector("#weeklyCategoryTabs");
@@ -126,7 +128,10 @@ function renderRelatedLinks(issue) {
       title: link.title || issue.title,
       source: link.source || issue.source,
       url: safeUrl(link.url),
+      imageUrl: safeUrl(link.imageUrl),
       contentPreview: compactText(link.contentPreview || "", 120),
+      contentPreviewSource: link.contentPreviewSource || "",
+      contentPreviewLabel: link.contentPreviewLabel || "",
       contentFetchStatus: link.contentFetchStatus || "",
       contentFetchError: link.contentFetchError || "",
     }))
@@ -142,6 +147,7 @@ function renderRelatedLinks(issue) {
         <a class="source-link" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">
           <strong>${escapeHtml(link.source)}</strong>
           <span>${escapeHtml(link.title)}</span>
+          ${link.contentPreviewLabel ? `<b class="preview-source ${escapeHtml(link.contentPreviewSource)}">${escapeHtml(link.contentPreviewLabel)}</b>` : ""}
           ${link.contentPreview ? `<small>${escapeHtml(link.contentPreview)}</small>` : ""}
           ${link.contentFetchStatus === "failed" && link.contentFetchError ? `<em>${escapeHtml(link.contentFetchError)}</em>` : ""}
         </a>
@@ -180,8 +186,10 @@ function renderNews() {
   pageItems.forEach((issue) => {
     const card = document.createElement("article");
     card.className = "news-card";
-    const leadText = compactText(issue.contentPreview || issue.summary, 280);
     const detailText = compactText(issue.contentPreview || issue.summary, 900);
+    const previewLabel = issue.contentPreviewLabel || (issue.contentPreviewSource === "rss" ? "RSS 요약 대체" : "원문 본문");
+    const previewSource = issue.contentPreviewSource || "article";
+    const imageUrl = safeUrl(issue.imageUrl) || safeUrl((issue.relatedLinks || []).find((link) => link.imageUrl)?.imageUrl);
     const keywords = issue.keywords.map((keyword) => `#${escapeHtml(keyword)}`).join(" ");
     card.innerHTML = `
       <details class="source-picker">
@@ -199,13 +207,19 @@ function renderNews() {
           <span>${issue.minutes}분 전</span>
         </div>
         <h3>${escapeHtml(issue.title)}</h3>
-        ${leadText ? `<p class="content-preview">${escapeHtml(leadText)}</p>` : ""}
         <details class="summary-expand">
-          <summary>요약과 본문 보기</summary>
+          <summary>내용 보기</summary>
           <div class="summary-detail">
-            <span>이슈 요약</span>
-            <p>${escapeHtml(issue.summary || "요약 정보가 없습니다.")}</p>
-            ${detailText ? `<span>본문 미리보기</span><p>${escapeHtml(detailText)}</p>` : ""}
+            <section>
+              <span>대표 내용</span>
+              <p>${escapeHtml(issue.summary || "요약 정보가 없습니다.")}</p>
+            </section>
+            ${detailText ? `
+              <section>
+                <span>${escapeHtml(previewLabel)}</span>
+                <p>${escapeHtml(detailText)}</p>
+              </section>
+            ` : ""}
           </div>
         </details>
         <div class="card-bottom">
@@ -214,6 +228,11 @@ function renderNews() {
         </div>
       </div>
     `;
+    if (imageUrl) {
+      const thumbnail = card.querySelector(".signal-art");
+      thumbnail?.classList.add("has-image");
+      thumbnail?.style.setProperty("--thumb-image", `url("${imageUrl}")`);
+    }
     newsList.appendChild(card);
   });
 
@@ -407,7 +426,9 @@ function buildWeeklyCategorySummary(category, items, weeklyLabel) {
 
 function renderPagination(totalItems) {
   if (!totalItems || totalItems <= pageSize) {
-    paginationControls.innerHTML = "";
+    paginationContainers.forEach((container) => {
+      container.innerHTML = "";
+    });
     return;
   }
 
@@ -422,7 +443,7 @@ function renderPagination(totalItems) {
     pages.push(page);
   }
 
-  paginationControls.innerHTML = `
+  const paginationHtml = `
     <div class="pagination-summary">${startItem}-${endItem} / ${totalItems}</div>
     <div class="pagination-buttons">
       <button class="page-button" type="button" data-page="1" ${currentPage === 1 ? "disabled" : ""}>처음</button>
@@ -437,6 +458,10 @@ function renderPagination(totalItems) {
       <button class="page-button" type="button" data-page="${pageCount}" ${currentPage === pageCount ? "disabled" : ""}>끝</button>
     </div>
   `;
+
+  paginationContainers.forEach((container) => {
+    container.innerHTML = paginationHtml;
+  });
 }
 
 function renderCategoryFilters() {
@@ -496,12 +521,14 @@ categoryFilters.addEventListener("click", (event) => {
   renderNews();
 });
 
-paginationControls.addEventListener("click", (event) => {
-  const button = event.target.closest(".page-button");
-  if (!button || button.disabled) return;
-  currentPage = Number(button.dataset.page);
-  renderNews();
-  newsList.scrollIntoView({ block: "start", behavior: "smooth" });
+paginationContainers.forEach((container) => {
+  container.addEventListener("click", (event) => {
+    const button = event.target.closest(".page-button");
+    if (!button || button.disabled) return;
+    currentPage = Number(button.dataset.page);
+    renderNews();
+    newsList.scrollIntoView({ block: "start", behavior: "smooth" });
+  });
 });
 
 weeklyCategoryTabs.addEventListener("click", (event) => {

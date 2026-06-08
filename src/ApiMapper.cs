@@ -20,6 +20,7 @@ public static class ApiMapper
             var title = TextCleaner.Clean(group.RepresentativeTitle);
             var previewSource = groupArticles.FirstOrDefault(article => !string.IsNullOrWhiteSpace(article.Content))
                 ?? groupArticles.FirstOrDefault(article => !string.IsNullOrWhiteSpace(article.Summary));
+            var previewKind = GetPreviewKind(previewSource);
 
             return new BriefDto
             {
@@ -30,22 +31,43 @@ public static class ApiMapper
                 Impact = group.Score,
                 Heat = group.Score >= 80 ? "hot" : "normal",
                 Summary = TextCleaner.Clean(group.Summary),
+                ImageUrl = groupArticles.Select(article => article.ImageUrl).FirstOrDefault(imageUrl => !string.IsNullOrWhiteSpace(imageUrl)) ?? "",
                 ContentPreview = BuildPreview(previewSource, title),
+                ContentPreviewSource = previewKind.Source,
+                ContentPreviewLabel = previewKind.Label,
                 Keywords = title.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(word => word.Length >= 2).Take(4).ToArray(),
                 ArticleCount = group.ArticleCount,
                 ArticleIds = group.ArticleIds,
                 LatestPublishedAt = group.LatestPublishedAt,
-                RelatedLinks = groupArticles.Take(8).Select(article => new RelatedLinkDto
+                RelatedLinks = groupArticles.Take(8).Select(article =>
                 {
-                    Title = TextCleaner.Clean(article.Title),
-                    Source = TextCleaner.Clean(article.Source),
-                    Url = article.Url,
-                    ContentPreview = BuildPreview(article, article.Title, 180),
-                    ContentFetchStatus = article.ContentFetchStatus,
-                    ContentFetchError = TextCleaner.Clean(article.ContentFetchError)
+                    var relatedPreviewKind = GetPreviewKind(article);
+
+                    return new RelatedLinkDto
+                    {
+                        Title = TextCleaner.Clean(article.Title),
+                        Source = TextCleaner.Clean(article.Source),
+                        Url = article.Url,
+                        ImageUrl = article.ImageUrl,
+                        ContentPreview = BuildPreview(article, article.Title, 180),
+                        ContentPreviewSource = relatedPreviewKind.Source,
+                        ContentPreviewLabel = relatedPreviewKind.Label,
+                        ContentFetchStatus = article.ContentFetchStatus,
+                        ContentFetchError = TextCleaner.Clean(article.ContentFetchError)
+                    };
                 }).ToArray()
             };
         });
+    }
+
+    /// <summary>UI에 표시할 기사 미리보기가 실제 본문인지 RSS 요약 대체인지 판별합니다.</summary>
+    private static (string Source, string Label) GetPreviewKind(Article? article)
+    {
+        if (article is null) return ("none", "미리보기 없음");
+
+        return !string.IsNullOrWhiteSpace(article.Content)
+            ? ("article", "원문 본문")
+            : ("rss", "RSS 요약 대체");
     }
 
     /// <summary>기사 본문을 우선 사용하고, 없으면 RSS 요약을 사용해 UI용 짧은 미리보기 문장을 만듭니다.</summary>

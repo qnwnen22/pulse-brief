@@ -348,6 +348,14 @@ h2 {
   border-top: 1px solid var(--line);
 }
 
+.pagination-controls-top {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
 .pagination-summary {
   color: var(--muted);
   font-size: 14px;
@@ -424,11 +432,23 @@ h2 {
   cursor: pointer;
 }
 
+.signal-art.has-image {
+  background:
+    linear-gradient(180deg, rgba(22, 32, 46, 0.04), rgba(22, 32, 46, 0.58)),
+    var(--thumb-image) center / cover no-repeat,
+    #e9eef6;
+}
+
 .signal-art::before,
 .signal-art::after {
   position: absolute;
   content: "";
   border-radius: 50%;
+}
+
+.signal-art.has-image::before,
+.signal-art.has-image::after {
+  display: none;
 }
 
 .signal-art::before {
@@ -496,6 +516,7 @@ h2 {
 
 .source-link strong,
 .source-link span,
+.source-link b,
 .source-link small,
 .source-link em,
 .source-empty {
@@ -508,12 +529,28 @@ h2 {
 }
 
 .source-link span,
+.source-link b,
 .source-link small,
 .source-link em,
 .source-empty {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.35;
+}
+
+.source-link b {
+  justify-self: start;
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: var(--green);
+  background: #e9f7f1;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.source-link b.rss {
+  color: #7c2d12;
+  background: #ffedd5;
 }
 
 .source-link small {
@@ -567,15 +604,24 @@ h2 {
   line-height: 1.55;
 }
 
-.content-preview {
-  display: -webkit-box;
-  overflow: hidden;
-  margin: 0 0 10px;
-  color: #334155;
-  font-size: 15px;
-  line-height: 1.65;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+.preview-source {
+  justify-self: start;
+  padding: 3px 8px;
+  border-radius: 999px;
+  color: var(--green);
+  background: #e9f7f1;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.preview-source.rss {
+  color: #7c2d12;
+  background: #ffedd5;
+}
+
+.preview-source.none {
+  color: var(--muted);
+  background: #eef2f6;
 }
 
 .summary-expand {
@@ -607,12 +653,22 @@ h2 {
 
 .summary-detail {
   display: grid;
-  gap: 6px;
+  gap: 10px;
   margin-top: 8px;
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #ffffff;
+}
+
+.summary-detail section {
+  display: grid;
+  gap: 6px;
+}
+
+.summary-detail section + section {
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
 }
 
 .summary-detail span {

@@ -33,6 +33,22 @@ public sealed partial class ArticleContentFetcher(HttpClient httpClient, IConfig
         }, async (article, token) => await FetchContentAsync(article, token));
     }
 
+    /// <summary>대표 이미지가 비어 있는 기사 중 지정한 개수만큼 선택해 원문 페이지의 og:image를 보강합니다.</summary>
+    public async Task EnrichMissingImagesAsync(IEnumerable<Article> articles, int limit, CancellationToken cancellationToken = default)
+    {
+        var targets = articles
+            .Where(article => string.IsNullOrWhiteSpace(article.ImageUrl))
+            .OrderByDescending(article => article.PublishedAt)
+            .Take(Math.Max(1, limit))
+            .ToArray();
+
+        await Parallel.ForEachAsync(targets, new ParallelOptions
+        {
+            CancellationToken = cancellationToken,
+            MaxDegreeOfParallelism = _maxConcurrency
+        }, async (article, token) => await FetchImageAsync(article, token));
+    }
+
     /// <summary>단일 기사 URL에서 본문을 가져오고 성공 또는 실패 상태를 Article에 반영합니다.</summary>
     private async Task FetchContentAsync(Article article, CancellationToken cancellationToken)
     {
@@ -66,6 +82,9 @@ public sealed partial class ArticleContentFetcher(HttpClient httpClient, IConfig
             }
 
             var html = await response.Content.ReadAsStringAsync(cancellationToken);
+            article.ImageUrl = string.IsNullOrWhiteSpace(article.ImageUrl)
+                ? ExtractImageUrl(html, uri)
+                : article.ImageUrl;
             var content = ExtractArticleText(html);
             if (content.Length < _minimumContentLength)
             {
@@ -81,6 +100,33 @@ public sealed partial class ArticleContentFetcher(HttpClient httpClient, IConfig
         catch (Exception error) when (error is not OperationCanceledException)
         {
             MarkFailed(article, $"기사 페이지에 접근하는 중 문제가 발생했습니다: {error.Message}");
+        }
+    }
+
+    /// <summary>단일 기사 URL의 HTML 메타 태그에서 대표 이미지만 추출해 Article에 반영합니다.</summary>
+    private async Task FetchImageAsync(Article article, CancellationToken cancellationToken)
+    {
+        if (!Uri.TryCreate(article.Url, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https")) return;
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+            request.Headers.UserAgent.ParseAdd("PulseBrief/0.3 (+local news summarizer)");
+            request.Headers.TryAddWithoutValidation("Accept", "text/html,application/xhtml+xml");
+            request.Headers.TryAddWithoutValidation("Accept-Language", "ko-KR,ko;q=0.9,en;q=0.6");
+
+            using var response = await httpClient.SendAsync(request, cancellationToken);
+            if (!response.IsSuccessStatusCode) return;
+
+            var mediaType = response.Content.Headers.ContentType?.MediaType ?? "";
+            if (!string.IsNullOrWhiteSpace(mediaType) && !mediaType.Contains("html", StringComparison.OrdinalIgnoreCase)) return;
+
+            var html = await response.Content.ReadAsStringAsync(cancellationToken);
+            article.ImageUrl = ExtractImageUrl(html, uri);
+        }
+        catch (Exception error) when (error is not OperationCanceledException)
+        {
+            Console.WriteLine($"[image] {article.Url}: {error.Message}");
         }
     }
 
@@ -141,6 +187,41 @@ public sealed partial class ArticleContentFetcher(HttpClient httpClient, IConfig
     }
 
     /// <summary>AngleSharp 요소의 텍스트 콘텐츠를 안전하게 반환합니다.</summary>
+    /// <summary>기사 HTML에서 og:image, twitter:image, 주요 image_src 값을 대표 이미지 URL로 추출합니다.</summary>
+    private static string ExtractImageUrl(string html, Uri articleUri)
+    {
+        var parser = new HtmlParser();
+        var document = parser.ParseDocument(html);
+        var selectors = new[]
+        {
+            "meta[property='og:image']",
+            "meta[property='og:image:url']",
+            "meta[name='twitter:image']",
+            "meta[name='twitter:image:src']",
+            "link[rel='image_src']"
+        };
+
+        foreach (var selector in selectors)
+        {
+            var element = document.QuerySelector(selector);
+            var value = element?.GetAttribute("content") ?? element?.GetAttribute("href");
+            var normalized = NormalizeImageUrl(value, articleUri);
+            if (!string.IsNullOrWhiteSpace(normalized)) return normalized;
+        }
+
+        var articleImage = document.QuerySelector("article img, main img, .article img, .news_view img")?.GetAttribute("src");
+        return NormalizeImageUrl(articleImage, articleUri);
+    }
+
+    /// <summary>상대 이미지 주소를 기사 URL 기준의 절대 URL로 변환하고 http/https만 허용합니다.</summary>
+    private static string NormalizeImageUrl(string? imageUrl, Uri articleUri)
+    {
+        if (string.IsNullOrWhiteSpace(imageUrl)) return "";
+        if (!Uri.TryCreate(articleUri, imageUrl.Trim(), out var uri)) return "";
+
+        return uri.Scheme is "http" or "https" ? uri.ToString() : "";
+    }
+
     private static string TextFrom(IElement element)
     {
         return element.TextContent ?? "";

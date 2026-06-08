@@ -1,11 +1,12 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 namespace PulseBrief;
 
 /// <summary>RSS/Atom 피드를 내려받아 내부 기사 모델로 변환합니다.</summary>
-public sealed class RssCollector(HttpClient httpClient)
+public sealed partial class RssCollector(HttpClient httpClient)
 {
     /// <summary>여러 RSS 피드 URL을 순회하며 수집 가능한 기사 목록을 반환합니다.</summary>
     public async Task<List<Article>> FetchAsync(IReadOnlyList<string> feedUrls, CancellationToken cancellationToken)
@@ -60,6 +61,7 @@ public sealed class RssCollector(HttpClient httpClient)
                 ElementValue(item, "description")
                 ?? ElementValue(item, "summary")
                 ?? ElementValue(item, "content"));
+            var imageUrl = ExtractImageUrl(item, url);
             var publishedRaw = ElementValue(item, "pubDate") ?? ElementValue(item, "published") ?? ElementValue(item, "updated");
             var publishedAt = DateTimeOffset.TryParse(publishedRaw, out var parsed)
                 ? parsed
@@ -75,6 +77,7 @@ public sealed class RssCollector(HttpClient httpClient)
                 Source = source,
                 FeedUrl = feedUrl,
                 Summary = summary,
+                ImageUrl = imageUrl,
                 PublishedAt = publishedAt.ToUniversalTime(),
                 FirstSeenAt = DateTimeOffset.UtcNow,
                 UpdatedAt = DateTimeOffset.UtcNow
@@ -88,6 +91,47 @@ public sealed class RssCollector(HttpClient httpClient)
         return item.Elements().FirstOrDefault(element => element.Name.LocalName.Equals(localName, StringComparison.OrdinalIgnoreCase))?.Value;
     }
 
+    /// <summary>RSS 항목에 포함된 media, enclosure, description img 태그에서 대표 이미지 URL을 찾습니다.</summary>
+    private static string ExtractImageUrl(XElement item, string articleUrl)
+    {
+        var imageElement = item.Descendants()
+            .FirstOrDefault(element =>
+            {
+                var localName = element.Name.LocalName;
+                if (localName.Equals("thumbnail", StringComparison.OrdinalIgnoreCase)) return true;
+                if (!localName.Equals("content", StringComparison.OrdinalIgnoreCase) && !localName.Equals("enclosure", StringComparison.OrdinalIgnoreCase)) return false;
+
+                var type = element.Attribute("type")?.Value ?? element.Attribute("medium")?.Value ?? "";
+                return type.Contains("image", StringComparison.OrdinalIgnoreCase);
+            });
+
+        var imageUrl = imageElement?.Attribute("url")?.Value
+            ?? imageElement?.Attribute("src")?.Value
+            ?? ImageFromDescription(item);
+
+        return NormalizeImageUrl(imageUrl, articleUrl);
+    }
+
+    /// <summary>RSS description 또는 content에 포함된 HTML img 태그의 src 값을 추출합니다.</summary>
+    private static string? ImageFromDescription(XElement item)
+    {
+        var html = ElementValue(item, "description") ?? ElementValue(item, "content");
+        if (string.IsNullOrWhiteSpace(html)) return null;
+
+        var match = ImgSourceRegex().Match(html);
+        return match.Success ? match.Groups["url"].Value : null;
+    }
+
+    /// <summary>상대 이미지 주소를 기사 URL 기준의 절대 URL로 변환하고 http/https만 허용합니다.</summary>
+    private static string NormalizeImageUrl(string? imageUrl, string articleUrl)
+    {
+        if (string.IsNullOrWhiteSpace(imageUrl)) return "";
+        if (!Uri.TryCreate(articleUrl, UriKind.Absolute, out var baseUri)) return "";
+        if (!Uri.TryCreate(baseUri, imageUrl.Trim(), out var uri)) return "";
+
+        return uri.Scheme is "http" or "https" ? uri.ToString() : "";
+    }
+
     /// <summary>URL을 우선 사용하고, URL이 없으면 제목과 발행일을 사용해 안정적인 기사 ID를 생성합니다.</summary>
     private static string IdFor(string url, string title, DateTimeOffset publishedAt)
     {
@@ -95,4 +139,7 @@ public sealed class RssCollector(HttpClient httpClient)
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(source));
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }
+
+    [GeneratedRegex("<img[^>]+src=[\"'](?<url>[^\"']+)[\"']", RegexOptions.IgnoreCase)]
+    private static partial Regex ImgSourceRegex();
 }

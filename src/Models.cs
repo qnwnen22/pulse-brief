@@ -23,6 +23,9 @@ public sealed class Article
     /// <summary>RSS에서 제공한 짧은 기사 요약 또는 설명입니다.</summary>
     public string Summary { get; set; } = "";
 
+    /// <summary>RSS 이미지 태그 또는 원문 페이지의 og:image에서 수집한 대표 이미지 URL입니다.</summary>
+    public string ImageUrl { get; set; } = "";
+
     /// <summary>원문 URL에 접근해 추출한 기사 본문입니다. 추출 실패 시 빈 문자열입니다.</summary>
     public string Content { get; set; } = "";
 
@@ -109,8 +112,17 @@ public sealed class BriefDto
     /// <summary>프론트엔드 카드에서 더보기로 확인하는 이슈 요약입니다.</summary>
     public string Summary { get; set; } = "";
 
+    /// <summary>이슈 피드 썸네일에 표시할 대표 이미지 URL입니다.</summary>
+    public string ImageUrl { get; set; } = "";
+
     /// <summary>이슈 피드 카드에 바로 표시할 대표 기사 본문 미리보기입니다.</summary>
     public string ContentPreview { get; set; } = "";
+
+    /// <summary>본문 미리보기가 실제 기사 본문(article)에서 왔는지 RSS 요약(rss)에서 왔는지 나타냅니다.</summary>
+    public string ContentPreviewSource { get; set; } = "";
+
+    /// <summary>본문 미리보기 출처를 화면에 표시하기 위한 짧은 라벨입니다.</summary>
+    public string ContentPreviewLabel { get; set; } = "";
 
     /// <summary>이슈 제목에서 추출한 간단한 키워드 목록입니다.</summary>
     public string[] Keywords { get; set; } = [];
@@ -140,8 +152,17 @@ public sealed class RelatedLinkDto
     /// <summary>관련 원문 기사 URL입니다.</summary>
     public string Url { get; set; } = "";
 
+    /// <summary>관련 원문 기사 대표 이미지 URL입니다.</summary>
+    public string ImageUrl { get; set; } = "";
+
     /// <summary>관련 원문 기사에서 추출한 본문 일부입니다. 출처 선택 목록에서 링크 판단을 돕는 용도로 사용합니다.</summary>
     public string ContentPreview { get; set; } = "";
+
+    /// <summary>관련 기사 미리보기가 실제 기사 본문(article)에서 왔는지 RSS 요약(rss)에서 왔는지 나타냅니다.</summary>
+    public string ContentPreviewSource { get; set; } = "";
+
+    /// <summary>관련 기사 미리보기 출처를 화면에 표시하기 위한 짧은 라벨입니다.</summary>
+    public string ContentPreviewLabel { get; set; } = "";
 
     /// <summary>해당 원문 URL의 본문 수집 상태입니다.</summary>
     public string ContentFetchStatus { get; set; } = "";
