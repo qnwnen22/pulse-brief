@@ -1,4 +1,6 @@
 using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using PulseBrief;
@@ -15,7 +17,13 @@ builder.Services.AddHttpClient<RssCollector>();
 builder.Services.AddSingleton<AppPaths>();
 builder.Services.AddSingleton<MongoArticleStore>();
 builder.Services.AddSingleton<IArticleStore>(services => services.GetRequiredService<MongoArticleStore>());
-builder.Services.AddHttpClient<ArticleContentFetcher>();
+builder.Services.AddHttpClient<ArticleContentFetcher>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(builder.Configuration.GetValue("ArticleContent:TimeoutSeconds", 15));
+}).ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+{
+    AllowAutoRedirect = false
+});
 builder.Services.AddSingleton<EmbeddingService>();
 builder.Services.AddSingleton<ArticleClusterer>();
 builder.Services.AddSingleton<BriefGenerator>();
@@ -26,25 +34,45 @@ builder.Services.AddHostedService<ScheduledRefreshService>();
 
 var app = builder.Build();
 
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
+    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    context.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+    await next();
+});
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-app.MapGet("/api/health", async (AppPaths paths, IConfiguration configuration) =>
+app.MapGet("/api/health", async (HttpContext context, AppPaths paths, IConfiguration configuration) =>
 {
     var feeds = await paths.ReadFeedUrlsAsync();
+    var isAdmin = IsAdminRequest(context, configuration);
     return Results.Ok(new
     {
         ok = true,
         server = ".NET",
         database = configuration["Storage:Provider"] ?? "MongoDB",
-        hasOpenAiKey = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("OPENAI_API_KEY")),
-        rssFeedCount = feeds.Count
+        rssFeedCount = feeds.Count,
+        hasOpenAiKey = isAdmin
+            ? !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("OPENAI_API_KEY"))
+            : (bool?)null
     });
 });
 
-app.MapGet("/api/articles", async (IArticleStore store) => Results.Ok(await store.ReadArticlesAsync()));
+app.MapGet("/api/articles", async (HttpContext context, IArticleStore store, IConfiguration configuration) =>
+{
+    if (!IsAdminRequest(context, configuration)) return AdminRequired();
+    return Results.Ok(await store.ReadArticlesAsync());
+});
 
-app.MapGet("/api/groups", async (IArticleStore store) => Results.Ok(await store.ReadGroupsAsync()));
+app.MapGet("/api/groups", async (HttpContext context, IArticleStore store, IConfiguration configuration) =>
+{
+    if (!IsAdminRequest(context, configuration)) return AdminRequired();
+    return Results.Ok(await store.ReadGroupsAsync());
+});
 
 app.MapGet("/api/briefs", async (IArticleStore store) =>
 {
@@ -57,6 +85,11 @@ app.MapGet("/api/daily-summary", async (HttpContext context, string? date, bool?
 {
     try
     {
+        if ((force.GetValueOrDefault() || !string.IsNullOrWhiteSpace(date)) && !IsAdminRequest(context, app.Configuration))
+        {
+            return AdminRequired();
+        }
+
         DateOnly? targetDate = null;
         if (!string.IsNullOrWhiteSpace(date))
         {
@@ -81,6 +114,11 @@ app.MapGet("/api/weekly-summary", async (HttpContext context, string? endDate, b
 {
     try
     {
+        if ((force.GetValueOrDefault() || !string.IsNullOrWhiteSpace(endDate)) && !IsAdminRequest(context, app.Configuration))
+        {
+            return AdminRequired();
+        }
+
         DateOnly? targetEndDate = null;
         if (!string.IsNullOrWhiteSpace(endDate))
         {
@@ -101,18 +139,17 @@ app.MapGet("/api/weekly-summary", async (HttpContext context, string? endDate, b
     }
 });
 
-app.MapPost("/api/refresh", async (NewsPipeline pipeline, CancellationToken cancellationToken) =>
+app.MapPost("/api/refresh", async (HttpContext context, NewsPipeline pipeline, IConfiguration configuration, CancellationToken cancellationToken) =>
 {
+    if (!IsAdminRequest(context, configuration)) return AdminRequired();
+
     var result = await pipeline.RunAsync(cancellationToken);
     return Results.Ok(result);
 });
 
-app.MapPost("/api/admin/fetch-missing-content", async (HttpContext context, int? limit, IArticleStore store, ArticleContentFetcher contentFetcher, CancellationToken cancellationToken) =>
+app.MapPost("/api/admin/fetch-missing-content", async (HttpContext context, int? limit, IArticleStore store, ArticleContentFetcher contentFetcher, IConfiguration configuration, CancellationToken cancellationToken) =>
 {
-    if (context.Connection.RemoteIpAddress is not { } remoteIpAddress || !IPAddress.IsLoopback(remoteIpAddress))
-    {
-        return Results.Forbid();
-    }
+    if (!IsAdminRequest(context, configuration)) return AdminRequired();
 
     var articles = await store.ReadArticlesAsync();
     var targetLimit = Math.Clamp(limit.GetValueOrDefault(500), 1, 2000);
@@ -136,12 +173,9 @@ app.MapPost("/api/admin/fetch-missing-content", async (HttpContext context, int?
     });
 });
 
-app.MapPost("/api/admin/fetch-missing-images", async (HttpContext context, int? limit, IArticleStore store, ArticleContentFetcher contentFetcher, CancellationToken cancellationToken) =>
+app.MapPost("/api/admin/fetch-missing-images", async (HttpContext context, int? limit, IArticleStore store, ArticleContentFetcher contentFetcher, IConfiguration configuration, CancellationToken cancellationToken) =>
 {
-    if (context.Connection.RemoteIpAddress is not { } remoteIpAddress || !IPAddress.IsLoopback(remoteIpAddress))
-    {
-        return Results.Forbid();
-    }
+    if (!IsAdminRequest(context, configuration)) return AdminRequired();
 
     var articles = await store.ReadArticlesAsync();
     var targetLimit = Math.Clamp(limit.GetValueOrDefault(500), 1, 2000);
@@ -172,4 +206,40 @@ static object CreateLocalError(HttpContext context, Exception error)
     return isLoopback
         ? new { error = error.GetType().Name, message = error.Message }
         : new { error = "summary_failed" };
+}
+
+static IResult AdminRequired()
+{
+    return Results.Json(new { error = "admin_required" }, statusCode: StatusCodes.Status401Unauthorized);
+}
+
+static bool IsAdminRequest(HttpContext context, IConfiguration configuration)
+{
+    var configuredToken = GetAdminToken(configuration);
+    if (!string.IsNullOrWhiteSpace(configuredToken))
+    {
+        var requestToken = context.Request.Headers["X-Admin-Token"].FirstOrDefault();
+        if (TokenEquals(requestToken, configuredToken)) return true;
+    }
+
+    return configuration.GetValue("Security:AllowLoopbackAdmin", false)
+        && context.Connection.RemoteIpAddress is { } remoteIpAddress
+        && IPAddress.IsLoopback(remoteIpAddress);
+}
+
+static string? GetAdminToken(IConfiguration configuration)
+{
+    return Environment.GetEnvironmentVariable("PULSEBRIEF_ADMIN_TOKEN")
+        ?? Environment.GetEnvironmentVariable("ADMIN_API_TOKEN")
+        ?? configuration["Security:AdminToken"];
+}
+
+static bool TokenEquals(string? requestToken, string configuredToken)
+{
+    if (string.IsNullOrWhiteSpace(requestToken)) return false;
+
+    var requestBytes = Encoding.UTF8.GetBytes(requestToken);
+    var configuredBytes = Encoding.UTF8.GetBytes(configuredToken);
+    return requestBytes.Length == configuredBytes.Length
+        && CryptographicOperations.FixedTimeEquals(requestBytes, configuredBytes);
 }

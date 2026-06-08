@@ -903,6 +903,7 @@ async function refreshFromServer() {
       return;
     } catch (error) {
       console.warn(`[refresh] ${error.message}`);
+      return;
     }
   }
 
