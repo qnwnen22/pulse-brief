@@ -118,6 +118,10 @@ const viewTitles = {
     eyebrow: "News Search",
     title: "뉴스 검색과 원문 출처 확인",
   },
+  notice: {
+    eyebrow: "Service Notice",
+    title: "서비스 고지와 운영 기준",
+  },
 };
 
 function escapeHtml(value) {
@@ -788,7 +792,7 @@ function showView(view) {
   viewPanels.forEach((panel) => {
     panel.classList.toggle("active", panel.dataset.panel === targetView);
   });
-  newsMetricGrid?.classList.toggle("hidden", targetView === "briefing");
+  newsMetricGrid?.classList.toggle("hidden", targetView !== "feed");
   if (menuEyebrow) menuEyebrow.textContent = title.eyebrow;
   if (menuTitle) menuTitle.textContent = title.title;
 }
@@ -796,6 +800,13 @@ function showView(view) {
 navItems.forEach((item) => {
   item.addEventListener("click", () => {
     showView(item.dataset.view);
+  });
+});
+
+document.querySelectorAll("[data-view].footer-link").forEach((item) => {
+  item.addEventListener("click", () => {
+    showView(item.dataset.view);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   });
 });
 

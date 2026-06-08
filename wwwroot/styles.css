@@ -489,6 +489,7 @@ h2 {
 }
 
 .feed-column,
+.notice-panel,
 .daily-box,
 .weekly-box {
   border: 1px solid var(--line);
@@ -498,6 +499,10 @@ h2 {
 }
 
 .feed-column {
+  padding: 18px;
+}
+
+.notice-panel {
   padding: 18px;
 }
 
@@ -1266,6 +1271,57 @@ h2 {
   text-align: center;
 }
 
+.notice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.notice-card {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-height: 260px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.notice-kicker {
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #1d4ed8;
+  background: #eaf1ff;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.notice-card h3 {
+  margin: 0;
+  font-size: 19px;
+}
+
+.notice-card p,
+.notice-card li {
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.notice-card p {
+  margin: 0;
+}
+
+.notice-card ul {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding-left: 18px;
+}
+
 .app-footer {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(220px, 1.4fr) auto;
@@ -1296,13 +1352,18 @@ h2 {
   line-height: 1.55;
 }
 
-.app-footer a {
+.app-footer a,
+.footer-link {
+  padding: 0;
+  border: 0;
   color: var(--blue);
+  background: transparent;
   font-weight: 800;
   text-decoration: none;
 }
 
-.app-footer a:hover {
+.app-footer a:hover,
+.footer-link:hover {
   text-decoration: underline;
 }
 
@@ -1324,7 +1385,7 @@ h2 {
   }
 
   .nav-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .top-actions {
@@ -1358,6 +1419,10 @@ h2 {
   }
 
   .metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .notice-grid {
     grid-template-columns: 1fr;
   }
 

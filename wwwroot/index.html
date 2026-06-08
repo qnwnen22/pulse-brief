@@ -54,6 +54,9 @@
           <button class="nav-item" type="button" data-view="feed">
             <span aria-hidden="true">⌕</span> 뉴스 검색
           </button>
+          <button class="nav-item" type="button" data-view="notice">
+            <span aria-hidden="true">ⓘ</span> 서비스 고지
+          </button>
         </nav>
       </aside>
 
@@ -201,6 +204,61 @@
             <div id="newsList" class="news-list" aria-live="polite"></div>
             <div id="paginationControls" class="pagination-controls" aria-label="이슈 피드 페이지 이동"></div>
           </section>
+
+          <section class="notice-panel view-panel" data-panel="notice" aria-labelledby="notice-title">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Service Notice</p>
+                <h2 id="notice-title">서비스 고지와 운영 기준</h2>
+              </div>
+            </div>
+
+            <div class="notice-grid">
+              <article class="notice-card">
+                <span class="notice-kicker">Copyright</span>
+                <h3>뉴스 저작권</h3>
+                <p>Pulse Brief는 뉴스 원문을 대체하는 서비스가 아니라, 수집된 RSS 정보와 원문 링크를 바탕으로 이슈 흐름을 정리하는 개인용 모니터링 도구입니다.</p>
+                <ul>
+                  <li>기사 제목, 출처, 링크, RSS 요약은 원문 출처 확인을 돕기 위해 표시합니다.</li>
+                  <li>기사 원문 본문은 공개 화면에 노출하지 않고, 전날/주간 이슈 요약 생성과 내부 분류 품질 개선에만 사용합니다.</li>
+                  <li>기사와 이미지는 각 언론사 또는 원 권리자의 정책과 권리를 따릅니다.</li>
+                </ul>
+              </article>
+
+              <article class="notice-card">
+                <span class="notice-kicker">Privacy</span>
+                <h3>개인정보와 로그</h3>
+                <p>현재 서비스는 회원가입, 댓글, 사용자 프로필 기능을 제공하지 않습니다. 다만 서버 운영 과정에서 기본 접속 로그가 생성될 수 있습니다.</p>
+                <ul>
+                  <li>수집 대상은 RSS 및 기사 페이지의 공개 뉴스 데이터입니다.</li>
+                  <li>뉴스 기사 안에 포함된 공개 개인정보는 요약과 분류 목적에 필요한 범위에서만 처리합니다.</li>
+                  <li>외부 원문 링크를 열면 해당 언론사 사이트의 개인정보 및 쿠키 정책이 적용됩니다.</li>
+                </ul>
+              </article>
+
+              <article class="notice-card">
+                <span class="notice-kicker">Security</span>
+                <h3>보안 운영</h3>
+                <p>공개 화면은 이슈 피드와 요약 데이터만 제공합니다. 원문 본문이 포함된 원천 데이터와 수동 수집 기능은 관리자 토큰으로 보호됩니다.</p>
+                <ul>
+                  <li>관리자 API는 토큰 없이는 접근할 수 없습니다.</li>
+                  <li>기사 본문 수집은 내부망, localhost, 비공개 IP 주소 접근을 차단합니다.</li>
+                  <li>배포 환경의 관리자 토큰과 API 키는 Git 저장소에 포함하지 않습니다.</li>
+                </ul>
+              </article>
+
+              <article class="notice-card">
+                <span class="notice-kicker">AI Summary</span>
+                <h3>AI 요약 기준</h3>
+                <p>전날/주간 이슈 요약은 저장된 기사 그룹, 출처, 대표 제목, 안전하게 정리된 요약 정보를 바탕으로 생성됩니다.</p>
+                <ul>
+                  <li>AI 요약은 원문 기사를 대신하지 않으며, 정확한 내용은 원문 출처에서 확인해야 합니다.</li>
+                  <li>요약 생성에는 카테고리, 대표 이슈, 출처, 내부 중요도 같은 제한된 데이터가 사용됩니다.</li>
+                  <li>AI가 생성한 문장은 사실 확인과 운영 기준에 따라 조정될 수 있습니다.</li>
+                </ul>
+              </article>
+            </div>
+          </section>
         </div>
 
         <footer class="app-footer" aria-label="서비스 안내">
@@ -211,6 +269,7 @@
           <p>요약은 수집된 기사 메타데이터와 저장된 본문을 바탕으로 생성되며, 원문 기사와 이미지는 각 출처의 권리를 따릅니다.</p>
           <nav aria-label="푸터 링크">
             <a href="https://github.com/qnwnen22/pulse-brief" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <button class="footer-link" type="button" data-view="notice">서비스 고지</button>
             <span>로컬 테스트</span>
           </nav>
         </footer>
