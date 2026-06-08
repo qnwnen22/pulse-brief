@@ -13,6 +13,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 builder.Services.AddHttpClient<RssCollector>();
 builder.Services.AddSingleton<AppPaths>();
 builder.Services.AddSingleton<ArticleStore>();
+builder.Services.AddSingleton<MongoArticleStore>();
+builder.Services.AddSingleton<IArticleStore>(services => services.GetRequiredService<MongoArticleStore>());
+builder.Services.AddHttpClient<ArticleContentFetcher>();
 builder.Services.AddSingleton<EmbeddingService>();
 builder.Services.AddSingleton<ArticleClusterer>();
 builder.Services.AddSingleton<BriefGenerator>();
@@ -26,23 +29,24 @@ var app = builder.Build();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-app.MapGet("/api/health", async (AppPaths paths) =>
+app.MapGet("/api/health", async (AppPaths paths, IConfiguration configuration) =>
 {
     var feeds = await paths.ReadFeedUrlsAsync();
     return Results.Ok(new
     {
         ok = true,
         server = ".NET",
+        database = configuration["Storage:Provider"] ?? "MongoDB",
         hasOpenAiKey = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("OPENAI_API_KEY")),
         rssFeedCount = feeds.Count
     });
 });
 
-app.MapGet("/api/articles", async (ArticleStore store) => Results.Ok(await store.ReadArticlesAsync()));
+app.MapGet("/api/articles", async (IArticleStore store) => Results.Ok(await store.ReadArticlesAsync()));
 
-app.MapGet("/api/groups", async (ArticleStore store) => Results.Ok(await store.ReadGroupsAsync()));
+app.MapGet("/api/groups", async (IArticleStore store) => Results.Ok(await store.ReadGroupsAsync()));
 
-app.MapGet("/api/briefs", async (ArticleStore store) =>
+app.MapGet("/api/briefs", async (IArticleStore store) =>
 {
     var articles = await store.ReadArticlesAsync();
     var groups = await store.ReadGroupsAsync();
@@ -65,10 +69,47 @@ app.MapGet("/api/daily-summary", async (string? date, bool? force, DailySummaryS
     return Results.Ok(await dailySummaryService.GetOrCreateSummaryAsync(targetDate, force.GetValueOrDefault(), cancellationToken));
 });
 
+app.MapGet("/api/weekly-summary", async (string? endDate, bool? force, DailySummaryService dailySummaryService, CancellationToken cancellationToken) =>
+{
+    DateOnly? targetEndDate = null;
+    if (!string.IsNullOrWhiteSpace(endDate))
+    {
+        if (!DateOnly.TryParse(endDate, out var parsed))
+        {
+            return Results.BadRequest(new { error = "endDate must be yyyy-MM-dd" });
+        }
+
+        targetEndDate = parsed;
+    }
+
+    return Results.Ok(await dailySummaryService.GetOrCreateWeeklySummaryAsync(targetEndDate, force.GetValueOrDefault(), cancellationToken));
+});
+
 app.MapPost("/api/refresh", async (NewsPipeline pipeline, CancellationToken cancellationToken) =>
 {
     var result = await pipeline.RunAsync(cancellationToken);
     return Results.Ok(result);
+});
+
+app.MapPost("/api/admin/migrate-to-mongo", async (ArticleStore sqliteStore, MongoArticleStore mongoStore) =>
+{
+    var articles = await sqliteStore.ReadArticlesAsync();
+    var groups = await sqliteStore.ReadGroupsAsync();
+    var summaries = await sqliteStore.ReadDailySummariesAsync();
+
+    await mongoStore.SaveArticlesAsync(articles);
+    await mongoStore.SaveGroupsAsync(groups);
+    foreach (var summary in summaries)
+    {
+        await mongoStore.SaveDailySummaryAsync(summary);
+    }
+
+    return Results.Ok(new
+    {
+        migratedArticles = articles.Count,
+        migratedGroups = groups.Count,
+        migratedSummaries = summaries.Count
+    });
 });
 
 app.MapFallbackToFile("index.html");

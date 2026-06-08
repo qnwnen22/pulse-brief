@@ -5,13 +5,16 @@ using System.Text.Json.Nodes;
 
 namespace PulseBrief;
 
+/// <summary>OpenAI Responses API를 호출해 일간/주간 이슈 요약 초안을 AI 요약으로 보강합니다.</summary>
 public sealed class OpenAiDailySummaryClient(HttpClient httpClient, IConfiguration configuration)
 {
     private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
 
+    /// <summary>OpenAI API 키가 환경 변수 또는 설정에 존재하는지 여부입니다.</summary>
     public bool IsConfigured => !string.IsNullOrWhiteSpace(GetApiKey());
 
-    public async Task<DailyIssueSummary?> TryGenerateAsync(DailyIssueSummary draft, CancellationToken cancellationToken = default)
+    /// <summary>로컬 요약 초안을 OpenAI에 전달해 카테고리별 요약과 대표 이슈 요약을 생성합니다.</summary>
+    public async Task<DailyIssueSummary?> TryGenerateAsync(DailyIssueSummary draft, string periodLabel = "전날 이슈", CancellationToken cancellationToken = default)
     {
         var apiKey = GetApiKey();
         if (string.IsNullOrWhiteSpace(apiKey) || draft.IssueCount == 0) return null;
@@ -31,7 +34,7 @@ public sealed class OpenAiDailySummaryClient(HttpClient httpClient, IConfigurati
                     role = "system",
                     content = """
                         You are a Korean news briefing editor.
-                        Summarize yesterday's issues by category first.
+                        Summarize the requested Korean news period by category first.
                         Summarize only the facts present in the provided issue data.
                         Do not invent facts, numbers, causes, quotes, or outcomes.
                         The categories array is the most important output. Write one useful sentence for each major category.
@@ -47,7 +50,7 @@ public sealed class OpenAiDailySummaryClient(HttpClient httpClient, IConfigurati
                 new
                 {
                     role = "user",
-                    content = BuildPrompt(draft)
+                    content = BuildPrompt(draft, periodLabel)
                 }
             }
         };
@@ -77,12 +80,14 @@ public sealed class OpenAiDailySummaryClient(HttpClient httpClient, IConfigurati
         }
     }
 
+    /// <summary>환경 변수와 설정 파일에서 OpenAI API 키를 조회합니다.</summary>
     private string? GetApiKey()
     {
         return Environment.GetEnvironmentVariable("OPENAI_API_KEY")
             ?? configuration["OpenAI:ApiKey"];
     }
 
+    /// <summary>요약 생성에 사용할 OpenAI 모델명을 설정 우선순위에 따라 결정합니다.</summary>
     private string GetModel()
     {
         return Environment.GetEnvironmentVariable("OPENAI_DAILY_SUMMARY_MODEL")
@@ -91,7 +96,8 @@ public sealed class OpenAiDailySummaryClient(HttpClient httpClient, IConfigurati
             ?? "gpt-5.4-nano";
     }
 
-    private static string BuildPrompt(DailyIssueSummary draft)
+    /// <summary>요약 초안의 카테고리 분포와 주요 이슈를 OpenAI 입력 프롬프트로 직렬화합니다.</summary>
+    private static string BuildPrompt(DailyIssueSummary draft, string periodLabel)
     {
         var topIssues = draft.TopIssues
             .Take(12)
@@ -105,7 +111,8 @@ public sealed class OpenAiDailySummaryClient(HttpClient httpClient, IConfigurati
             .Select(category => $"- {category.Category}: 이슈 {category.IssueCount}건, 기사 {category.ArticleCount}건");
 
         return $"""
-            날짜: {draft.Date}
+            요약 대상: {periodLabel}
+            기간 키: {draft.Date}
             전체 이슈 수: {draft.IssueCount}
             전체 기사 수: {draft.ArticleCount}
             전체 출처 수: {draft.SourceCount}
@@ -118,6 +125,7 @@ public sealed class OpenAiDailySummaryClient(HttpClient httpClient, IConfigurati
             """;
     }
 
+    /// <summary>Responses API 응답 JSON에서 모델이 생성한 텍스트 출력을 추출합니다.</summary>
     private static string ExtractOutputText(string body)
     {
         var root = JsonNode.Parse(body);
@@ -137,6 +145,7 @@ public sealed class OpenAiDailySummaryClient(HttpClient httpClient, IConfigurati
         return builder.ToString().Trim();
     }
 
+    /// <summary>OpenAI가 반환한 JSON 문자열을 기존 요약 초안에 병합합니다.</summary>
     private DailyIssueSummary? ApplyAiResult(DailyIssueSummary draft, string outputText, string model)
     {
         var json = ExtractJsonObject(outputText);
@@ -158,6 +167,7 @@ public sealed class OpenAiDailySummaryClient(HttpClient httpClient, IConfigurati
         return draft;
     }
 
+    /// <summary>AI가 생성한 카테고리별 요약을 기존 카테고리 요약 항목에 반영합니다.</summary>
     private static void ApplyCategorySummaries(DailyIssueSummary draft, JsonArray? categories)
     {
         if (categories is null) return;
@@ -171,6 +181,7 @@ public sealed class OpenAiDailySummaryClient(HttpClient httpClient, IConfigurati
         }
     }
 
+    /// <summary>AI가 생성한 대표 이슈별 요약을 기존 대표 이슈 항목에 반영합니다.</summary>
     private static void ApplyIssueSummaries(DailyIssueSummary draft, JsonArray? issues)
     {
         if (issues is null) return;
@@ -184,6 +195,7 @@ public sealed class OpenAiDailySummaryClient(HttpClient httpClient, IConfigurati
         }
     }
 
+    /// <summary>모델 출력에 설명 문구가 섞였을 때 첫 JSON 객체 부분만 잘라냅니다.</summary>
     private static string ExtractJsonObject(string value)
     {
         var trimmed = value.Trim();

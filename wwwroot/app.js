@@ -63,6 +63,7 @@ const sampleIssues = [
 
 let issues = [...sampleIssues];
 let dailyBrief = null;
+let weeklyBrief = null;
 let activeFilter = "전체";
 let currentPage = 1;
 let activeWeeklyCategory = "전체";
@@ -119,6 +120,8 @@ function renderRelatedLinks(issue) {
       title: link.title || issue.title,
       source: link.source || issue.source,
       url: safeUrl(link.url),
+      contentFetchStatus: link.contentFetchStatus || "",
+      contentFetchError: link.contentFetchError || "",
     }))
     .filter((link) => link.url);
 
@@ -132,6 +135,7 @@ function renderRelatedLinks(issue) {
         <a class="source-link" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">
           <strong>${escapeHtml(link.source)}</strong>
           <span>${escapeHtml(link.title)}</span>
+          ${link.contentFetchStatus === "failed" && link.contentFetchError ? `<em>${escapeHtml(link.contentFetchError)}</em>` : ""}
         </a>
       `;
     })
@@ -307,6 +311,11 @@ function renderWeeklySummary() {
     .slice(0, 4);
   const sourceCount = new Set(targetItems.flatMap((issue) => (issue.source || "").split(", ").filter(Boolean))).size;
   const weeklyLabel = weeklyItems.length ? "최근 7일" : "저장 데이터 기준";
+  const weeklyCategorySummary = (weeklyBrief?.categories || []).find((category) => category.category === activeWeeklyCategory);
+  const aiWeeklyIssues = (weeklyBrief?.topIssues || []).filter((issue) => issue.category === activeWeeklyCategory).slice(0, 4);
+  const weeklyIssueItems = aiWeeklyIssues.length ? aiWeeklyIssues : topIssues;
+  const weeklyProvider = weeklyBrief?.provider === "openai" ? `AI 요약 · ${weeklyBrief.model || "OpenAI"}` : "로컬 요약";
+  const weeklyText = weeklyCategorySummary?.summary || buildWeeklyCategorySummary(activeWeeklyCategory, targetItems, weeklyLabel);
 
   if (!targetItems.length) {
     weeklyStats.innerHTML = "";
@@ -319,11 +328,12 @@ function renderWeeklySummary() {
   renderCategorySummary();
   weeklySummary.innerHTML = `
     <div class="weekly-summary-card">
+      <span class="daily-provider">${escapeHtml(weeklyProvider)}</span>
       <h3>${escapeHtml(activeWeeklyCategory)} 주간 요약</h3>
-      <p>${escapeHtml(buildWeeklyCategorySummary(activeWeeklyCategory, targetItems, weeklyLabel))}</p>
+      <p>${escapeHtml(weeklyText)}</p>
     </div>
     <ol class="weekly-issue-list">
-      ${topIssues
+      ${weeklyIssueItems
         .map((issue) => `<li><strong>${escapeHtml(issue.category)}</strong><span>${escapeHtml(issue.title)}</span></li>`)
         .join("")}
     </ol>
@@ -520,6 +530,22 @@ async function loadDailySummary() {
   }
 }
 
+async function loadWeeklySummary() {
+  if (location.protocol === "file:") return false;
+
+  try {
+    const response = await fetch("/api/weekly-summary");
+    if (!response.ok) throw new Error(`weekly-summary ${response.status}`);
+    weeklyBrief = await response.json();
+    renderWeeklySummary();
+    return true;
+  } catch (error) {
+    console.warn(`[weekly-summary] ${error.message}`);
+    renderWeeklySummary();
+    return false;
+  }
+}
+
 async function refreshFromServer() {
   if (location.protocol !== "file:") {
     try {
@@ -527,6 +553,7 @@ async function refreshFromServer() {
       if (!response.ok) throw new Error(`refresh ${response.status}`);
       await loadServerBriefs();
       await loadDailySummary();
+      await loadWeeklySummary();
       currentPage = 1;
       renderCategoryFilters();
       renderNews();
@@ -554,6 +581,7 @@ document.addEventListener("click", (event) => {
 loadServerBriefs().then(() => {
   showView("briefing");
   loadDailySummary();
+  loadWeeklySummary();
   renderCategoryFilters();
   renderNews();
 });

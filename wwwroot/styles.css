@@ -496,6 +496,7 @@ h2 {
 
 .source-link strong,
 .source-link span,
+.source-link em,
 .source-empty {
   overflow-wrap: anywhere;
 }
@@ -506,10 +507,16 @@ h2 {
 }
 
 .source-link span,
+.source-link em,
 .source-empty {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.35;
+}
+
+.source-link em {
+  color: var(--red);
+  font-style: normal;
 }
 
 .source-empty {

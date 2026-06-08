@@ -1,5 +1,6 @@
 namespace PulseBrief;
 
+/// <summary>기사 임베딩 유사도와 키워드 규칙을 사용해 유사 기사들을 이슈 그룹으로 묶습니다.</summary>
 public sealed class ArticleClusterer(IConfiguration configuration)
 {
     private readonly double _threshold = configuration.GetValue("GroupSimilarityThreshold", 0.78);
@@ -17,6 +18,7 @@ public sealed class ArticleClusterer(IConfiguration configuration)
         ("사회", ["사회", "사건", "사고", "경찰", "소방", "법원", "재판", "범죄", "안전", "교통", "시민", "노조", "집회", "수사", "고발", "피의자", "구속", "압수수색", "공판", "선고", "혐의", "소송"])
     ];
 
+    /// <summary>기사 임베딩 간 코사인 유사도를 기준으로 기사 목록을 여러 이슈 그룹으로 분류합니다.</summary>
     public List<ArticleGroup> GroupSimilarArticles(IEnumerable<Article> articles)
     {
         var workingGroups = new List<WorkingGroup>();
@@ -69,14 +71,15 @@ public sealed class ArticleClusterer(IConfiguration configuration)
                 LatestPublishedAt = groupArticles.FirstOrDefault()?.PublishedAt ?? DateTimeOffset.UtcNow,
                 Score = Math.Min(100, 55 + groupArticles.Length * 8 + sourceBonus),
                 SeedTitle = groupArticles.FirstOrDefault()?.Title ?? "새 이슈",
-                SeedSummary = groupArticles.FirstOrDefault()?.Summary ?? ""
+                SeedSummary = BestSummary(groupArticles.FirstOrDefault())
             };
         }).ToList();
     }
 
+    /// <summary>그룹에 속한 기사들의 출처, 제목, 요약, 본문에서 카테고리 키워드를 찾아 대표 카테고리를 결정합니다.</summary>
     private static string CategoryFor(IEnumerable<Article> articles)
     {
-        var text = string.Join(' ', articles.Select(article => $"{article.Source} {article.Title} {article.Summary}")).ToLowerInvariant();
+        var text = string.Join(' ', articles.Select(article => $"{article.Source} {article.Title} {article.Summary} {article.Content}")).ToLowerInvariant();
         return CategoryRules
             .Select(rule => new
             {
@@ -87,6 +90,7 @@ public sealed class ArticleClusterer(IConfiguration configuration)
             .FirstOrDefault(rule => rule.Score > 0)?.Category ?? "사회";
     }
 
+    /// <summary>그룹에 포함된 기사 임베딩들의 평균 벡터를 계산합니다.</summary>
     private static double[] Centroid(IReadOnlyCollection<Article> articles)
     {
         var size = articles.FirstOrDefault()?.Embedding?.Length ?? 0;
@@ -102,6 +106,15 @@ public sealed class ArticleClusterer(IConfiguration configuration)
         return vector;
     }
 
+    /// <summary>그룹 초기 요약으로 사용할 수 있도록 추출 본문 일부를 우선하고 없으면 RSS 요약을 반환합니다.</summary>
+    private static string BestSummary(Article? article)
+    {
+        if (article is null) return "";
+        if (!string.IsNullOrWhiteSpace(article.Content)) return article.Content.Length > 700 ? article.Content[..700] : article.Content;
+        return article.Summary;
+    }
+
+    /// <summary>두 임베딩 벡터의 코사인 유사도 점수를 계산합니다.</summary>
     private static double CosineSimilarity(IReadOnlyList<double> a, IReadOnlyList<double> b)
     {
         if (a.Count != b.Count) return 0;
@@ -111,9 +124,13 @@ public sealed class ArticleClusterer(IConfiguration configuration)
         return sum;
     }
 
+    /// <summary>그룹화 중간 단계에서 기사 목록과 중심 벡터를 함께 보관하는 작업용 모델입니다.</summary>
     private sealed class WorkingGroup
     {
+        /// <summary>현재 작업 그룹의 평균 임베딩 벡터입니다.</summary>
         public double[] Centroid { get; set; } = [];
+
+        /// <summary>현재 작업 그룹에 포함된 기사 목록입니다.</summary>
         public List<Article> Articles { get; set; } = [];
     }
 }

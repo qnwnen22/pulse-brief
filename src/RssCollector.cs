@@ -4,8 +4,10 @@ using System.Xml.Linq;
 
 namespace PulseBrief;
 
+/// <summary>RSS/Atom 피드를 내려받아 내부 기사 모델로 변환합니다.</summary>
 public sealed class RssCollector(HttpClient httpClient)
 {
+    /// <summary>여러 RSS 피드 URL을 순회하며 수집 가능한 기사 목록을 반환합니다.</summary>
     public async Task<List<Article>> FetchAsync(IReadOnlyList<string> feedUrls, CancellationToken cancellationToken)
     {
         var articles = new List<Article>();
@@ -31,6 +33,7 @@ public sealed class RssCollector(HttpClient httpClient)
         return articles;
     }
 
+    /// <summary>RSS 또는 Atom XML 문자열에서 기사 항목을 파싱합니다.</summary>
     private static IEnumerable<Article> Parse(string xml, string feedUrl)
     {
         var document = XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
@@ -79,11 +82,13 @@ public sealed class RssCollector(HttpClient httpClient)
         }
     }
 
+    /// <summary>XML 항목에서 로컬 이름이 일치하는 첫 번째 자식 요소 값을 찾습니다.</summary>
     private static string? ElementValue(XElement item, string localName)
     {
         return item.Elements().FirstOrDefault(element => element.Name.LocalName.Equals(localName, StringComparison.OrdinalIgnoreCase))?.Value;
     }
 
+    /// <summary>URL을 우선 사용하고, URL이 없으면 제목과 발행일을 사용해 안정적인 기사 ID를 생성합니다.</summary>
     private static string IdFor(string url, string title, DateTimeOffset publishedAt)
     {
         var source = string.IsNullOrWhiteSpace(url) ? $"{title}:{publishedAt:O}" : url;

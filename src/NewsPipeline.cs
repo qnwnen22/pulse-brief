@@ -1,9 +1,11 @@
 namespace PulseBrief;
 
+/// <summary>RSS 수집, 기사 본문 보강, 임베딩, 그룹화, 요약 갱신을 순서대로 실행하는 뉴스 처리 파이프라인입니다.</summary>
 public sealed class NewsPipeline(
     AppPaths paths,
     RssCollector rssCollector,
-    ArticleStore store,
+    IArticleStore store,
+    ArticleContentFetcher articleContentFetcher,
     EmbeddingService embeddingService,
     ArticleClusterer clusterer,
     BriefGenerator briefGenerator,
@@ -11,6 +13,7 @@ public sealed class NewsPipeline(
 {
     private readonly SemaphoreSlim _lock = new(1, 1);
 
+    /// <summary>뉴스 수집 파이프라인을 한 번 실행하고 수집/저장/그룹화 결과를 반환합니다.</summary>
     public async Task<PipelineResult> RunAsync(CancellationToken cancellationToken = default)
     {
         await _lock.WaitAsync(cancellationToken);
@@ -20,6 +23,7 @@ public sealed class NewsPipeline(
             var fetched = await rssCollector.FetchAsync(feeds, cancellationToken);
             var articles = await store.UpsertArticlesAsync(fetched);
 
+            await articleContentFetcher.EnrichMissingContentAsync(articles, cancellationToken);
             await embeddingService.EnsureEmbeddingsAsync(articles);
             await store.SaveArticlesAsync(articles);
 

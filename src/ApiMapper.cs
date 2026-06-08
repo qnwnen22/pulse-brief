@@ -1,7 +1,9 @@
 namespace PulseBrief;
 
+/// <summary>저장소의 도메인 모델을 프론트엔드 API 응답 DTO로 변환합니다.</summary>
 public static class ApiMapper
 {
+    /// <summary>이슈 그룹과 기사 목록을 이슈 피드에서 사용하는 브리프 DTO 목록으로 변환합니다.</summary>
     public static IEnumerable<BriefDto> ToBriefs(IEnumerable<ArticleGroup> groups, IEnumerable<Article> articles)
     {
         var byId = articles.ToDictionary(article => article.Id, StringComparer.OrdinalIgnoreCase);
@@ -32,7 +34,9 @@ public static class ApiMapper
                 {
                     Title = TextCleaner.Clean(article.Title),
                     Source = TextCleaner.Clean(article.Source),
-                    Url = article.Url
+                    Url = article.Url,
+                    ContentFetchStatus = article.ContentFetchStatus,
+                    ContentFetchError = TextCleaner.Clean(article.ContentFetchError)
                 }).ToArray()
             };
         });
