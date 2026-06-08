@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace PulseBrief;
 
 /// <summary>저장소의 도메인 모델을 프론트엔드 API 응답 DTO로 변환합니다.</summary>
@@ -18,9 +16,6 @@ public static class ApiMapper
                 ? 1
                 : Math.Max(1, (int)Math.Round((DateTimeOffset.UtcNow - latest.PublishedAt).TotalMinutes));
             var title = TextCleaner.Clean(group.RepresentativeTitle);
-            var previewSource = groupArticles.FirstOrDefault(article => !string.IsNullOrWhiteSpace(article.Content))
-                ?? groupArticles.FirstOrDefault(article => !string.IsNullOrWhiteSpace(article.Summary));
-            var previewKind = GetPreviewKind(previewSource);
 
             return new BriefDto
             {
@@ -30,28 +25,20 @@ public static class ApiMapper
                 Minutes = minutes,
                 Impact = group.Score,
                 Heat = group.Score >= 80 ? "hot" : "normal",
-                Summary = TextCleaner.Clean(group.Summary),
+                Summary = BuildSafeSummary(group, groupArticles),
                 ImageUrl = groupArticles.Select(article => article.ImageUrl).FirstOrDefault(imageUrl => !string.IsNullOrWhiteSpace(imageUrl)) ?? "",
-                ContentPreview = BuildPreview(previewSource, title),
-                ContentPreviewSource = previewKind.Source,
-                ContentPreviewLabel = previewKind.Label,
                 Keywords = title.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(word => word.Length >= 2).Take(4).ToArray(),
                 ArticleCount = group.ArticleCount,
                 ArticleIds = group.ArticleIds,
                 LatestPublishedAt = group.LatestPublishedAt,
                 RelatedLinks = groupArticles.Take(8).Select(article =>
                 {
-                    var relatedPreviewKind = GetPreviewKind(article);
-
                     return new RelatedLinkDto
                     {
                         Title = TextCleaner.Clean(article.Title),
                         Source = TextCleaner.Clean(article.Source),
                         Url = article.Url,
                         ImageUrl = article.ImageUrl,
-                        ContentPreview = BuildPreview(article, article.Title, 180),
-                        ContentPreviewSource = relatedPreviewKind.Source,
-                        ContentPreviewLabel = relatedPreviewKind.Label,
                         ContentFetchStatus = article.ContentFetchStatus,
                         ContentFetchError = TextCleaner.Clean(article.ContentFetchError)
                     };
@@ -60,57 +47,24 @@ public static class ApiMapper
         });
     }
 
-    /// <summary>UI에 표시할 기사 미리보기가 실제 본문인지 RSS 요약 대체인지 판별합니다.</summary>
-    private static (string Source, string Label) GetPreviewKind(Article? article)
+    /// <summary>뉴스검색 화면에는 원문 본문 대신 RSS 요약 또는 짧은 로컬 안내 문구만 내려줍니다.</summary>
+    private static string BuildSafeSummary(ArticleGroup group, IReadOnlyList<Article> articles)
     {
-        if (article is null) return ("none", "미리보기 없음");
+        var rssSummary = articles
+            .Select(article => TextCleaner.Clean(article.Summary))
+            .FirstOrDefault(summary => !string.IsNullOrWhiteSpace(summary));
 
-        return !string.IsNullOrWhiteSpace(article.Content)
-            ? ("article", "원문 본문")
-            : ("rss", "RSS 요약 대체");
-    }
-
-    /// <summary>기사 본문을 우선 사용하고, 없으면 RSS 요약을 사용해 UI용 짧은 미리보기 문장을 만듭니다.</summary>
-    private static string BuildPreview(Article? article, string? title, int maxLength = 320)
-    {
-        if (article is null) return "";
-
-        var text = NormalizePreviewText(
-            TextCleaner.Clean(!string.IsNullOrWhiteSpace(article.Content) ? article.Content : article.Summary),
-            TextCleaner.Clean(title));
-
-        if (text.Length <= maxLength) return text;
-
-        var boundary = text.LastIndexOfAny(['.', '!', '?', '다'], Math.Min(text.Length - 1, maxLength));
-        if (boundary < maxLength / 2) boundary = maxLength;
-
-        return $"{text[..Math.Min(boundary + 1, text.Length)].Trim()}...";
-    }
-
-    /// <summary>기사 본문 앞에 섞인 메뉴, 오디오 플레이어, 광고 표기 등 미리보기 방해 요소를 제거합니다.</summary>
-    private static string NormalizePreviewText(string text, string title)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return "";
-
-        text = Regex.Replace(text, @"기사를\s*읽어드립니다", " ", RegexOptions.IgnoreCase);
-        text = Regex.Replace(text, @"Your browser does not support the\s*audio element\.?\s*0:00", " ", RegexOptions.IgnoreCase);
-        text = Regex.Replace(text, @"\s+", " ").Trim();
-
-        if (!string.IsNullOrWhiteSpace(title))
+        if (!string.IsNullOrWhiteSpace(rssSummary))
         {
-            var titleIndex = text.IndexOf(title, StringComparison.OrdinalIgnoreCase);
-            if (titleIndex is >= 0 and < 180)
-            {
-                text = text[(titleIndex + title.Length)..].Trim();
-            }
+            return rssSummary.Length > 220 ? $"{rssSummary[..220].Trim()}..." : rssSummary;
         }
 
-        var adIndex = text.IndexOf("광고", StringComparison.Ordinal);
-        if (adIndex is >= 0 and < 280)
-        {
-            text = text[(adIndex + "광고".Length)..].Trim();
-        }
+        var sourceCount = articles
+            .Select(article => article.Source)
+            .Where(source => !string.IsNullOrWhiteSpace(source))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count();
 
-        return Regex.Replace(text, @"^(본문|수정\s*\d{4}[-.]\d{2}[-.]\d{2}\s*\d{1,2}:\d{2})\s*", "", RegexOptions.IgnoreCase).Trim();
+        return $"{group.ArticleCount}개 관련 기사가 묶인 이슈입니다. 자세한 내용은 원문 링크에서 확인해 주세요. 확인 출처 {sourceCount}개.";
     }
 }

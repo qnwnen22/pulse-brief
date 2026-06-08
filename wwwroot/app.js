@@ -123,6 +123,18 @@ function compactText(value, maxLength = 260) {
   return `${text.slice(0, maxLength).replace(/[,\s.·-]+$/g, "")}...`;
 }
 
+function formatIssueTime(issue) {
+  const date = getIssueDate(issue);
+  const minutes = Math.max(1, Math.round((Date.now() - date.getTime()) / 60000));
+  if (minutes < 60) return `${minutes}분 전`;
+  if (minutes < 1440) return `${Math.floor(minutes / 60)}시간 전`;
+  return date.toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+}
+
 function renderRelatedLinks(issue) {
   const links = (issue.relatedLinks || [])
     .map((link) => ({
@@ -156,8 +168,8 @@ function getVisibleIssues() {
   const query = (searchInput?.value || "").trim().toLowerCase();
   return issues.filter((issue) => {
     const matchesFilter = activeFilter === "전체" || issue.category === activeFilter;
-    const relatedText = (issue.relatedLinks || []).map((link) => `${link.title} ${link.source} ${link.contentPreview}`).join(" ");
-    const text = `${issue.title} ${issue.category} ${issue.source} ${issue.summary} ${issue.contentPreview || ""} ${relatedText} ${issue.keywords.join(" ")}`.toLowerCase();
+    const relatedText = (issue.relatedLinks || []).map((link) => `${link.title} ${link.source}`).join(" ");
+    const text = `${issue.title} ${issue.category} ${issue.source} ${issue.summary} ${relatedText} ${issue.keywords.join(" ")}`.toLowerCase();
     return matchesFilter && (!query || text.includes(query));
   });
 }
@@ -182,41 +194,23 @@ function renderNews() {
   pageItems.forEach((issue) => {
     const card = document.createElement("article");
     card.className = "news-card";
-    const detailText = compactText(issue.contentPreview || issue.summary, 900);
-    const previewLabel = issue.contentPreviewLabel || (issue.contentPreviewSource === "rss" ? "RSS 요약 대체" : "원문 본문");
-    const previewSource = issue.contentPreviewSource || "article";
     const imageUrl = safeUrl(issue.imageUrl) || safeUrl((issue.relatedLinks || []).find((link) => link.imageUrl)?.imageUrl);
     const keywords = issue.keywords.map((keyword) => `#${escapeHtml(keyword)}`).join(" ");
     card.innerHTML = `
-      <details class="source-picker">
-        <summary class="signal-art" aria-label="관련 본문 링크 선택">
-          <span class="source-hint">본문 보기</span>
-        </summary>
-        <div class="source-menu">
-          ${renderRelatedLinks(issue)}
-        </div>
-      </details>
+      <div class="signal-art" aria-hidden="true"></div>
       <div>
         <div class="card-meta">
           <span class="badge">${escapeHtml(issue.category)}</span>
           ${issue.heat === "hot" ? '<span class="hot-marker">HOT</span>' : ""}
           <span>${escapeHtml(issue.source)}</span>
-          <span>${issue.minutes}분 전</span>
+          <span>${formatIssueTime(issue)}</span>
         </div>
         <h3>${escapeHtml(issue.title)}</h3>
-        <details class="summary-expand">
-          <summary>내용 보기</summary>
-          <div class="summary-detail">
-            <section>
-              <span>대표 내용</span>
-              <p>${escapeHtml(issue.summary || "요약 정보가 없습니다.")}</p>
-            </section>
-            ${detailText ? `
-              <section>
-                <span>${escapeHtml(previewLabel)}</span>
-                <p>${escapeHtml(detailText)}</p>
-              </section>
-            ` : ""}
+        <p class="safe-summary">${escapeHtml(compactText(issue.summary || "관련 기사가 묶인 이슈입니다. 자세한 내용은 원문에서 확인해 주세요.", 220))}</p>
+        <details class="source-picker">
+          <summary class="source-button" aria-label="관련 본문 링크 선택">본문 보기</summary>
+          <div class="source-menu">
+            ${renderRelatedLinks(issue)}
           </div>
         </details>
         <div class="card-bottom">
