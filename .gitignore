@@ -2,6 +2,7 @@ data/
 *.log
 node_modules/
 .env
+appsettings.Production.json
 bin/
 obj/
 .vs/

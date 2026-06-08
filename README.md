@@ -33,6 +33,8 @@ setx PULSEBRIEF_ADMIN_TOKEN "긴-랜덤-토큰"
 
 프로젝트의 `.env` 파일은 Git에 포함하지 않습니다. IIS 운영 환경에서는 가능하면 `.env`를 배포 산출물로 복사하지 말고 Windows 환경 변수 또는 App Pool 환경 변수로 관리하세요.
 
+IIS 배포 폴더의 `appsettings.Production.json`에 운영 전용 관리자 토큰을 둘 수 있습니다. 이 파일은 Git 추적 대상이 아니며, 배포 스크립트가 기존 파일을 보존합니다.
+
 ## 데이터 저장소
 
 MongoDB 컬렉션은 다음 구조를 사용합니다.

@@ -5,7 +5,7 @@ try {
     $sitePath = 'C:\inetpub\pulse-brief'
     $publishPath = Join-Path $projectPath 'publish\iis'
     $offlinePath = Join-Path $sitePath 'app_offline.htm'
-    $preservedItems = @('app_offline.htm', '.env')
+    $preservedItems = @('app_offline.htm', '.env', 'appsettings.Production.json')
 
     New-Item -ItemType Directory -Path $sitePath -Force | Out-Null
 
