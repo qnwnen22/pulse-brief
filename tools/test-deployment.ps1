@@ -76,8 +76,13 @@ else {
 
 if (-not [string]::IsNullOrWhiteSpace($AdminToken)) {
     $adminHeaders = @{ "X-Admin-Token" = $AdminToken }
-    $authorizedStatus = Invoke-Status -Uri (Join-Url $BaseUrl "/api/admin/diagnostics") -Headers $adminHeaders
+    $diagnosticsUri = Join-Url $BaseUrl "/api/admin/diagnostics"
+    $authorizedStatus = Invoke-Status -Uri $diagnosticsUri -Headers $adminHeaders
     Assert-Status -Name "Admin API with token" -Actual $authorizedStatus -Expected @(200)
+
+    $diagnostics = Invoke-RestMethod -Uri $diagnosticsUri -Method Get -Headers $adminHeaders -TimeoutSec $TimeoutSeconds
+    $warningCount = @($diagnostics.warnings).Count
+    Write-Host "[OK] Diagnostic warning count: $warningCount"
 }
 else {
     Write-Host "[INFO] Admin token was not provided. Authenticated admin API check was skipped."

@@ -25,12 +25,32 @@ public sealed class OperationalDiagnosticsService(
         var feeds = feedsTask.Result;
         var now = DateTimeOffset.UtcNow;
         var effectiveArticleCount = ArticleDedupe.EffectiveArticles(articles).Length;
+        var duplicateArticleCount = Math.Max(0, articles.Count - effectiveArticleCount);
         var contentStatusCounts = articles
             .GroupBy(article => string.IsNullOrWhiteSpace(article.ContentFetchStatus) ? "pending" : article.ContentFetchStatus)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
         var summaryProviders = summaries
             .GroupBy(summary => string.IsNullOrWhiteSpace(summary.Provider) ? "unknown" : summary.Provider)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
+        var latestPublishedAt = MaxOrNull(articles.Select(article => article.PublishedAt));
+        var oldestPublishedAt = MinOrNull(articles.Select(article => article.PublishedAt));
+        var latestArticleUpdatedAt = MaxOrNull(articles.Select(article => article.UpdatedAt));
+        var latestSummaryGeneratedAt = MaxOrNull(summaries.Select(summary => summary.GeneratedAt));
+        var contentPendingCount = contentStatusCounts.GetValueOrDefault("pending");
+        var contentSuccessCount = contentStatusCounts.GetValueOrDefault("success");
+        var contentFailedCount = contentStatusCounts.GetValueOrDefault("failed");
+        var imageCount = articles.Count(article => !string.IsNullOrWhiteSpace(article.ImageUrl));
+        var pipeline = pipelineRunTracker.Current;
+        var warnings = BuildWarnings(
+            now,
+            feeds.Count,
+            articles.Count,
+            duplicateArticleCount,
+            contentFailedCount,
+            latestArticleUpdatedAt,
+            latestSummaryGeneratedAt,
+            summaries.Count,
+            pipeline);
 
         return new
         {
@@ -52,7 +72,7 @@ public sealed class OperationalDiagnosticsService(
             {
                 articleCount = articles.Count,
                 effectiveArticleCount,
-                duplicateArticleCount = Math.Max(0, articles.Count - effectiveArticleCount),
+                duplicateArticleCount,
                 groupCount = groups.Count,
                 summaryCount = summaries.Count,
                 sourceCount = articles
@@ -60,28 +80,29 @@ public sealed class OperationalDiagnosticsService(
                     .Where(source => !string.IsNullOrWhiteSpace(source))
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .Count(),
-                latestPublishedAt = MaxOrNull(articles.Select(article => article.PublishedAt)),
-                oldestPublishedAt = MinOrNull(articles.Select(article => article.PublishedAt)),
-                latestArticleUpdatedAt = MaxOrNull(articles.Select(article => article.UpdatedAt))
+                latestPublishedAt,
+                oldestPublishedAt,
+                latestArticleUpdatedAt
             },
             contentFetch = new
             {
-                pending = contentStatusCounts.GetValueOrDefault("pending"),
-                success = contentStatusCounts.GetValueOrDefault("success"),
-                failed = contentStatusCounts.GetValueOrDefault("failed"),
-                successRate = Ratio(contentStatusCounts.GetValueOrDefault("success"), articles.Count)
+                pending = contentPendingCount,
+                success = contentSuccessCount,
+                failed = contentFailedCount,
+                successRate = Ratio(contentSuccessCount, articles.Count),
+                failureRate = Ratio(contentFailedCount, articles.Count)
             },
             images = new
             {
-                withImage = articles.Count(article => !string.IsNullOrWhiteSpace(article.ImageUrl)),
-                missingImage = articles.Count(article => string.IsNullOrWhiteSpace(article.ImageUrl)),
-                coverageRate = Ratio(articles.Count(article => !string.IsNullOrWhiteSpace(article.ImageUrl)), articles.Count)
+                withImage = imageCount,
+                missingImage = articles.Count - imageCount,
+                coverageRate = Ratio(imageCount, articles.Count)
             },
             summaries = new
             {
                 dailyCount = summaries.Count(summary => !summary.Date.StartsWith("weekly:", StringComparison.OrdinalIgnoreCase)),
                 weeklyCount = summaries.Count(summary => summary.Date.StartsWith("weekly:", StringComparison.OrdinalIgnoreCase)),
-                latestGeneratedAt = MaxOrNull(summaries.Select(summary => summary.GeneratedAt)),
+                latestGeneratedAt = latestSummaryGeneratedAt,
                 providers = summaryProviders
             },
             categories = groups
@@ -94,9 +115,82 @@ public sealed class OperationalDiagnosticsService(
                     articleCount = group.Sum(item => item.ArticleCount)
                 })
                 .ToArray(),
-            pipeline = pipelineRunTracker.Current,
+            pipeline,
+            warnings,
             recentEvents = operationalLog.ReadRecentEvents(20)
         };
+    }
+
+    /// <summary>운영자가 조치해야 할 가능성이 있는 수집/요약 상태를 경고 목록으로 변환합니다.</summary>
+    private OperationalWarning[] BuildWarnings(
+        DateTimeOffset now,
+        int feedCount,
+        int articleCount,
+        int duplicateArticleCount,
+        int contentFailedCount,
+        DateTimeOffset? latestArticleUpdatedAt,
+        DateTimeOffset? latestSummaryGeneratedAt,
+        int summaryCount,
+        PipelineRunSnapshot pipeline)
+    {
+        var warnings = new List<OperationalWarning>();
+        var staleArticleHours = configuration.GetValue("Diagnostics:StaleArticleHours", 12);
+        var staleSummaryHours = configuration.GetValue("Diagnostics:StaleSummaryHours", 36);
+        var pipelineRunningMinutes = configuration.GetValue("Diagnostics:LongRunningPipelineMinutes", 30);
+        var contentFailureRateWarning = configuration.GetValue("Diagnostics:ContentFetchFailureRateWarning", 0.5);
+        var duplicateRateWarning = configuration.GetValue("Diagnostics:DuplicateArticleRateWarning", 0.35);
+        var minimumArticlesForRateWarnings = configuration.GetValue("Diagnostics:MinimumArticlesForRateWarnings", 50);
+
+        if (feedCount == 0)
+        {
+            warnings.Add(new OperationalWarning("rss_feed_empty", "error", "등록된 RSS 피드가 없습니다."));
+        }
+
+        if (articleCount == 0)
+        {
+            warnings.Add(new OperationalWarning("article_empty", "warning", "저장된 뉴스 기사가 없습니다."));
+        }
+
+        if (latestArticleUpdatedAt is not null && now - latestArticleUpdatedAt > TimeSpan.FromHours(staleArticleHours))
+        {
+            warnings.Add(new OperationalWarning("article_update_stale", "warning", $"최근 기사 갱신이 {staleArticleHours}시간 이상 지연되었습니다."));
+        }
+
+        if (summaryCount == 0)
+        {
+            warnings.Add(new OperationalWarning("summary_empty", "warning", "저장된 전날/주간 요약이 없습니다."));
+        }
+        else if (latestSummaryGeneratedAt is not null && now - latestSummaryGeneratedAt > TimeSpan.FromHours(staleSummaryHours))
+        {
+            warnings.Add(new OperationalWarning("summary_stale", "warning", $"최근 요약 생성이 {staleSummaryHours}시간 이상 지연되었습니다."));
+        }
+
+        if (pipeline.Status == "failed")
+        {
+            warnings.Add(new OperationalWarning("pipeline_failed", "error", "마지막 뉴스 수집 파이프라인이 실패했습니다."));
+        }
+
+        if (pipeline.IsRunning && pipeline.StartedAt is not null && now - pipeline.StartedAt > TimeSpan.FromMinutes(pipelineRunningMinutes))
+        {
+            warnings.Add(new OperationalWarning("pipeline_long_running", "warning", $"뉴스 수집 파이프라인이 {pipelineRunningMinutes}분 이상 실행 중입니다."));
+        }
+
+        if (articleCount >= minimumArticlesForRateWarnings)
+        {
+            var contentFailureRate = Ratio(contentFailedCount, articleCount);
+            if (contentFailureRate >= contentFailureRateWarning)
+            {
+                warnings.Add(new OperationalWarning("content_fetch_failure_rate_high", "warning", $"본문 수집 실패율이 {contentFailureRate:P0}입니다."));
+            }
+
+            var duplicateRate = Ratio(duplicateArticleCount, articleCount);
+            if (duplicateRate >= duplicateRateWarning)
+            {
+                warnings.Add(new OperationalWarning("duplicate_article_rate_high", "info", $"중복으로 판단되는 기사 비율이 {duplicateRate:P0}입니다."));
+            }
+        }
+
+        return warnings.ToArray();
     }
 
     /// <summary>빈 시퀀스에서는 null을 반환하는 UTC 시각 최댓값 계산입니다.</summary>
@@ -117,5 +211,26 @@ public sealed class OperationalDiagnosticsService(
     private static double Ratio(int value, int total)
     {
         return total == 0 ? 0 : Math.Round((double)value / total, 2);
+    }
+}
+
+/// <summary>관리자 진단 API에서 운영자가 확인할 수 있는 상태 경고입니다.</summary>
+public sealed class OperationalWarning
+{
+    /// <summary>경고 유형을 구분하는 안정적인 코드입니다.</summary>
+    public string Code { get; init; } = "";
+
+    /// <summary>경고 심각도입니다. info, warning, error 값을 사용합니다.</summary>
+    public string Level { get; init; } = "warning";
+
+    /// <summary>운영자가 읽을 수 있는 경고 설명입니다.</summary>
+    public string Message { get; init; } = "";
+
+    /// <summary>운영 경고 응답 모델을 생성합니다.</summary>
+    public OperationalWarning(string code, string level, string message)
+    {
+        Code = code;
+        Level = level;
+        Message = message;
     }
 }

@@ -81,6 +81,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\restore-mongodb.ps1 
 
 로그 저장 위치는 `OperationalLog:Directory`, 진단 API에 보관할 최근 이벤트 수는 `OperationalLog:RecentEventCount` 설정으로 조정할 수 있습니다.
 
+## 운영 진단
+
+관리자 전용 `/api/admin/diagnostics`는 기사 수, 본문 수집 성공률, 요약 생성 상태, 마지막 파이프라인 실행 상태와 함께 `warnings` 목록을 반환합니다. 기본 경고 기준은 최신 기사 갱신 12시간 지연, 최신 요약 생성 36시간 지연, 본문 수집 실패율 50% 이상, 중복 기사 비율 35% 이상입니다.
+
+경고 기준은 `Diagnostics:StaleArticleHours`, `Diagnostics:StaleSummaryHours`, `Diagnostics:LongRunningPipelineMinutes`, `Diagnostics:ContentFetchFailureRateWarning`, `Diagnostics:DuplicateArticleRateWarning`, `Diagnostics:MinimumArticlesForRateWarnings` 설정으로 조정할 수 있습니다.
+
 ## 서버 파이프라인
 
 1. RSS 수집
@@ -102,7 +108,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\restore-mongodb.ps1 
 - `GET /api/articles`: 저장된 기사 목록과 본문 수집 상태
 - `GET /api/groups`: 유사 기사 그룹 목록
 - `POST /api/refresh`: RSS 수집부터 요약 갱신까지 파이프라인 실행
-- `GET /api/admin/diagnostics`: 기사/그룹/요약 수, 본문 수집 상태, 마지막 파이프라인 실행 상태, 최근 운영 이벤트
+- `GET /api/admin/diagnostics`: 기사/그룹/요약 수, 본문 수집 상태, 마지막 파이프라인 실행 상태, 운영 경고, 최근 운영 이벤트
 - `POST /api/admin/fetch-missing-content`: 누락된 기사 본문 재수집
 - `POST /api/admin/fetch-missing-images`: 누락된 기사 이미지 재수집
 
