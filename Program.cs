@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using PulseBrief;
@@ -88,6 +89,35 @@ app.MapPost("/api/refresh", async (NewsPipeline pipeline, CancellationToken canc
 {
     var result = await pipeline.RunAsync(cancellationToken);
     return Results.Ok(result);
+});
+
+app.MapPost("/api/admin/fetch-missing-content", async (HttpContext context, int? limit, IArticleStore store, ArticleContentFetcher contentFetcher, CancellationToken cancellationToken) =>
+{
+    if (context.Connection.RemoteIpAddress is not { } remoteIpAddress || !IPAddress.IsLoopback(remoteIpAddress))
+    {
+        return Results.Forbid();
+    }
+
+    var articles = await store.ReadArticlesAsync();
+    var targetLimit = Math.Clamp(limit.GetValueOrDefault(500), 1, 2000);
+    var beforeMissing = articles.Count(article => string.IsNullOrWhiteSpace(article.ContentFetchStatus));
+
+    await contentFetcher.EnrichMissingContentAsync(articles, targetLimit, cancellationToken);
+    await store.SaveArticlesAsync(articles);
+
+    var statusCounts = articles
+        .GroupBy(article => string.IsNullOrWhiteSpace(article.ContentFetchStatus) ? "pending" : article.ContentFetchStatus)
+        .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
+
+    return Results.Ok(new
+    {
+        requested = targetLimit,
+        processed = Math.Min(targetLimit, beforeMissing),
+        beforeMissing,
+        afterMissing = statusCounts.GetValueOrDefault("pending"),
+        success = statusCounts.GetValueOrDefault("success"),
+        failed = statusCounts.GetValueOrDefault("failed")
+    });
 });
 
 app.MapFallbackToFile("index.html");

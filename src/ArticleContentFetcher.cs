@@ -8,21 +8,29 @@ namespace PulseBrief;
 public sealed partial class ArticleContentFetcher(HttpClient httpClient, IConfiguration configuration)
 {
     private readonly int _maxArticlesPerRun = Math.Max(1, configuration.GetValue("ArticleContent:MaxArticlesPerRun", 50));
+    private readonly int _maxConcurrency = Math.Max(1, configuration.GetValue("ArticleContent:MaxConcurrency", 4));
     private readonly int _minimumContentLength = Math.Max(80, configuration.GetValue("ArticleContent:MinimumContentLength", 220));
 
     /// <summary>아직 본문 수집을 시도하지 않은 기사 중 최신 기사 일부를 선택해 본문을 보강합니다.</summary>
-    public async Task EnrichMissingContentAsync(IEnumerable<Article> articles, CancellationToken cancellationToken = default)
+    public Task EnrichMissingContentAsync(IEnumerable<Article> articles, CancellationToken cancellationToken = default)
+    {
+        return EnrichMissingContentAsync(articles, _maxArticlesPerRun, cancellationToken);
+    }
+
+    /// <summary>아직 본문 수집을 시도하지 않은 기사 중 지정한 개수만큼 선택해 본문을 보강합니다.</summary>
+    public async Task EnrichMissingContentAsync(IEnumerable<Article> articles, int limit, CancellationToken cancellationToken = default)
     {
         var targets = articles
             .Where(article => string.IsNullOrWhiteSpace(article.ContentFetchStatus))
             .OrderByDescending(article => article.PublishedAt)
-            .Take(_maxArticlesPerRun)
+            .Take(Math.Max(1, limit))
             .ToArray();
 
-        foreach (var article in targets)
+        await Parallel.ForEachAsync(targets, new ParallelOptions
         {
-            await FetchContentAsync(article, cancellationToken);
-        }
+            CancellationToken = cancellationToken,
+            MaxDegreeOfParallelism = _maxConcurrency
+        }, async (article, token) => await FetchContentAsync(article, token));
     }
 
     /// <summary>단일 기사 URL에서 본문을 가져오고 성공 또는 실패 상태를 Article에 반영합니다.</summary>
