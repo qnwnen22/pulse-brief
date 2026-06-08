@@ -62,11 +62,12 @@ const sampleIssues = [
 ];
 
 let issues = [...sampleIssues];
+let dailyBrief = null;
 const trendPoints = [18, 26, 24, 38, 52, 48, 61, 74, 70, 86, 91, 96];
 let activeFilter = "전체";
 let currentPage = 1;
 let activeWeeklyCategory = "전체";
-const pageSize = 50;
+const pageSize = 10;
 
 const newsList = document.querySelector("#newsList");
 const searchInput = document.querySelector("#searchInput");
@@ -77,6 +78,7 @@ const keywordCloud = document.querySelector("#keywordCloud");
 const trendCanvas = document.querySelector("#trendCanvas");
 const categoryFilters = document.querySelector("#categoryFilters");
 const paginationControls = document.querySelector("#paginationControls");
+const dailySummary = document.querySelector("#dailySummary");
 const weeklySummary = document.querySelector("#weeklySummary");
 const weeklyCategoryTabs = document.querySelector("#weeklyCategoryTabs");
 
@@ -206,6 +208,48 @@ function renderNews() {
 function getIssueDate(issue) {
   const date = new Date(issue.latestPublishedAt || Date.now() - issue.minutes * 60000);
   return Number.isNaN(date.getTime()) ? new Date() : date;
+}
+
+function renderDailySummary() {
+  if (!dailySummary) return;
+
+  if (!dailyBrief || !dailyBrief.issueCount) {
+    dailySummary.innerHTML = '<div class="empty-state">어제 생성된 이슈 요약이 아직 없습니다.</div>';
+    return;
+  }
+
+  const topIssues = (dailyBrief.topIssues || []).slice(0, 5);
+  const providerLabel = dailyBrief.provider === "openai" ? `AI 요약 · ${dailyBrief.model || "OpenAI"}` : "로컬 요약";
+  dailySummary.innerHTML = `
+    <div class="daily-provider">${escapeHtml(providerLabel)}</div>
+    <p>${escapeHtml(dailyBrief.summary)}</p>
+    <div class="daily-kpis">
+      <div>
+        <strong>${Number(dailyBrief.issueCount || 0).toLocaleString("ko-KR")}</strong>
+        <span>이슈</span>
+      </div>
+      <div>
+        <strong>${Number(dailyBrief.articleCount || 0).toLocaleString("ko-KR")}</strong>
+        <span>기사</span>
+      </div>
+      <div>
+        <strong>${Number(dailyBrief.sourceCount || 0).toLocaleString("ko-KR")}</strong>
+        <span>출처</span>
+      </div>
+    </div>
+    <ol class="daily-issue-list">
+      ${topIssues
+        .map((issue) => {
+          return `
+            <li>
+              <strong>${escapeHtml(issue.title)}</strong>
+              <span>${escapeHtml(issue.category)} · ${escapeHtml(issue.summary)}</span>
+            </li>
+          `;
+        })
+        .join("")}
+    </ol>
+  `;
 }
 
 function renderWeeklySummary() {
@@ -465,12 +509,29 @@ async function loadServerBriefs() {
   }
 }
 
+async function loadDailySummary() {
+  if (location.protocol === "file:") return false;
+
+  try {
+    const response = await fetch("/api/daily-summary");
+    if (!response.ok) throw new Error(`daily-summary ${response.status}`);
+    dailyBrief = await response.json();
+    renderDailySummary();
+    return true;
+  } catch (error) {
+    console.warn(`[daily-summary] ${error.message}`);
+    renderDailySummary();
+    return false;
+  }
+}
+
 async function refreshFromServer() {
   if (location.protocol !== "file:") {
     try {
       const response = await fetch("/api/refresh", { method: "POST" });
       if (!response.ok) throw new Error(`refresh ${response.status}`);
       await loadServerBriefs();
+      await loadDailySummary();
       currentPage = 1;
       renderCategoryFilters();
       renderNews();
@@ -496,6 +557,7 @@ document.addEventListener("click", (event) => {
   });
 });
 loadServerBriefs().then(() => {
+  loadDailySummary();
   renderCategoryFilters();
   renderNews();
 });

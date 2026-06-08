@@ -54,4 +54,37 @@ public sealed class RelatedLinkDto
     public string Url { get; set; } = "";
 }
 
+public sealed class DailyIssueSummary
+{
+    public string Date { get; set; } = "";
+    public DateTimeOffset GeneratedAt { get; set; } = DateTimeOffset.UtcNow;
+    public string Provider { get; set; } = "local";
+    public string Model { get; set; } = "";
+    public string Headline { get; set; } = "";
+    public string Summary { get; set; } = "";
+    public int IssueCount { get; set; }
+    public int ArticleCount { get; set; }
+    public int SourceCount { get; set; }
+    public DailyCategorySummary[] Categories { get; set; } = [];
+    public DailyTopIssue[] TopIssues { get; set; } = [];
+}
+
+public sealed class DailyCategorySummary
+{
+    public string Category { get; set; } = "";
+    public int IssueCount { get; set; }
+    public int ArticleCount { get; set; }
+    public string Summary { get; set; } = "";
+}
+
+public sealed class DailyTopIssue
+{
+    public string Title { get; set; } = "";
+    public string Category { get; set; } = "";
+    public string Summary { get; set; } = "";
+    public int ArticleCount { get; set; }
+    public int Score { get; set; }
+    public string[] Sources { get; set; } = [];
+}
+
 public sealed record PipelineResult(int FetchedCount, int ArticleCount, int GroupCount, DateTimeOffset UpdatedAt);

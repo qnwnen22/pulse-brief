@@ -244,6 +244,7 @@ h2 {
 }
 
 .feed-column,
+.daily-box,
 .weekly-box,
 .trend-box,
 .keyword-box {
@@ -289,6 +290,20 @@ h2 {
   color: var(--ink);
   background: #ffffff;
   box-shadow: 0 2px 8px rgba(24, 33, 47, 0.1);
+}
+
+.feed-column .section-head {
+  gap: 12px 24px;
+}
+
+.feed-column .segmented {
+  justify-self: end;
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+
+.segment {
+  white-space: nowrap;
 }
 
 .news-list {
@@ -555,9 +570,85 @@ h2 {
 }
 
 .weekly-box,
+.daily-box,
 .trend-box,
 .keyword-box {
   padding: 18px;
+}
+
+.daily-summary {
+  display: grid;
+  gap: 14px;
+}
+
+.daily-summary p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.daily-provider {
+  justify-self: start;
+  padding: 4px 8px;
+  border-radius: 8px;
+  color: var(--green);
+  background: #e9f7f1;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.daily-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.daily-kpis div {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f7f9fb;
+}
+
+.daily-kpis strong,
+.daily-kpis span {
+  display: block;
+}
+
+.daily-kpis strong {
+  font-size: 22px;
+}
+
+.daily-kpis span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.daily-issue-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.daily-issue-list li {
+  display: grid;
+  gap: 4px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.daily-issue-list strong {
+  font-size: 14px;
+}
+
+.daily-issue-list span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .weekly-tabs {
@@ -727,6 +818,17 @@ h2 {
   }
 }
 
+@media (max-width: 1080px) {
+  .feed-column .section-head {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .feed-column .segmented {
+    justify-self: stretch;
+  }
+}
+
 @media (max-width: 720px) {
   .workspace,
   .sidebar {
@@ -745,6 +847,10 @@ h2 {
   .segmented {
     overflow-x: auto;
     width: 100%;
+  }
+
+  .feed-column .segmented {
+    flex-wrap: nowrap;
   }
 
   .news-card {

@@ -80,6 +80,46 @@ public sealed class ArticleStore
         return groups;
     }
 
+    public async Task<DailyIssueSummary?> ReadDailySummaryAsync(string date)
+    {
+        await EnsureInitializedAsync();
+        await using var connection = OpenConnection();
+        await connection.OpenAsync();
+
+        var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT summary_json
+            FROM daily_summaries
+            WHERE date = $date
+            """;
+        command.Parameters.AddWithValue("$date", date);
+
+        var json = await command.ExecuteScalarAsync() as string;
+        return string.IsNullOrWhiteSpace(json)
+            ? null
+            : JsonSerializer.Deserialize<DailyIssueSummary>(json, _jsonOptions);
+    }
+
+    public async Task SaveDailySummaryAsync(DailyIssueSummary summary)
+    {
+        await EnsureInitializedAsync();
+        await using var connection = OpenConnection();
+        await connection.OpenAsync();
+
+        var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO daily_summaries (date, generated_at, summary_json)
+            VALUES ($date, $generatedAt, $summaryJson)
+            ON CONFLICT(date) DO UPDATE SET
+                generated_at = excluded.generated_at,
+                summary_json = excluded.summary_json
+            """;
+        command.Parameters.AddWithValue("$date", summary.Date);
+        command.Parameters.AddWithValue("$generatedAt", summary.GeneratedAt.ToUniversalTime().ToString("O"));
+        command.Parameters.AddWithValue("$summaryJson", JsonSerializer.Serialize(summary, _jsonOptions));
+        await command.ExecuteNonQueryAsync();
+    }
+
     public async Task SaveArticlesAsync(IReadOnlyCollection<Article> articles)
     {
         await EnsureInitializedAsync();
@@ -225,6 +265,12 @@ public sealed class ArticleStore
 
             CREATE INDEX IF NOT EXISTS idx_article_groups_category ON article_groups(category);
             CREATE INDEX IF NOT EXISTS idx_article_groups_latest ON article_groups(latest_published_at DESC);
+
+            CREATE TABLE IF NOT EXISTS daily_summaries (
+                date TEXT PRIMARY KEY,
+                generated_at TEXT NOT NULL,
+                summary_json TEXT NOT NULL
+            );
             """;
         await command.ExecuteNonQueryAsync();
     }

@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using PulseBrief;
 
 var builder = WebApplication.CreateBuilder(args);
+DotEnv.Load(Path.Combine(builder.Environment.ContentRootPath, ".env"));
 
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
@@ -15,6 +16,8 @@ builder.Services.AddSingleton<ArticleStore>();
 builder.Services.AddSingleton<EmbeddingService>();
 builder.Services.AddSingleton<ArticleClusterer>();
 builder.Services.AddSingleton<BriefGenerator>();
+builder.Services.AddHttpClient<OpenAiDailySummaryClient>();
+builder.Services.AddSingleton<DailySummaryService>();
 builder.Services.AddSingleton<NewsPipeline>();
 builder.Services.AddHostedService<ScheduledRefreshService>();
 
@@ -44,6 +47,22 @@ app.MapGet("/api/briefs", async (ArticleStore store) =>
     var articles = await store.ReadArticlesAsync();
     var groups = await store.ReadGroupsAsync();
     return Results.Ok(ApiMapper.ToBriefs(groups, articles));
+});
+
+app.MapGet("/api/daily-summary", async (string? date, bool? force, DailySummaryService dailySummaryService, CancellationToken cancellationToken) =>
+{
+    DateOnly? targetDate = null;
+    if (!string.IsNullOrWhiteSpace(date))
+    {
+        if (!DateOnly.TryParse(date, out var parsed))
+        {
+            return Results.BadRequest(new { error = "date must be yyyy-MM-dd" });
+        }
+
+        targetDate = parsed;
+    }
+
+    return Results.Ok(await dailySummaryService.GetOrCreateSummaryAsync(targetDate, force.GetValueOrDefault(), cancellationToken));
 });
 
 app.MapPost("/api/refresh", async (NewsPipeline pipeline, CancellationToken cancellationToken) =>

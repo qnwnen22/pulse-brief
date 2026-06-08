@@ -6,7 +6,8 @@ public sealed class NewsPipeline(
     ArticleStore store,
     EmbeddingService embeddingService,
     ArticleClusterer clusterer,
-    BriefGenerator briefGenerator)
+    BriefGenerator briefGenerator,
+    DailySummaryService dailySummaryService)
 {
     private readonly SemaphoreSlim _lock = new(1, 1);
 
@@ -25,6 +26,7 @@ public sealed class NewsPipeline(
             var groups = clusterer.GroupSimilarArticles(articles);
             var enriched = await briefGenerator.EnrichGroupsAsync(groups, articles);
             await store.SaveGroupsAsync(enriched);
+            await dailySummaryService.RefreshYesterdaySummaryAsync(cancellationToken);
 
             return new PipelineResult(fetched.Count, articles.Count, enriched.Count, DateTimeOffset.UtcNow);
         }
