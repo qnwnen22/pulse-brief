@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pulse Brief</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="서비스 메뉴">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">PB</span>
+          <div>
+            <strong>Pulse Brief</strong>
+            <span>실시간 이슈 요약</span>
+          </div>
+        </div>
+
+        <nav class="nav-list" aria-label="대시보드 보기">
+          <button class="nav-item active" type="button" data-view="dashboard">
+            <span aria-hidden="true">⌁</span> 브리핑
+          </button>
+          <button class="nav-item" type="button" data-view="topics">
+            <span aria-hidden="true">#</span> 토픽
+          </button>
+          <button class="nav-item" type="button" data-view="watch">
+            <span aria-hidden="true">◎</span> 관심 이슈
+          </button>
+        </nav>
+
+        <section class="source-panel" aria-labelledby="source-title">
+          <h2 id="source-title">수집 소스</h2>
+          <label><input type="checkbox" checked /> 국내 주요 뉴스</label>
+          <label><input type="checkbox" checked /> 글로벌 미디어</label>
+          <label><input type="checkbox" checked /> 검색 트렌드</label>
+          <label><input type="checkbox" checked /> 소셜 시그널</label>
+        </section>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">2026.06.08 · 서울 기준</p>
+            <h1>지금 중요한 이슈를 한눈에</h1>
+          </div>
+          <div class="top-actions">
+            <div class="search-wrap">
+              <span aria-hidden="true">⌕</span>
+              <input id="searchInput" type="search" placeholder="키워드, 출처, 분야 검색" />
+            </div>
+            <button class="icon-button" id="refreshButton" type="button" aria-label="새로고침" title="새로고침">↻</button>
+          </div>
+        </header>
+
+        <section class="metric-grid" aria-label="핵심 지표">
+          <article class="metric">
+            <span>급상승 토픽</span>
+            <strong id="topicCount">0</strong>
+            <small>최근 60분 기준</small>
+          </article>
+          <article class="metric">
+            <span>중요도 평균</span>
+            <strong id="impactScore">0.0</strong>
+            <small>뉴스량·확산도 종합</small>
+          </article>
+          <article class="metric">
+            <span>업데이트</span>
+            <strong id="updateTime">--:--</strong>
+            <small>자동 갱신 준비됨</small>
+          </article>
+        </section>
+
+        <div class="content-grid">
+          <section class="feed-column" aria-labelledby="feed-title">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Live Feed</p>
+                <h2 id="feed-title">이슈 피드</h2>
+              </div>
+              <div class="segmented" role="tablist" aria-label="카테고리 필터">
+                <button class="segment active" type="button" data-filter="전체">전체</button>
+                <button class="segment" type="button" data-filter="경제">경제</button>
+                <button class="segment" type="button" data-filter="기술">기술</button>
+                <button class="segment" type="button" data-filter="사회">사회</button>
+                <button class="segment" type="button" data-filter="문화">문화</button>
+              </div>
+            </div>
+            <div id="newsList" class="news-list" aria-live="polite"></div>
+          </section>
+
+          <aside class="insight-column" aria-label="요약 정보">
+            <section class="brief-box">
+              <div class="section-head compact">
+                <div>
+                  <p class="eyebrow">AI Summary</p>
+                  <h2>3분 브리핑</h2>
+                </div>
+                <button class="ghost-button" id="briefButton" type="button">요약</button>
+              </div>
+              <ol id="briefList" class="brief-list"></ol>
+            </section>
+
+            <section class="trend-box">
+              <div class="section-head compact">
+                <div>
+                  <p class="eyebrow">Trend Radar</p>
+                  <h2>확산 신호</h2>
+                </div>
+              </div>
+              <canvas id="trendCanvas" width="520" height="260" aria-label="트렌드 확산 그래프"></canvas>
+            </section>
+
+            <section class="keyword-box">
+              <div class="section-head compact">
+                <div>
+                  <p class="eyebrow">Keywords</p>
+                  <h2>인기 키워드</h2>
+                </div>
+              </div>
+              <div id="keywordCloud" class="keyword-cloud"></div>
+            </section>
+          </aside>
+        </div>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
