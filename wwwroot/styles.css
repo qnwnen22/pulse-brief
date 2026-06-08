@@ -939,23 +939,6 @@ h2 {
   text-transform: uppercase;
 }
 
-.daily-issue-list li {
-  display: grid;
-  gap: 4px;
-  padding: 10px 0;
-  border-top: 1px solid var(--line);
-}
-
-.daily-issue-list strong {
-  font-size: 14px;
-}
-
-.daily-issue-list span {
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
 .weekly-tabs {
   display: flex;
   gap: 6px;
@@ -1084,6 +1067,11 @@ h2 {
   text-transform: uppercase;
 }
 
+.tracked-issue-list::before {
+  justify-self: start;
+}
+
+.daily-issue-list.tracked-issue-list li,
 .weekly-issue-list li {
   display: grid;
   gap: 10px;
@@ -1093,6 +1081,7 @@ h2 {
   line-height: 1.45;
 }
 
+.daily-issue-list.tracked-issue-list strong,
 .weekly-issue-list strong {
   display: inline-block;
   margin-right: 6px;
@@ -1108,13 +1097,6 @@ h2 {
 .weekly-issue-content span {
   color: #273244;
   font-weight: 800;
-}
-
-.weekly-issue-content p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.5;
 }
 
 .weekly-source-picker {

@@ -213,15 +213,19 @@ function findTrackedIssue(summaryIssue, candidates) {
     || null;
 }
 
-function renderWeeklyIssueList(weeklyIssueItems, targetItems) {
+function renderTrackedIssueList(items, targetItems, options = {}) {
+  const listClass = options.listClass || "weekly-issue-list";
+  const pickerClass = options.pickerClass || "weekly-source-picker";
+  const ariaLabel = options.ariaLabel || "관련 기사 보기";
+
   return `
-    <ol class="weekly-issue-list">
-      ${weeklyIssueItems.map((issue) => renderWeeklyIssueItem(issue, targetItems)).join("")}
+    <ol class="${listClass}">
+      ${items.map((issue) => renderTrackedIssueItem(issue, targetItems, pickerClass, ariaLabel)).join("")}
     </ol>
   `;
 }
 
-function renderWeeklyIssueItem(issue, targetItems) {
+function renderTrackedIssueItem(issue, targetItems, pickerClass, ariaLabel) {
   const trackedIssue = findTrackedIssue(issue, targetItems);
   const linkCount = trackedIssue?.relatedLinks?.length || 0;
   const articleCount = Number(issue.articleCount || trackedIssue?.articleCount || linkCount || 0);
@@ -231,10 +235,9 @@ function renderWeeklyIssueItem(issue, targetItems) {
       <div class="weekly-issue-content">
         <strong>${escapeHtml(issue.category || trackedIssue?.category || activeWeeklyCategory)}</strong>
         <span>${escapeHtml(issue.title)}</span>
-        ${issue.summary ? `<p>${escapeHtml(compactText(issue.summary, 180))}</p>` : ""}
       </div>
-      <details class="weekly-source-picker">
-        <summary class="source-button" aria-label="주간 주요 이슈 관련 기사 보기">
+      <details class="${pickerClass}">
+        <summary class="source-button" aria-label="${escapeHtml(ariaLabel)}">
           관련 기사${articleCount ? ` ${articleCount.toLocaleString("ko-KR")}건` : ""}
         </summary>
         <div class="weekly-source-menu">
@@ -434,7 +437,7 @@ function renderCategorySummary() {
       <span>${dailyBrief?.date ? `${escapeHtml(dailyBrief.date)} 기준` : "저장 데이터 기준"}</span>
     </div>
     <p>${escapeHtml(summary)}</p>
-    ${categoryIssues.length ? renderDailyIssueList(categoryIssues) : ""}
+    ${categoryIssues.length ? renderDailyIssueList(categoryIssues, selectedIssues) : ""}
   `;
 }
 
@@ -444,21 +447,12 @@ function buildLocalCategorySummary(category, items) {
   return `${category}에서 ${items.length.toLocaleString("ko-KR")}개 이슈가 확인됐습니다. 현재 가장 주목도가 높은 이슈는 ${topIssue.title}입니다.`;
 }
 
-function renderDailyIssueList(topIssues) {
-  return `
-    <ol class="daily-issue-list">
-      ${topIssues
-        .map((issue) => {
-          return `
-            <li>
-              <strong>${escapeHtml(issue.title)}</strong>
-              <span>${escapeHtml(issue.category)} · ${escapeHtml(issue.summary)}</span>
-            </li>
-          `;
-        })
-        .join("")}
-    </ol>
-  `;
+function renderDailyIssueList(topIssues, targetItems) {
+  return renderTrackedIssueList(topIssues, targetItems, {
+    listClass: "daily-issue-list tracked-issue-list",
+    pickerClass: "daily-source-picker weekly-source-picker",
+    ariaLabel: "전날 주요 이슈 관련 기사 보기",
+  });
 }
 
 function renderWeeklySummary() {
@@ -521,7 +515,11 @@ function renderWeeklySummary() {
       <h3>${escapeHtml(activeWeeklyCategory)} 주간 요약</h3>
       <p>${escapeHtml(weeklyText)}</p>
     </div>
-    ${renderWeeklyIssueList(weeklyIssueItems, targetItems)}
+    ${renderTrackedIssueList(weeklyIssueItems, targetItems, {
+      listClass: "weekly-issue-list tracked-issue-list",
+      pickerClass: "weekly-source-picker",
+      ariaLabel: "주간 주요 이슈 관련 기사 보기",
+    })}
   `;
 }
 
