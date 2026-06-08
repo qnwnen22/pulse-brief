@@ -1141,9 +1141,55 @@ h2 {
   text-align: center;
 }
 
+.app-footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 1.4fr) auto;
+  align-items: center;
+  gap: 14px;
+  margin-top: 22px;
+  padding: 16px 4px 0;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.app-footer div,
+.app-footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-footer strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.app-footer p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.app-footer a {
+  color: var(--blue);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.app-footer a:hover {
+  text-decoration: underline;
+}
+
+.app-footer nav span {
+  color: #7a8797;
+  font-weight: 700;
+}
+
 @media (max-width: 1050px) {
   .app-shell,
   .content-grid,
+  .app-footer,
   .topbar {
     grid-template-columns: 1fr;
   }
