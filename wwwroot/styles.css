@@ -211,7 +211,7 @@ h2 {
 }
 
 .metric-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 22px;
 }
@@ -560,9 +560,13 @@ h2 {
   font-weight: 700;
 }
 
-.badge.hot {
+.hot-marker {
+  padding: 3px 7px;
+  border-radius: 999px;
   color: #7c2d12;
   background: #ffedd5;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .news-card h3 {

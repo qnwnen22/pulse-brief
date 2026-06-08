@@ -72,6 +72,7 @@ const pageSize = 10;
 const newsList = document.querySelector("#newsList");
 const searchInput = document.querySelector("#searchInput");
 const topicCount = document.querySelector("#topicCount");
+const todayCount = document.querySelector("#todayCount");
 const impactScore = document.querySelector("#impactScore");
 const updateTime = document.querySelector("#updateTime");
 const metricGrid = document.querySelector(".metric-grid");
@@ -197,7 +198,8 @@ function renderNews() {
       </details>
       <div>
         <div class="card-meta">
-          <span class="badge ${issue.heat === "hot" ? "hot" : ""}">${escapeHtml(issue.category)}</span>
+          <span class="badge">${escapeHtml(issue.category)}</span>
+          ${issue.heat === "hot" ? '<span class="hot-marker">HOT</span>' : ""}
           <span>${escapeHtml(issue.source)}</span>
           <span>${issue.minutes}분 전</span>
         </div>
@@ -477,12 +479,16 @@ function renderCategoryFilters() {
     .join("");
 }
 
-function renderMetrics(items) {
-  const totalImpact = items.reduce((sum, issue) => sum + issue.impact, 0);
-  const average = items.length ? totalImpact / items.length : 0;
+function renderMetrics() {
+  const categoryItems = getCategoryIssues(activeFilter);
+  const todayKey = new Date().toDateString();
+  const todayItems = categoryItems.filter((issue) => getIssueDate(issue).toDateString() === todayKey);
+  const totalImpact = todayItems.reduce((sum, issue) => sum + issue.impact, 0);
+  const average = todayItems.length ? totalImpact / todayItems.length : 0;
   const now = new Date();
 
-  topicCount.textContent = items.length;
+  topicCount.textContent = categoryItems.length.toLocaleString("ko-KR");
+  todayCount.textContent = todayItems.length.toLocaleString("ko-KR");
   impactScore.textContent = average.toFixed(1);
   updateTime.textContent = now.toLocaleTimeString("ko-KR", {
     hour: "2-digit",

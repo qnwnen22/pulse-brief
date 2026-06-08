@@ -7,7 +7,7 @@ public sealed class ArticleClusterer(IConfiguration configuration)
 
     private static readonly (string Category, string[] Words)[] CategoryRules =
     [
-        ("정치/정책", ["정치", "대통령", "국회", "정부", "정책", "브리핑", "보도자료", "연설문", "국무회의", "위원회", "장관", "청와대", "대통령실", "국무조정실", "고용노동부", "과학기술정보통신부", "교육부", "국가보훈부", "국방부", "국토교통부", "기획예산처", "농림축산식품부", "문화체육관광부", "법무부", "법제처", "보건복지부", "산업통상부", "성평등가족부", "식품의약품안전처", "외교부", "인사혁신처", "재정경제부", "중소벤처기업부", "통일부", "해양수산부", "행정안전부", "경찰청", "검찰청", "국세청", "기상청", "소방청", "질병관리청", "검찰", "특검", "선거", "재선거", "대선", "총선", "지선", "보궐선거", "여당", "야당", "국민의힘", "민주당", "개혁신당", "조국혁신당", "의원", "대표", "원내대표", "당대표", "후보", "공천", "탄핵", "청문회", "국정조사", "법안", "개헌"]),
+        ("정치/정책", ["정치", "대통령", "국회", "정부", "정책", "브리핑", "보도자료", "연설문", "국무회의", "위원회", "장관", "청와대", "대통령실", "국무조정실", "고용노동부", "과학기술정보통신부", "교육부", "국가보훈부", "국방부", "국토교통부", "기획예산처", "농림축산식품부", "문화체육관광부", "법무부", "법제처", "보건복지부", "산업통상부", "성평등가족부", "식품의약품안전처", "외교부", "인사혁신처", "재정경제부", "중소벤처기업부", "통일부", "해양수산부", "행정안전부", "경찰청", "검찰청", "국세청", "기상청", "소방청", "질병관리청", "검찰", "특검", "선거", "재선거", "대선", "총선", "지선", "보궐선거", "여당", "야당", "국민의힘", "민주당", "개혁신당", "조국혁신당", "의원", "원내대표", "당대표", "후보", "공천", "탄핵", "청문회", "국정조사", "법안", "개헌"]),
         ("문화/연예", ["연예", "문화", "영화", "음악", "방송", "드라마", "ott", "웹툰", "콘텐츠", "공연", "전시", "k-culture", "entertainment"]),
         ("스포츠", ["스포츠", "야구", "축구", "농구", "배구", "골프", "e스포츠", "격투기", "kbo", "lck", "월드컵", "프리미어리그", "올림픽"]),
         ("경제/산업", ["경제", "금융", "산업", "기업", "증시", "코스피", "코스닥", "환율", "금리", "물가", "투자", "부동산", "무역", "수출", "반도체", "자동차", "은행", "보험", "시장"]),
@@ -59,7 +59,7 @@ public sealed class ArticleClusterer(IConfiguration configuration)
                 .OrderByDescending(article => article.PublishedAt)
                 .ThenByDescending(article => article.FirstSeenAt)
                 .ToArray();
-            var sourceBonus = groupArticles.Select(article => article.Source).Distinct().Count() * 4;
+            var sourceCount = groupArticles.Select(article => article.Source).Distinct().Count();
 
             return new ArticleGroup
             {
@@ -69,7 +69,7 @@ public sealed class ArticleClusterer(IConfiguration configuration)
                 ArticleCount = groupArticles.Length,
                 Sources = groupArticles.Select(article => article.Source).Distinct().ToArray(),
                 LatestPublishedAt = groupArticles.FirstOrDefault()?.PublishedAt ?? DateTimeOffset.UtcNow,
-                Score = Math.Min(100, 55 + groupArticles.Length * 8 + sourceBonus),
+                Score = Math.Min(100, 30 + groupArticles.Length * 4 + sourceCount * 3),
                 SeedTitle = groupArticles.FirstOrDefault()?.Title ?? "새 이슈",
                 SeedSummary = BestSummary(groupArticles.FirstOrDefault())
             };
@@ -79,7 +79,14 @@ public sealed class ArticleClusterer(IConfiguration configuration)
     /// <summary>그룹에 속한 기사들의 출처, 제목, 요약, 본문에서 카테고리 키워드를 찾아 대표 카테고리를 결정합니다.</summary>
     private static string CategoryFor(IEnumerable<Article> articles)
     {
-        var text = string.Join(' ', articles.Select(article => $"{article.Source} {article.Title} {article.Summary} {article.Content}")).ToLowerInvariant();
+        var articleList = articles.ToArray();
+        var headlineText = string.Join(' ', articleList.Select(article => $"{article.Source} {article.Title}")).ToLowerInvariant();
+        if (headlineText.Contains("et포토", StringComparison.OrdinalIgnoreCase))
+        {
+            return "문화/연예";
+        }
+
+        var text = string.Join(' ', articleList.Select(article => $"{article.Source} {article.Title} {article.Summary} {article.Content}")).ToLowerInvariant();
         return CategoryRules
             .Select(rule => new
             {
