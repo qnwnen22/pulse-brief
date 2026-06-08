@@ -2,3 +2,6 @@ data/
 *.log
 node_modules/
 .env
+bin/
+obj/
+.vs/

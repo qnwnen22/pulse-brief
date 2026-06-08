@@ -78,27 +78,22 @@
                 <p class="eyebrow">Live Feed</p>
                 <h2 id="feed-title">이슈 피드</h2>
               </div>
-              <div class="segmented" role="tablist" aria-label="카테고리 필터">
-                <button class="segment active" type="button" data-filter="전체">전체</button>
-                <button class="segment" type="button" data-filter="경제">경제</button>
-                <button class="segment" type="button" data-filter="기술">기술</button>
-                <button class="segment" type="button" data-filter="사회">사회</button>
-                <button class="segment" type="button" data-filter="문화">문화</button>
-              </div>
+              <div id="categoryFilters" class="segmented" role="tablist" aria-label="카테고리 필터"></div>
             </div>
             <div id="newsList" class="news-list" aria-live="polite"></div>
+            <div id="paginationControls" class="pagination-controls" aria-label="이슈 피드 페이지 이동"></div>
           </section>
 
           <aside class="insight-column" aria-label="요약 정보">
-            <section class="brief-box">
+            <section class="weekly-box">
               <div class="section-head compact">
                 <div>
-                  <p class="eyebrow">AI Summary</p>
-                  <h2>3분 브리핑</h2>
+                  <p class="eyebrow">Weekly Pulse</p>
+                  <h2>주간 이슈 요약</h2>
                 </div>
-                <button class="ghost-button" id="briefButton" type="button">요약</button>
               </div>
-              <ol id="briefList" class="brief-list"></ol>
+              <div id="weeklyCategoryTabs" class="weekly-tabs" aria-label="주간 이슈 카테고리"></div>
+              <div id="weeklySummary" class="weekly-summary"></div>
             </section>
 
             <section class="trend-box">

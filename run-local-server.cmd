@@ -1,3 +1,3 @@
 @echo off
 cd /d "%~dp0"
-"C:\Program Files\nodejs\node.exe" server\index.js >> server.out.log 2>> server.err.log
+dotnet run --urls http://localhost:4000 >> server.out.log 2>> server.err.log
