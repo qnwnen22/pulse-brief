@@ -35,6 +35,18 @@ setx PULSEBRIEF_ADMIN_TOKEN "긴-랜덤-토큰"
 
 IIS 배포 폴더의 `appsettings.Production.json`에 운영 전용 관리자 토큰을 둘 수 있습니다. 이 파일은 Git 추적 대상이 아니며, 배포 스크립트가 기존 파일을 보존합니다.
 
+배포 후 기본 점검:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\test-deployment.ps1
+```
+
+관리자 토큰까지 함께 확인하려면 다음처럼 실행합니다.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\test-deployment.ps1 -AdminToken "운영-관리자-토큰"
+```
+
 ## 데이터 저장소
 
 MongoDB 컬렉션은 다음 구조를 사용합니다.
