@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Pulse Brief icon</title>
+  <desc id="desc">A news card with a blue pulse signal for Pulse Brief.</desc>
+  <rect width="128" height="128" rx="28" fill="#16202e"/>
+  <rect x="34" y="21" width="60" height="86" rx="12" fill="#ffffff"/>
+  <rect x="43" y="34" width="22" height="22" rx="4" fill="#16202e"/>
+  <rect x="70" y="37" width="17" height="5" rx="2.5" fill="#16202e"/>
+  <rect x="70" y="48" width="17" height="5" rx="2.5" fill="#16202e"/>
+  <path d="M18 68h29l8-15 13 31 11-39 8 23h23" fill="none" stroke="#2563eb" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="43" y="83" width="42" height="5" rx="2.5" fill="#16202e"/>
+  <rect x="43" y="94" width="42" height="5" rx="2.5" fill="#16202e"/>
+</svg>

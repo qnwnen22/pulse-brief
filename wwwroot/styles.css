@@ -49,31 +49,18 @@ button {
 }
 
 .brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.brand-mark {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 8px;
-  color: #0e1724;
-  background: #ffffff;
-  font-weight: 800;
-}
-
-.brand strong,
-.brand span {
   display: block;
 }
 
-.brand span {
-  margin-top: 2px;
-  color: #b9c4d2;
-  font-size: 13px;
+.brand-logo {
+  display: block;
+  width: 100%;
+  max-width: 212px;
+  aspect-ratio: 4 / 3;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 12px;
+  object-fit: contain;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.24);
 }
 
 .nav-list {
