@@ -53,36 +53,52 @@ app.MapGet("/api/briefs", async (IArticleStore store) =>
     return Results.Ok(ApiMapper.ToBriefs(groups, articles));
 });
 
-app.MapGet("/api/daily-summary", async (string? date, bool? force, DailySummaryService dailySummaryService, CancellationToken cancellationToken) =>
+app.MapGet("/api/daily-summary", async (HttpContext context, string? date, bool? force, DailySummaryService dailySummaryService, CancellationToken cancellationToken) =>
 {
-    DateOnly? targetDate = null;
-    if (!string.IsNullOrWhiteSpace(date))
+    try
     {
-        if (!DateOnly.TryParse(date, out var parsed))
+        DateOnly? targetDate = null;
+        if (!string.IsNullOrWhiteSpace(date))
         {
-            return Results.BadRequest(new { error = "date must be yyyy-MM-dd" });
+            if (!DateOnly.TryParse(date, out var parsed))
+            {
+                return Results.BadRequest(new { error = "date must be yyyy-MM-dd" });
+            }
+
+            targetDate = parsed;
         }
 
-        targetDate = parsed;
+        return Results.Ok(await dailySummaryService.GetOrCreateSummaryAsync(targetDate, force.GetValueOrDefault(), cancellationToken));
     }
-
-    return Results.Ok(await dailySummaryService.GetOrCreateSummaryAsync(targetDate, force.GetValueOrDefault(), cancellationToken));
+    catch (Exception error) when (error is not OperationCanceledException)
+    {
+        Console.WriteLine($"[daily-summary] failed: {error}");
+        return Results.Json(CreateLocalError(context, error), statusCode: StatusCodes.Status500InternalServerError);
+    }
 });
 
-app.MapGet("/api/weekly-summary", async (string? endDate, bool? force, DailySummaryService dailySummaryService, CancellationToken cancellationToken) =>
+app.MapGet("/api/weekly-summary", async (HttpContext context, string? endDate, bool? force, DailySummaryService dailySummaryService, CancellationToken cancellationToken) =>
 {
-    DateOnly? targetEndDate = null;
-    if (!string.IsNullOrWhiteSpace(endDate))
+    try
     {
-        if (!DateOnly.TryParse(endDate, out var parsed))
+        DateOnly? targetEndDate = null;
+        if (!string.IsNullOrWhiteSpace(endDate))
         {
-            return Results.BadRequest(new { error = "endDate must be yyyy-MM-dd" });
+            if (!DateOnly.TryParse(endDate, out var parsed))
+            {
+                return Results.BadRequest(new { error = "endDate must be yyyy-MM-dd" });
+            }
+
+            targetEndDate = parsed;
         }
 
-        targetEndDate = parsed;
+        return Results.Ok(await dailySummaryService.GetOrCreateWeeklySummaryAsync(targetEndDate, force.GetValueOrDefault(), cancellationToken));
     }
-
-    return Results.Ok(await dailySummaryService.GetOrCreateWeeklySummaryAsync(targetEndDate, force.GetValueOrDefault(), cancellationToken));
+    catch (Exception error) when (error is not OperationCanceledException)
+    {
+        Console.WriteLine($"[weekly-summary] failed: {error}");
+        return Results.Json(CreateLocalError(context, error), statusCode: StatusCodes.Status500InternalServerError);
+    }
 });
 
 app.MapPost("/api/refresh", async (NewsPipeline pipeline, CancellationToken cancellationToken) =>
@@ -149,3 +165,11 @@ app.MapPost("/api/admin/fetch-missing-images", async (HttpContext context, int? 
 app.MapFallbackToFile("index.html");
 
 app.Run();
+
+static object CreateLocalError(HttpContext context, Exception error)
+{
+    var isLoopback = context.Connection.RemoteIpAddress is { } remoteIpAddress && IPAddress.IsLoopback(remoteIpAddress);
+    return isLoopback
+        ? new { error = error.GetType().Name, message = error.Message }
+        : new { error = "summary_failed" };
+}

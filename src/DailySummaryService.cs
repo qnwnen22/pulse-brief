@@ -66,7 +66,10 @@ public sealed class DailySummaryService(IArticleStore store, OpenAiDailySummaryC
     /// <summary>지정한 기간에 포함된 이슈 그룹을 모아 AI 호출 전 로컬 요약 초안을 만듭니다.</summary>
     private static DailyIssueSummary BuildSummary(string date, IEnumerable<ArticleGroup> groups, IEnumerable<Article> articles, DateOnly startDate, DateOnly endDate, string periodLabel)
     {
-        var articleById = articles.ToDictionary(article => article.Id, StringComparer.OrdinalIgnoreCase);
+        var articleById = articles
+            .Where(article => !string.IsNullOrWhiteSpace(article.Id))
+            .GroupBy(article => article.Id, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
         var targetGroups = groups
             .Where(group =>
             {
@@ -95,7 +98,8 @@ public sealed class DailySummaryService(IArticleStore store, OpenAiDailySummaryC
             .Select(group =>
             {
                 var topGroup = group
-                    .OrderByDescending(item => item.Score)
+                    .OrderBy(item => IsLowBriefingValueGroup(item) ? 1 : 0)
+                    .ThenByDescending(item => item.Score)
                     .ThenByDescending(item => item.ArticleCount)
                     .First();
                 return new DailyCategorySummary
@@ -108,13 +112,28 @@ public sealed class DailySummaryService(IArticleStore store, OpenAiDailySummaryC
             })
             .ToArray();
         var topIssues = targetGroups
-            .Take(8)
+            .GroupBy(group => group.Category)
+            .SelectMany(group => group
+                .OrderBy(item => IsLowBriefingValueGroup(item) ? 1 : 0)
+                .ThenByDescending(item => item.Score)
+                .ThenByDescending(item => item.ArticleCount)
+                .ThenByDescending(item => item.LatestPublishedAt)
+                .Take(4))
+            .OrderByDescending(group => categorySummaries.FirstOrDefault(category => category.Category == group.Category)?.IssueCount ?? 0)
+            .ThenBy(group => IsLowBriefingValueGroup(group) ? 1 : 0)
+            .ThenByDescending(group => group.Score)
+            .ThenByDescending(group => group.ArticleCount)
+            .Take(20)
             .Select(group => new DailyTopIssue
             {
                 Title = Clean(group.RepresentativeTitle),
                 Category = group.Category,
                 Summary = Clean(group.Summary),
                 ArticleCount = group.ArticleIds.Count(id => articleById.ContainsKey(id)),
+                ArticleIds = group.ArticleIds
+                    .Where(id => articleById.ContainsKey(id))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray(),
                 Score = group.Score,
                 Sources = group.Sources.Take(4).ToArray()
             })
@@ -140,6 +159,15 @@ public sealed class DailySummaryService(IArticleStore store, OpenAiDailySummaryC
             Categories = categorySummaries,
             TopIssues = topIssues
         };
+    }
+
+    /// <summary>포토/화보처럼 사실 흐름 요약 가치가 낮은 이슈를 대표 요약 후보에서 후순위로 밀기 위해 판별합니다.</summary>
+    private static bool IsLowBriefingValueGroup(ArticleGroup group)
+    {
+        var text = $"{group.RepresentativeTitle} {group.SeedTitle}".ToLowerInvariant();
+        return text.Contains("et포토", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("포토", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("화보", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>카테고리 분포와 대표 이슈를 바탕으로 로컬 fallback용 요약 문장을 만듭니다.</summary>

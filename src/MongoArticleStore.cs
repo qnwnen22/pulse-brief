@@ -67,6 +67,7 @@ public sealed class MongoArticleStore : IArticleStore
     public async Task SaveDailySummaryAsync(DailyIssueSummary summary)
     {
         await EnsureInitializedAsync();
+        await RemoveDuplicateSummariesAsync(summary.Date);
         await _summaries.ReplaceOneAsync(
             item => item.Date == summary.Date,
             summary,
@@ -144,16 +145,47 @@ public sealed class MongoArticleStore : IArticleStore
                 new CreateIndexModel<ArticleGroup>(Builders<ArticleGroup>.IndexKeys.Descending(group => group.LatestPublishedAt))
             ]);
 
-            await _summaries.Indexes.CreateOneAsync(
-                new CreateIndexModel<DailyIssueSummary>(
-                    Builders<DailyIssueSummary>.IndexKeys.Ascending(summary => summary.Date),
-                    new CreateIndexOptions { Unique = true }));
+            await EnsureSummaryDateIndexAsync();
 
             _initialized = true;
         }
         finally
         {
             _initLock.Release();
+        }
+    }
+
+    /// <summary>요약 날짜 인덱스를 생성하되 기존 인덱스/중복 데이터 문제로 API 전체 오류가 나지 않게 처리합니다.</summary>
+    private async Task EnsureSummaryDateIndexAsync()
+    {
+        var indexKeys = Builders<DailyIssueSummary>.IndexKeys.Ascending(summary => summary.Date);
+
+        try
+        {
+            await _summaries.Indexes.CreateOneAsync(
+                new CreateIndexModel<DailyIssueSummary>(
+                    indexKeys,
+                    new CreateIndexOptions { Unique = true, Name = "date_unique" }));
+        }
+        catch (MongoCommandException error) when (error.CodeName is "DuplicateKey" or "IndexOptionsConflict")
+        {
+            Console.WriteLine($"[mongo] unique summary date index skipped: {error.CodeName} {error.Message}");
+        }
+    }
+
+    /// <summary>동일 날짜/기간 요약이 여러 건 있으면 최신 문서만 남겨 이후 조회와 저장이 안정적으로 동작하게 합니다.</summary>
+    private async Task RemoveDuplicateSummariesAsync(string date)
+    {
+        var duplicates = await _summaries.Find(summary => summary.Date == date)
+            .SortByDescending(summary => summary.GeneratedAt)
+            .Skip(1)
+            .ToListAsync();
+
+        foreach (var duplicate in duplicates)
+        {
+            await _summaries.DeleteOneAsync(summary =>
+                summary.Date == duplicate.Date &&
+                summary.GeneratedAt == duplicate.GeneratedAt);
         }
     }
 }

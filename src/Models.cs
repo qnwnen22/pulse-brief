@@ -1,8 +1,10 @@
+using MongoDB.Bson.Serialization.Attributes;
 using System.Text.Json.Serialization;
 
 namespace PulseBrief;
 
 /// <summary>RSS 수집과 원문 본문 추출 결과를 담는 개별 뉴스 기사 문서입니다.</summary>
+[BsonIgnoreExtraElements]
 public sealed class Article
 {
     /// <summary>기사 URL과 제목/발행일을 기준으로 생성한 내부 기사 식별자입니다.</summary>
@@ -52,6 +54,7 @@ public sealed class Article
 }
 
 /// <summary>유사 기사들을 하나의 이슈로 묶은 그룹 문서입니다.</summary>
+[BsonIgnoreExtraElements]
 public sealed class ArticleGroup
 {
     /// <summary>그룹화 과정에서 생성한 이슈 그룹 식별자입니다.</summary>
@@ -154,6 +157,7 @@ public sealed class RelatedLinkDto
 }
 
 /// <summary>전날 또는 주간 이슈 요약 결과를 저장하는 요약 문서입니다.</summary>
+[BsonIgnoreExtraElements]
 public sealed class DailyIssueSummary
 {
     /// <summary>요약 대상 날짜 또는 주간 요약 키입니다. 주간은 weekly:시작일:종료일 형식을 사용합니다.</summary>
@@ -220,6 +224,9 @@ public sealed class DailyTopIssue
 
     /// <summary>대표 이슈에 연결된 기사 수입니다.</summary>
     public int ArticleCount { get; set; }
+
+    /// <summary>대표 이슈를 구성하는 원본 기사 ID 목록입니다.</summary>
+    public string[] ArticleIds { get; set; } = [];
 
     /// <summary>대표 이슈의 중요도 점수입니다.</summary>
     public int Score { get; set; }

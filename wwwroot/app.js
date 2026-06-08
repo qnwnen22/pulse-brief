@@ -71,11 +71,21 @@ const pageSize = 10;
 
 const newsList = document.querySelector("#newsList");
 const searchInput = document.querySelector("#searchInput");
+const dateFilter = document.querySelector("#dateFilter");
+const sourceFilter = document.querySelector("#sourceFilter");
+const imageFilter = document.querySelector("#imageFilter");
+const articleCountFilter = document.querySelector("#articleCountFilter");
+const sortSelect = document.querySelector("#sortSelect");
+const hotOnlyFilter = document.querySelector("#hotOnlyFilter");
+const resetFiltersButton = document.querySelector("#resetFiltersButton");
+const todayKeywords = document.querySelector("#todayKeywords");
 const topicCount = document.querySelector("#topicCount");
 const todayCount = document.querySelector("#todayCount");
 const impactScore = document.querySelector("#impactScore");
 const updateTime = document.querySelector("#updateTime");
-const metricGrid = document.querySelector(".metric-grid");
+const newsMetricGrid = document.querySelector("#newsMetricGrid");
+const menuEyebrow = document.querySelector("#menuEyebrow");
+const menuTitle = document.querySelector("#menuTitle");
 const categoryFilters = document.querySelector("#categoryFilters");
 const paginationControls = document.querySelector("#paginationControls");
 const topPaginationControls = document.querySelector("#topPaginationControls");
@@ -98,6 +108,17 @@ const preferredCategories = [
   "생활/건강",
   "지역",
 ];
+
+const viewTitles = {
+  briefing: {
+    eyebrow: "Briefing",
+    title: "카테고리별 이슈 흐름 요약",
+  },
+  feed: {
+    eyebrow: "News Search",
+    title: "뉴스 검색과 원문 출처 확인",
+  },
+};
 
 function escapeHtml(value) {
   return String(value || "")
@@ -164,14 +185,153 @@ function renderRelatedLinks(issue) {
     .join("");
 }
 
+function normalizeTitle(value) {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .replace(/[^\p{L}\p{N}\s]/gu, "")
+    .trim()
+    .toLowerCase();
+}
+
+function findTrackedIssue(summaryIssue, candidates) {
+  const articleIds = new Set((summaryIssue.articleIds || []).filter(Boolean));
+  if (articleIds.size) {
+    const byArticleId = candidates.find((candidate) =>
+      (candidate.articleIds || []).some((articleId) => articleIds.has(articleId))
+    );
+    if (byArticleId) return byArticleId;
+  }
+
+  const title = normalizeTitle(summaryIssue.title);
+  const sameCategory = candidates.filter((candidate) => !summaryIssue.category || candidate.category === summaryIssue.category);
+  return sameCategory.find((candidate) => normalizeTitle(candidate.title) === title)
+    || candidates.find((candidate) => normalizeTitle(candidate.title) === title)
+    || sameCategory.find((candidate) => {
+      const candidateTitle = normalizeTitle(candidate.title);
+      return title && (candidateTitle.includes(title) || title.includes(candidateTitle));
+    })
+    || null;
+}
+
+function renderWeeklyIssueList(weeklyIssueItems, targetItems) {
+  return `
+    <ol class="weekly-issue-list">
+      ${weeklyIssueItems.map((issue) => renderWeeklyIssueItem(issue, targetItems)).join("")}
+    </ol>
+  `;
+}
+
+function renderWeeklyIssueItem(issue, targetItems) {
+  const trackedIssue = findTrackedIssue(issue, targetItems);
+  const linkCount = trackedIssue?.relatedLinks?.length || 0;
+  const articleCount = Number(issue.articleCount || trackedIssue?.articleCount || linkCount || 0);
+
+  return `
+    <li>
+      <div class="weekly-issue-content">
+        <strong>${escapeHtml(issue.category || trackedIssue?.category || activeWeeklyCategory)}</strong>
+        <span>${escapeHtml(issue.title)}</span>
+        ${issue.summary ? `<p>${escapeHtml(compactText(issue.summary, 180))}</p>` : ""}
+      </div>
+      <details class="weekly-source-picker">
+        <summary class="source-button" aria-label="주간 주요 이슈 관련 기사 보기">
+          관련 기사${articleCount ? ` ${articleCount.toLocaleString("ko-KR")}건` : ""}
+        </summary>
+        <div class="weekly-source-menu">
+          ${trackedIssue ? renderRelatedLinks(trackedIssue) : '<span class="source-empty">연결된 관련 기사를 찾지 못했습니다.</span>'}
+        </div>
+      </details>
+    </li>
+  `;
+}
+
+function startOfDay(date) {
+  const result = new Date(date);
+  result.setHours(0, 0, 0, 0);
+  return result;
+}
+
+function getSourceNames(issue) {
+  const values = [issue.source, ...(issue.relatedLinks || []).map((link) => link.source)]
+    .flatMap((source) => String(source || "").split(","))
+    .map((source) => source.trim())
+    .filter(Boolean);
+  return [...new Set(values)];
+}
+
+function getSourceCount(issue) {
+  return getSourceNames(issue).length || (issue.source ? 1 : 0);
+}
+
+function getIssueImageUrl(issue) {
+  return safeUrl(issue.imageUrl) || safeUrl((issue.relatedLinks || []).find((link) => link.imageUrl)?.imageUrl);
+}
+
+function matchesDateFilter(issue) {
+  const value = dateFilter?.value || "all";
+  if (value === "all") return true;
+
+  const issueDay = startOfDay(getIssueDate(issue)).getTime();
+  const today = startOfDay(new Date()).getTime();
+  const oneDay = 24 * 60 * 60 * 1000;
+
+  if (value === "today") return issueDay === today;
+  if (value === "yesterday") return issueDay === today - oneDay;
+  if (value === "week") return getIssueDate(issue).getTime() >= Date.now() - 7 * oneDay;
+  return true;
+}
+
+function matchesSourceFilter(issue) {
+  const selectedSource = sourceFilter?.value || "all";
+  if (selectedSource === "all") return true;
+  return getSourceNames(issue).includes(selectedSource);
+}
+
+function matchesImageFilter(issue) {
+  const value = imageFilter?.value || "all";
+  if (value === "all") return true;
+  const hasImage = Boolean(getIssueImageUrl(issue));
+  return value === "with" ? hasImage : !hasImage;
+}
+
+function matchesArticleCountFilter(issue) {
+  const minCount = Number(articleCountFilter?.value || 0);
+  if (!minCount) return true;
+  return Number(issue.articleCount || 1) >= minCount;
+}
+
+function compareIssues(a, b) {
+  const sortValue = sortSelect?.value || "latest";
+  const dateDiff = getIssueDate(b) - getIssueDate(a);
+  const impactDiff = Number(b.impact || 0) - Number(a.impact || 0);
+  const articleDiff = Number(b.articleCount || 1) - Number(a.articleCount || 1);
+  const sourceDiff = getSourceCount(b) - getSourceCount(a);
+
+  if (sortValue === "oldest") return getIssueDate(a) - getIssueDate(b);
+  if (sortValue === "impactDesc") return impactDiff || dateDiff;
+  if (sortValue === "impactAsc") return -impactDiff || dateDiff;
+  if (sortValue === "articleCountDesc") return articleDiff || impactDiff || dateDiff;
+  if (sortValue === "articleCountAsc") return -articleDiff || dateDiff;
+  if (sortValue === "sourceCountDesc") return sourceDiff || articleDiff || dateDiff;
+  if (sortValue === "sourceCountAsc") return -sourceDiff || dateDiff;
+  if (sortValue === "titleAsc") return String(a.title || "").localeCompare(String(b.title || ""), "ko") || dateDiff;
+  return dateDiff || impactDiff;
+}
+
 function getVisibleIssues() {
   const query = (searchInput?.value || "").trim().toLowerCase();
   return issues.filter((issue) => {
     const matchesFilter = activeFilter === "전체" || issue.category === activeFilter;
     const relatedText = (issue.relatedLinks || []).map((link) => `${link.title} ${link.source}`).join(" ");
     const text = `${issue.title} ${issue.category} ${issue.source} ${issue.summary} ${relatedText} ${issue.keywords.join(" ")}`.toLowerCase();
-    return matchesFilter && (!query || text.includes(query));
-  });
+    return matchesFilter
+      && (!query || text.includes(query))
+      && matchesDateFilter(issue)
+      && matchesSourceFilter(issue)
+      && matchesImageFilter(issue)
+      && matchesArticleCountFilter(issue)
+      && (!hotOnlyFilter?.checked || issue.heat === "hot");
+  }).sort(compareIssues);
 }
 
 function renderNews() {
@@ -187,6 +347,7 @@ function renderNews() {
     newsList.innerHTML = '<div class="empty-state">검색 조건에 맞는 이슈가 없습니다.</div>';
     renderMetrics(visible);
     renderWeeklySummary();
+    renderTodayKeywords();
     renderPagination(0);
     return;
   }
@@ -194,7 +355,7 @@ function renderNews() {
   pageItems.forEach((issue) => {
     const card = document.createElement("article");
     card.className = "news-card";
-    const imageUrl = safeUrl(issue.imageUrl) || safeUrl((issue.relatedLinks || []).find((link) => link.imageUrl)?.imageUrl);
+    const imageUrl = getIssueImageUrl(issue);
     const keywords = issue.keywords.map((keyword) => `#${escapeHtml(keyword)}`).join(" ");
     card.innerHTML = `
       <div class="signal-art" aria-hidden="true"></div>
@@ -229,6 +390,7 @@ function renderNews() {
 
   renderMetrics(visible);
   renderWeeklySummary();
+  renderTodayKeywords();
   renderPagination(visible.length);
 }
 
@@ -359,11 +521,7 @@ function renderWeeklySummary() {
       <h3>${escapeHtml(activeWeeklyCategory)} 주간 요약</h3>
       <p>${escapeHtml(weeklyText)}</p>
     </div>
-    <ol class="weekly-issue-list">
-      ${weeklyIssueItems
-        .map((issue) => `<li><strong>${escapeHtml(issue.category)}</strong><span>${escapeHtml(issue.title)}</span></li>`)
-        .join("")}
-    </ol>
+    ${renderWeeklyIssueList(weeklyIssueItems, targetItems)}
   `;
 }
 
@@ -377,30 +535,60 @@ function renderWeeklyStats(category, targetItems, sourceCount, weeklyLabel) {
     : 0;
 
   weeklyStats.innerHTML = `
-    <div>
-      <span>선택 카테고리</span>
-      <strong>${escapeHtml(category)}</strong>
-    </div>
-    <div>
-      <span>${escapeHtml(weeklyLabel)} 이슈</span>
-      <strong>${targetItems.length.toLocaleString("ko-KR")}</strong>
-    </div>
-    <div>
-      <span>확인 출처</span>
-      <strong>${sourceCount.toLocaleString("ko-KR")}</strong>
-    </div>
-    <div>
-      <span>관련 기사</span>
-      <strong>${articleCount.toLocaleString("ko-KR")}</strong>
-    </div>
-    <div>
-      <span>중요도 평균</span>
-      <strong>${averageImpact.toFixed(1)}</strong>
-    </div>
-    <div>
-      <span>최상위 이슈</span>
-      <strong>${escapeHtml(topIssue?.title || "-")}</strong>
-    </div>
+    ${renderMetricCard(
+      "선택 카테고리",
+      category,
+      "요약 기준",
+      "전날 이슈 요약과 주간 이슈 요약을 계산할 때 사용 중인 카테고리입니다.",
+      "compact-value"
+    )}
+    ${renderMetricCard(
+      `${weeklyLabel} 이슈`,
+      targetItems.length.toLocaleString("ko-KR"),
+      "선택 카테고리 기준",
+      "최근 7일 데이터가 있으면 최근 7일 이슈 묶음 수를, 없으면 저장된 데이터 전체 기준 이슈 묶음 수를 보여줍니다."
+    )}
+    ${renderMetricCard(
+      "확인 출처",
+      sourceCount.toLocaleString("ko-KR"),
+      "중복 출처 제외",
+      "선택 카테고리의 이슈를 구성하는 기사 출처를 중복 없이 계산한 값입니다."
+    )}
+    ${renderMetricCard(
+      "관련 기사",
+      articleCount.toLocaleString("ko-KR"),
+      "그룹에 포함된 기사",
+      "선택 카테고리의 이슈 묶음 안에 포함된 개별 기사 수의 합계입니다."
+    )}
+    ${renderMetricCard(
+      "중요도 평균",
+      averageImpact.toFixed(1),
+      "선택 카테고리 평균",
+      "관련 기사 수와 출처 수를 반영해 계산한 중요도 점수의 평균입니다. 값이 높을수록 여러 기사에서 반복적으로 확인된 흐름에 가깝습니다."
+    )}
+    ${renderMetricCard(
+      "최상위 이슈",
+      topIssue?.title || "-",
+      "중요도 기준",
+      "선택 카테고리에서 중요도 점수가 가장 높은 이슈입니다.",
+      "long-value"
+    )}
+  `;
+}
+
+function renderMetricCard(label, value, description, helpText, valueClass = "") {
+  const className = valueClass ? ` ${valueClass}` : "";
+  return `
+    <article class="metric">
+      <div class="metric-label">
+        <span>${escapeHtml(label)}</span>
+        <span class="metric-help" tabindex="0" aria-label="${escapeHtml(label)} 도움말">
+          <span class="metric-tooltip">${escapeHtml(helpText)}</span>
+        </span>
+      </div>
+      <strong class="${className.trim()}">${escapeHtml(value)}</strong>
+      <small>${escapeHtml(description)}</small>
+    </article>
   `;
 }
 
@@ -473,6 +661,60 @@ function renderCategoryFilters() {
     .join("");
 }
 
+function renderSourceFilter() {
+  if (!sourceFilter) return;
+
+  const currentValue = sourceFilter.value || "all";
+  const sourceNames = [...new Set(issues.flatMap(getSourceNames))]
+    .sort((a, b) => a.localeCompare(b, "ko"));
+
+  sourceFilter.innerHTML = [
+    '<option value="all">전체 출처</option>',
+    ...sourceNames.map((source) => `<option value="${escapeHtml(source)}">${escapeHtml(source)}</option>`),
+  ].join("");
+  sourceFilter.value = sourceNames.includes(currentValue) ? currentValue : "all";
+}
+
+function renderTodayKeywords() {
+  if (!todayKeywords) return;
+
+  const todayKey = startOfDay(new Date()).getTime();
+  const counts = new Map();
+  issues
+    .filter((issue) => getIssueDate(issue).toDateString() === new Date(todayKey).toDateString())
+    .forEach((issue) => {
+      (issue.keywords || []).forEach((keyword) => {
+        const cleaned = String(keyword || "").replace(/^#/, "").trim();
+        if (!cleaned) return;
+        counts.set(cleaned, (counts.get(cleaned) || 0) + 1);
+      });
+    });
+
+  const keywordItems = [...counts.entries()]
+    .filter(([, count]) => count >= 5)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ko"))
+    .slice(0, 16);
+
+  if (!keywordItems.length) {
+    todayKeywords.innerHTML = "";
+    todayKeywords.classList.add("hidden");
+    return;
+  }
+
+  todayKeywords.classList.remove("hidden");
+  todayKeywords.innerHTML = `
+    <div>
+      <strong>금일 주요 키워드</strong>
+      <span>오늘 뉴스에서 5회 이상 확인된 키워드</span>
+    </div>
+    <div class="keyword-list">
+      ${keywordItems
+        .map(([keyword, count]) => `<button type="button" data-keyword="${escapeHtml(keyword)}">#${escapeHtml(keyword)} <span>${count}</span></button>`)
+        .join("")}
+    </div>
+  `;
+}
+
 function renderMetrics() {
   const categoryItems = getCategoryIssues(activeFilter);
   const todayKey = new Date().toDateString();
@@ -492,13 +734,16 @@ function renderMetrics() {
 
 function showView(view) {
   const targetView = [...viewPanels].some((panel) => panel.dataset.panel === view) ? view : "briefing";
+  const title = viewTitles[targetView] || viewTitles.briefing;
   navItems.forEach((item) => {
     item.classList.toggle("active", item.dataset.view === targetView);
   });
   viewPanels.forEach((panel) => {
     panel.classList.toggle("active", panel.dataset.panel === targetView);
   });
-  metricGrid?.classList.toggle("hidden", targetView === "briefing");
+  newsMetricGrid?.classList.toggle("hidden", targetView === "briefing");
+  if (menuEyebrow) menuEyebrow.textContent = title.eyebrow;
+  if (menuTitle) menuTitle.textContent = title.title;
 }
 
 navItems.forEach((item) => {
@@ -506,6 +751,18 @@ navItems.forEach((item) => {
     showView(item.dataset.view);
   });
 });
+
+function resetSearchFilters() {
+  if (searchInput) searchInput.value = "";
+  if (dateFilter) dateFilter.value = "all";
+  if (sourceFilter) sourceFilter.value = "all";
+  if (imageFilter) imageFilter.value = "all";
+  if (articleCountFilter) articleCountFilter.value = "all";
+  if (sortSelect) sortSelect.value = "latest";
+  if (hotOnlyFilter) hotOnlyFilter.checked = false;
+  currentPage = 1;
+  renderNews();
+}
 
 categoryFilters.addEventListener("click", (event) => {
   const button = event.target.closest(".segment");
@@ -594,6 +851,7 @@ async function refreshFromServer() {
       await loadDailySummary();
       await loadWeeklySummary();
       currentPage = 1;
+      renderSourceFilter();
       renderCategoryFilters();
       renderNews();
       return;
@@ -612,8 +870,30 @@ searchInput?.addEventListener("input", () => {
   currentPage = 1;
   renderNews();
 });
+
+[dateFilter, sourceFilter, imageFilter, articleCountFilter, sortSelect, hotOnlyFilter]
+  .filter(Boolean)
+  .forEach((control) => {
+    control.addEventListener("change", () => {
+      currentPage = 1;
+      renderNews();
+    });
+  });
+
+resetFiltersButton?.addEventListener("click", resetSearchFilters);
+
+todayKeywords?.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-keyword]");
+  if (!button || !searchInput) return;
+  searchInput.value = button.dataset.keyword || "";
+  currentPage = 1;
+  renderNews();
+});
 document.addEventListener("click", (event) => {
   document.querySelectorAll(".source-picker[open]").forEach((picker) => {
+    if (!picker.contains(event.target)) picker.removeAttribute("open");
+  });
+  document.querySelectorAll(".weekly-source-picker[open]").forEach((picker) => {
     if (!picker.contains(event.target)) picker.removeAttribute("open");
   });
 });
@@ -621,6 +901,7 @@ loadServerBriefs().then(() => {
   showView("briefing");
   loadDailySummary();
   loadWeeklySummary();
+  renderSourceFilter();
   renderCategoryFilters();
   renderNews();
 });

@@ -25,45 +25,57 @@
             <span aria-hidden="true">⌕</span> 뉴스 검색
           </button>
         </nav>
-
-        <section class="source-panel" aria-labelledby="source-title">
-          <h2 id="source-title">수집 소스</h2>
-          <label><input type="checkbox" checked /> 국내 주요 뉴스</label>
-          <label><input type="checkbox" checked /> 글로벌 미디어</label>
-          <label><input type="checkbox" checked /> 정책/공공기관</label>
-          <label><input type="checkbox" checked /> 방송사 RSS</label>
-        </section>
       </aside>
 
       <main class="workspace">
         <header class="topbar">
           <div>
-            <p class="eyebrow">2026.06.08 · 서울 기준</p>
-            <h1>지금 중요한 이슈를 한눈에</h1>
+            <p id="menuEyebrow" class="eyebrow">Briefing</p>
+            <h1 id="menuTitle">카테고리별 이슈 흐름 요약</h1>
           </div>
           <div class="top-actions">
             <button class="icon-button" id="refreshButton" type="button" aria-label="새로고침" title="새로고침">↻</button>
           </div>
         </header>
 
-        <section class="metric-grid hidden" aria-label="뉴스검색 지표">
+        <section id="newsMetricGrid" class="metric-grid hidden" aria-label="뉴스검색 지표">
           <article class="metric">
-            <span>전체 뉴스</span>
+            <div class="metric-label">
+              <span>전체 뉴스</span>
+              <span class="metric-help" tabindex="0" aria-label="전체 뉴스 도움말">
+                <span class="metric-tooltip">현재 선택한 카테고리에 포함된 전체 이슈 묶음 수입니다. 검색어나 상세 필터와는 별개로 카테고리 기준 총량을 보여줍니다.</span>
+              </span>
+            </div>
             <strong id="topicCount">0</strong>
             <small>선택한 카테고리 기준</small>
           </article>
           <article class="metric">
-            <span>금일 뉴스</span>
+            <div class="metric-label">
+              <span>금일 뉴스</span>
+              <span class="metric-help" tabindex="0" aria-label="금일 뉴스 도움말">
+                <span class="metric-tooltip">오늘 발행된 기사 중 선택한 카테고리에 속한 이슈 묶음 수입니다.</span>
+              </span>
+            </div>
             <strong id="todayCount">0</strong>
             <small>오늘 발행된 기사 기준</small>
           </article>
           <article class="metric">
-            <span>금일 중요도 평균</span>
+            <div class="metric-label">
+              <span>금일 중요도 평균</span>
+              <span class="metric-help" tabindex="0" aria-label="금일 중요도 평균 도움말">
+                <span class="metric-tooltip">오늘 뉴스의 중요도 점수를 평균낸 값입니다. 관련 기사 수와 출처 수를 보수적으로 반영한 내부 지표입니다.</span>
+              </span>
+            </div>
             <strong id="impactScore">0.0</strong>
             <small>오늘 뉴스 중요도 평균</small>
           </article>
           <article class="metric">
-            <span>업데이트</span>
+            <div class="metric-label">
+              <span>업데이트</span>
+              <span class="metric-help" tabindex="0" aria-label="업데이트 도움말">
+                <span class="metric-tooltip">현재 화면의 데이터와 지표가 마지막으로 갱신된 시각입니다. 새로고침 버튼을 누르면 RSS 수집 후 다시 계산됩니다.</span>
+              </span>
+            </div>
             <strong id="updateTime">--:--</strong>
             <small>마지막 화면 갱신 시각</small>
           </article>
@@ -71,7 +83,7 @@
 
         <div class="content-grid">
           <div class="briefing-panel view-panel active" data-panel="briefing">
-            <div id="weeklyStats" class="weekly-stats" aria-label="선택 카테고리 지표"></div>
+            <div id="weeklyStats" class="metric-grid briefing-metrics" aria-label="선택 카테고리 지표"></div>
             <div id="weeklyCategoryTabs" class="weekly-tabs" aria-label="주간 이슈 카테고리"></div>
 
             <section class="daily-box" aria-labelledby="daily-summary-title">
@@ -108,6 +120,60 @@
             </div>
             <div class="feed-controls">
               <div id="categoryFilters" class="segmented" role="tablist" aria-label="카테고리 필터"></div>
+              <div class="search-tools" aria-label="뉴스 검색 상세 도구">
+                <label>
+                  기간
+                  <select id="dateFilter">
+                    <option value="all">전체</option>
+                    <option value="today">오늘</option>
+                    <option value="yesterday">어제</option>
+                    <option value="week">최근 7일</option>
+                  </select>
+                </label>
+                <label>
+                  출처
+                  <select id="sourceFilter">
+                    <option value="all">전체 출처</option>
+                  </select>
+                </label>
+                <label>
+                  이미지
+                  <select id="imageFilter">
+                    <option value="all">전체</option>
+                    <option value="with">이미지 있음</option>
+                    <option value="without">이미지 없음</option>
+                  </select>
+                </label>
+                <label>
+                  묶인 기사
+                  <select id="articleCountFilter">
+                    <option value="all">전체</option>
+                    <option value="2">2개 이상</option>
+                    <option value="5">5개 이상</option>
+                    <option value="10">10개 이상</option>
+                  </select>
+                </label>
+                <label>
+                  정렬
+                  <select id="sortSelect">
+                    <option value="latest">최신순</option>
+                    <option value="oldest">오래된순</option>
+                    <option value="impactDesc">중요도 높은순</option>
+                    <option value="impactAsc">중요도 낮은순</option>
+                    <option value="articleCountDesc">묶인 기사 많은순</option>
+                    <option value="articleCountAsc">묶인 기사 적은순</option>
+                    <option value="sourceCountDesc">출처 많은순</option>
+                    <option value="sourceCountAsc">출처 적은순</option>
+                    <option value="titleAsc">제목 가나다순</option>
+                  </select>
+                </label>
+                <label class="check-filter">
+                  <input id="hotOnlyFilter" type="checkbox" />
+                  HOT만
+                </label>
+                <button id="resetFiltersButton" class="ghost-button" type="button">초기화</button>
+              </div>
+              <section id="todayKeywords" class="keyword-panel" aria-label="금일 주요 키워드"></section>
             </div>
             <div id="topPaginationControls" class="pagination-controls pagination-controls-top" aria-label="이슈 피드 상단 페이지 이동"></div>
             <div id="newsList" class="news-list" aria-live="polite"></div>

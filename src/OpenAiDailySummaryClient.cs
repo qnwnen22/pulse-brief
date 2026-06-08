@@ -73,7 +73,7 @@ public sealed class OpenAiDailySummaryClient(HttpClient httpClient, IConfigurati
 
             return ApplyAiResult(draft, outputText, model);
         }
-        catch (Exception error) when (error is HttpRequestException or TaskCanceledException or JsonException)
+        catch (Exception error) when (error is not OperationCanceledException)
         {
             Console.WriteLine($"[openai] daily summary failed: {error.Message}");
             return null;
@@ -171,7 +171,10 @@ public sealed class OpenAiDailySummaryClient(HttpClient httpClient, IConfigurati
     private static void ApplyCategorySummaries(DailyIssueSummary draft, JsonArray? categories)
     {
         if (categories is null) return;
-        var byCategory = draft.Categories.ToDictionary(item => item.Category, StringComparer.OrdinalIgnoreCase);
+        var byCategory = draft.Categories
+            .Where(item => !string.IsNullOrWhiteSpace(item.Category))
+            .GroupBy(item => item.Category, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
         foreach (var item in categories)
         {
             var category = item?["category"]?.GetValue<string>();
@@ -185,7 +188,10 @@ public sealed class OpenAiDailySummaryClient(HttpClient httpClient, IConfigurati
     private static void ApplyIssueSummaries(DailyIssueSummary draft, JsonArray? issues)
     {
         if (issues is null) return;
-        var byTitle = draft.TopIssues.ToDictionary(item => item.Title, StringComparer.OrdinalIgnoreCase);
+        var byTitle = draft.TopIssues
+            .Where(item => !string.IsNullOrWhiteSpace(item.Title))
+            .GroupBy(item => item.Title, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
         foreach (var item in issues)
         {
             var title = item?["title"]?.GetValue<string>();
