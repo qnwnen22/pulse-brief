@@ -73,7 +73,6 @@ const newsList = document.querySelector("#newsList");
 const searchInput = document.querySelector("#searchInput");
 const dateFilter = document.querySelector("#dateFilter");
 const sourceFilter = document.querySelector("#sourceFilter");
-const imageFilter = document.querySelector("#imageFilter");
 const articleCountFilter = document.querySelector("#articleCountFilter");
 const sortSelect = document.querySelector("#sortSelect");
 const hotOnlyFilter = document.querySelector("#hotOnlyFilter");
@@ -332,13 +331,6 @@ function matchesSourceFilter(issue) {
   return getSourceNames(issue).includes(selectedSource);
 }
 
-function matchesImageFilter(issue) {
-  const value = imageFilter?.value || "all";
-  if (value === "all") return true;
-  const hasImage = Boolean(getIssueImageUrl(issue));
-  return value === "with" ? hasImage : !hasImage;
-}
-
 function matchesArticleCountFilter(issue) {
   const minCount = Number(articleCountFilter?.value || 0);
   if (!minCount) return true;
@@ -373,7 +365,6 @@ function getVisibleIssues() {
       && (!query || text.includes(query))
       && matchesDateFilter(issue)
       && matchesSourceFilter(issue)
-      && matchesImageFilter(issue)
       && matchesArticleCountFilter(issue)
       && (!hotOnlyFilter?.checked || issue.heat === "hot");
   }).sort(compareIssues);
@@ -796,7 +787,6 @@ function resetSearchFilters() {
   if (searchInput) searchInput.value = "";
   if (dateFilter) dateFilter.value = "all";
   if (sourceFilter) sourceFilter.value = "all";
-  if (imageFilter) imageFilter.value = "all";
   if (articleCountFilter) articleCountFilter.value = "all";
   if (sortSelect) sortSelect.value = "latest";
   if (hotOnlyFilter) hotOnlyFilter.checked = false;
@@ -911,7 +901,7 @@ searchInput?.addEventListener("input", () => {
   renderNews();
 });
 
-[dateFilter, sourceFilter, imageFilter, articleCountFilter, sortSelect, hotOnlyFilter]
+[dateFilter, sourceFilter, articleCountFilter, sortSelect, hotOnlyFilter]
   .filter(Boolean)
   .forEach((control) => {
     control.addEventListener("change", () => {
