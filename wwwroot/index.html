@@ -11,7 +11,30 @@
     <div class="app-shell">
       <aside class="sidebar" aria-label="서비스 메뉴">
         <div class="brand">
-          <img class="brand-logo" src="assets/pulse-brief-wordmark.png" alt="Pulse Brief" />
+          <span class="brand-logo-mark">
+            <img class="brand-logo" src="assets/pulse-brief-wordmark.png" alt="Pulse Brief" />
+            <svg class="brand-signal-light" viewBox="0 0 1456 1024" aria-hidden="true" focusable="false">
+              <g class="brand-signal-pulse" opacity="0">
+                <circle class="brand-signal-halo" r="28" />
+                <circle class="brand-signal-core" r="8" />
+                <animateMotion
+                  dur="4.2s"
+                  repeatCount="indefinite"
+                  calcMode="linear"
+                  keyTimes="0;0.36;1"
+                  keyPoints="0;1;1"
+                  path="M70 602 H664 C680 602 676 587 690 586 C709 585 704 624 724 623 C747 622 744 515 761 514 C776 513 784 666 800 668 C816 670 811 592 835 589 C851 587 847 601 864 602 H1370"
+                />
+                <animate
+                  attributeName="opacity"
+                  dur="4.2s"
+                  repeatCount="indefinite"
+                  keyTimes="0;0.36;0.42;1"
+                  values="1;1;0;0"
+                />
+              </g>
+            </svg>
+          </span>
         </div>
 
         <nav class="nav-list" aria-label="대시보드 보기">
