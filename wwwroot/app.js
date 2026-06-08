@@ -95,6 +95,7 @@ const weeklyCategoryTabs = document.querySelector("#weeklyCategoryTabs");
 const weeklyStats = document.querySelector("#weeklyStats");
 const navItems = document.querySelectorAll(".nav-item[data-view]");
 const viewPanels = document.querySelectorAll(".view-panel[data-panel]");
+const appLoading = document.querySelector("#appLoading");
 
 const preferredCategories = [
   "정치/정책",
@@ -710,20 +711,35 @@ function renderTodayKeywords() {
   if (!todayKeywords) return;
 
   const todayKey = startOfDay(new Date()).getTime();
-  const counts = new Map();
+  const keywordStats = new Map();
+  const countedIssueKeys = new Set();
   issues
     .filter((issue) => getIssueDate(issue).toDateString() === new Date(todayKey).toDateString())
     .forEach((issue) => {
-      (issue.keywords || []).forEach((keyword) => {
+      const issueKey = `${issue.source || ""}|${normalizeTitle(issue.title)}`;
+      if (countedIssueKeys.has(issueKey)) return;
+      countedIssueKeys.add(issueKey);
+
+      const issueSources = getSourceNames(issue);
+      const uniqueKeywords = new Set((issue.keywords || [])
+        .map((keyword) => String(keyword || "").replace(/^#/, "").trim())
+        .filter(Boolean));
+
+      uniqueKeywords.forEach((keyword) => {
         const cleaned = String(keyword || "").replace(/^#/, "").trim();
         if (!cleaned) return;
-        counts.set(cleaned, (counts.get(cleaned) || 0) + 1);
+
+        const stats = keywordStats.get(cleaned) || { count: 0, sources: new Set() };
+        stats.count += 1;
+        issueSources.forEach((source) => stats.sources.add(source));
+        keywordStats.set(cleaned, stats);
       });
     });
 
-  const keywordItems = [...counts.entries()]
-    .filter(([, count]) => count >= 5)
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ko"))
+  const keywordItems = [...keywordStats.entries()]
+    .map(([keyword, stats]) => [keyword, stats.count, stats.sources.size])
+    .filter(([, count, sourceCount]) => count >= 5 && sourceCount >= 3)
+    .sort((a, b) => b[1] - a[1] || b[2] - a[2] || a[0].localeCompare(b[0], "ko"))
     .slice(0, 16);
 
   if (!keywordItems.length) {
@@ -736,11 +752,11 @@ function renderTodayKeywords() {
   todayKeywords.innerHTML = `
     <div>
       <strong>금일 주요 키워드</strong>
-      <span>오늘 뉴스에서 5회 이상 확인된 키워드</span>
+      <span>오늘 5회 이상, 3개 이상 출처에서 확인된 키워드</span>
     </div>
     <div class="keyword-list">
       ${keywordItems
-        .map(([keyword, count]) => `<button type="button" data-keyword="${escapeHtml(keyword)}">#${escapeHtml(keyword)} <span>${count}</span></button>`)
+        .map(([keyword, count, sourceCount]) => `<button type="button" data-keyword="${escapeHtml(keyword)}">#${escapeHtml(keyword)} <span>${count}회 · ${sourceCount}출처</span></button>`)
         .join("")}
     </div>
   `;
@@ -927,11 +943,31 @@ document.addEventListener("click", (event) => {
     if (!picker.contains(event.target)) picker.removeAttribute("open");
   });
 });
-loadServerBriefs().then(() => {
-  showView("briefing");
-  loadDailySummary();
-  loadWeeklySummary();
-  renderSourceFilter();
-  renderCategoryFilters();
-  renderNews();
-});
+
+function hideAppLoading() {
+  document.body.classList.remove("loading-active");
+  if (!appLoading) return;
+  appLoading.classList.add("done");
+  window.setTimeout(() => {
+    appLoading.setAttribute("hidden", "");
+  }, 280);
+}
+
+async function initializeApp() {
+  document.body.classList.add("loading-active");
+
+  try {
+    await loadServerBriefs();
+    showView("briefing");
+    renderSourceFilter();
+    renderCategoryFilters();
+    renderNews();
+    Promise.all([loadDailySummary(), loadWeeklySummary()]).catch((error) => {
+      console.warn(`[summary-load] ${error.message}`);
+    });
+  } finally {
+    hideAppLoading();
+  }
+}
+
+initializeApp();

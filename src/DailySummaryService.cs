@@ -76,17 +76,17 @@ public sealed class DailySummaryService(IArticleStore store, OpenAiDailySummaryC
                 var groupDate = ToKoreaDate(group.LatestPublishedAt);
                 return groupDate >= startDate && groupDate <= endDate;
             })
-            .OrderByDescending(group => group.Score)
+            .OrderByDescending(group => EffectiveScore(group, articleById))
             .ThenByDescending(group => group.ArticleCount)
             .ThenByDescending(group => group.LatestPublishedAt)
             .ToList();
 
         var effectiveArticleIds = targetGroups
-            .SelectMany(group => EffectiveArticleIds(group, articleById))
+            .SelectMany(group => ArticleDedupe.EffectiveArticleIds(group, articleById))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
         var sourceCount = targetGroups
-            .SelectMany(group => group.Sources)
+            .SelectMany(group => EffectiveSources(group, articleById))
             .Where(source => !string.IsNullOrWhiteSpace(source))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Count();
@@ -99,15 +99,15 @@ public sealed class DailySummaryService(IArticleStore store, OpenAiDailySummaryC
             {
                 var topGroup = group
                     .OrderBy(item => IsLowBriefingValueGroup(item) ? 1 : 0)
-                    .ThenByDescending(item => EffectiveSourceCount(item, articleById))
-                    .ThenByDescending(item => EffectiveArticleCount(item, articleById))
-                    .ThenByDescending(item => item.Score)
+                    .ThenByDescending(item => ArticleDedupe.EffectiveSourceCount(item, articleById))
+                    .ThenByDescending(item => ArticleDedupe.EffectiveArticleCount(item, articleById))
+                    .ThenByDescending(item => EffectiveScore(item, articleById))
                     .First();
                 return new DailyCategorySummary
                 {
                     Category = group.Key,
                     IssueCount = group.Count(),
-                    ArticleCount = group.SelectMany(item => EffectiveArticleIds(item, articleById)).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+                    ArticleCount = group.SelectMany(item => ArticleDedupe.EffectiveArticleIds(item, articleById)).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
                     Summary = $"{Clean(topGroup.RepresentativeTitle)} 이슈가 가장 두드러졌고, 이 카테고리에서 {group.Count()}개 이슈가 확인됐습니다."
                 };
             })
@@ -116,20 +116,21 @@ public sealed class DailySummaryService(IArticleStore store, OpenAiDailySummaryC
             .GroupBy(group => group.Category)
             .SelectMany(group => group
                 .OrderBy(item => IsLowBriefingValueGroup(item) ? 1 : 0)
-                .ThenByDescending(item => EffectiveSourceCount(item, articleById))
-                .ThenByDescending(item => EffectiveArticleCount(item, articleById))
-                .ThenByDescending(item => item.Score)
+                .ThenByDescending(item => ArticleDedupe.EffectiveSourceCount(item, articleById))
+                .ThenByDescending(item => ArticleDedupe.EffectiveArticleCount(item, articleById))
+                .ThenByDescending(item => EffectiveScore(item, articleById))
                 .ThenByDescending(item => item.LatestPublishedAt)
                 .Take(4))
             .OrderByDescending(group => categorySummaries.FirstOrDefault(category => category.Category == group.Category)?.IssueCount ?? 0)
             .ThenBy(group => IsLowBriefingValueGroup(group) ? 1 : 0)
-            .ThenByDescending(group => EffectiveSourceCount(group, articleById))
-            .ThenByDescending(group => EffectiveArticleCount(group, articleById))
-            .ThenByDescending(group => group.Score)
+            .ThenByDescending(group => ArticleDedupe.EffectiveSourceCount(group, articleById))
+            .ThenByDescending(group => ArticleDedupe.EffectiveArticleCount(group, articleById))
+            .ThenByDescending(group => EffectiveScore(group, articleById))
             .Take(20)
             .Select(group =>
             {
-                var effectiveIds = EffectiveArticleIds(group, articleById).ToArray();
+                var effectiveIds = ArticleDedupe.EffectiveArticleIds(group, articleById);
+                var effectiveSources = EffectiveSources(group, articleById);
                 return new DailyTopIssue
                 {
                     Title = Clean(group.RepresentativeTitle),
@@ -137,8 +138,8 @@ public sealed class DailySummaryService(IArticleStore store, OpenAiDailySummaryC
                     Summary = Clean(group.Summary),
                     ArticleCount = effectiveIds.Length,
                     ArticleIds = effectiveIds,
-                    Score = group.Score,
-                    Sources = group.Sources.Take(4).ToArray()
+                    Score = EffectiveScore(group, articleById),
+                    Sources = effectiveSources.Take(4).ToArray()
                 };
             })
             .ToArray();
@@ -168,54 +169,30 @@ public sealed class DailySummaryService(IArticleStore store, OpenAiDailySummaryC
     /// <summary>포토/화보처럼 사실 흐름 요약 가치가 낮은 이슈를 대표 요약 후보에서 후순위로 밀기 위해 판별합니다.</summary>
     private static bool IsLowBriefingValueGroup(ArticleGroup group)
     {
-        var text = $"{string.Join(' ', group.Sources)} {group.RepresentativeTitle} {group.SeedTitle}".ToLowerInvariant();
-        return text.Contains("et포토", StringComparison.OrdinalIgnoreCase)
-            || text.Contains("포토", StringComparison.OrdinalIgnoreCase)
-            || text.Contains("화보", StringComparison.OrdinalIgnoreCase);
+        return IssueSignalCalculator.IsLowBriefingValue($"{group.RepresentativeTitle} {group.SeedTitle}", group.Sources);
     }
 
-    /// <summary>같은 출처, 제목, 작성자가 반복된 기사 묶음을 하나로 보아 요약용 유효 기사 ID를 반환합니다.</summary>
-    private static IEnumerable<string> EffectiveArticleIds(ArticleGroup group, IReadOnlyDictionary<string, Article> articleById)
+    /// <summary>요약 정렬과 노출에 사용할 중복 제거 기준의 중요도 점수를 계산합니다.</summary>
+    private static int EffectiveScore(ArticleGroup group, IReadOnlyDictionary<string, Article> articleById)
     {
-        return group.ArticleIds
-            .Select(id => articleById.TryGetValue(id, out var article) ? article : null)
-            .Where(article => article is not null)
-            .GroupBy(article => DuplicateKey(article!), StringComparer.OrdinalIgnoreCase)
-            .Select(duplicateGroup => duplicateGroup
-                .OrderByDescending(article => article!.PublishedAt)
-                .First()!.Id);
+        var effectiveArticleCount = ArticleDedupe.EffectiveArticleCount(group, articleById);
+        var sources = EffectiveSources(group, articleById);
+        var articleCount = effectiveArticleCount > 0 ? effectiveArticleCount : group.ArticleCount;
+        return IssueSignalCalculator.CalculateImpact(articleCount, sources.Length, Clean(group.RepresentativeTitle), sources);
     }
 
-    /// <summary>요약 후보 정렬에 사용할 중복 제거 기사 수입니다.</summary>
-    private static int EffectiveArticleCount(ArticleGroup group, IReadOnlyDictionary<string, Article> articleById)
+    /// <summary>중복 제거 후 남은 기사에서 출처를 추출하고, 기사 문서가 없으면 그룹의 저장 출처를 사용합니다.</summary>
+    private static string[] EffectiveSources(ArticleGroup group, IReadOnlyDictionary<string, Article> articleById)
     {
-        return EffectiveArticleIds(group, articleById).Count();
-    }
-
-    /// <summary>요약 후보 정렬에 사용할 중복 제거 출처 수입니다.</summary>
-    private static int EffectiveSourceCount(ArticleGroup group, IReadOnlyDictionary<string, Article> articleById)
-    {
-        return group.ArticleIds
-            .Select(id => articleById.TryGetValue(id, out var article) ? article : null)
-            .Where(article => article is not null)
-            .Select(article => Clean(article!.Source))
+        var sources = ArticleDedupe.EffectiveArticles(group.ArticleIds.Select(id => articleById.TryGetValue(id, out var article) ? article : null))
+            .Select(article => Clean(article.Source))
             .Where(source => !string.IsNullOrWhiteSpace(source))
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Count();
-    }
+            .ToArray();
 
-    /// <summary>동일 기사 반복 여부를 판단하기 위한 출처/제목/작성자 기반 키를 만듭니다.</summary>
-    private static string DuplicateKey(Article article)
-    {
-        var author = string.IsNullOrWhiteSpace(article.Author) ? "unknown" : Clean(article.Author).ToLowerInvariant();
-        return $"{Clean(article.Source).ToLowerInvariant()}|{NormalizeForDuplicate(article.Title)}|{author}";
-    }
-
-    /// <summary>중복 판정에서 문장부호와 공백 차이를 줄이기 위해 제목을 정규화합니다.</summary>
-    private static string NormalizeForDuplicate(string value)
-    {
-        var cleaned = Clean(value).ToLowerInvariant();
-        return new string(cleaned.Where(char.IsLetterOrDigit).ToArray());
+        return sources.Length > 0
+            ? sources
+            : group.Sources.Select(Clean).Where(source => !string.IsNullOrWhiteSpace(source)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
     /// <summary>카테고리 분포와 대표 이슈를 바탕으로 로컬 fallback용 요약 문장을 만듭니다.</summary>

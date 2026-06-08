@@ -55,23 +55,31 @@ public sealed class ArticleClusterer(IConfiguration configuration)
 
         return workingGroups.Select((group, index) =>
         {
-            var groupArticles = group.Articles
+            var rawGroupArticles = group.Articles
                 .OrderByDescending(article => article.PublishedAt)
                 .ThenByDescending(article => article.FirstSeenAt)
                 .ToArray();
-            var sourceCount = groupArticles.Select(article => article.Source).Distinct().Count();
+            var groupArticles = ArticleDedupe.EffectiveArticles(rawGroupArticles);
+            var articlesForDisplay = groupArticles.Length > 0 ? groupArticles : rawGroupArticles;
+            var sources = articlesForDisplay
+                .Select(article => article.Source)
+                .Where(source => !string.IsNullOrWhiteSpace(source))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            var seedTitle = articlesForDisplay.FirstOrDefault()?.Title ?? "새 이슈";
+            var score = IssueSignalCalculator.CalculateImpact(articlesForDisplay.Length, sources.Length, seedTitle, sources);
 
             return new ArticleGroup
             {
                 Id = $"group-{index + 1}",
-                Category = CategoryFor(groupArticles),
-                ArticleIds = groupArticles.Select(article => article.Id).ToArray(),
-                ArticleCount = groupArticles.Length,
-                Sources = groupArticles.Select(article => article.Source).Distinct().ToArray(),
-                LatestPublishedAt = groupArticles.FirstOrDefault()?.PublishedAt ?? DateTimeOffset.UtcNow,
-                Score = Math.Min(100, 30 + groupArticles.Length * 4 + sourceCount * 3),
-                SeedTitle = groupArticles.FirstOrDefault()?.Title ?? "새 이슈",
-                SeedSummary = BestSummary(groupArticles.FirstOrDefault())
+                Category = CategoryFor(articlesForDisplay),
+                ArticleIds = articlesForDisplay.Select(article => article.Id).ToArray(),
+                ArticleCount = articlesForDisplay.Length,
+                Sources = sources,
+                LatestPublishedAt = articlesForDisplay.FirstOrDefault()?.PublishedAt ?? DateTimeOffset.UtcNow,
+                Score = score,
+                SeedTitle = seedTitle,
+                SeedSummary = BestSummary(articlesForDisplay.FirstOrDefault())
             };
         }).ToList();
     }

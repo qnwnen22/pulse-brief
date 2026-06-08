@@ -24,6 +24,10 @@ body {
   background: var(--bg);
 }
 
+body.loading-active {
+  overflow: hidden;
+}
+
 button,
 input {
   font: inherit;
@@ -31,6 +35,98 @@ input {
 
 button {
   cursor: pointer;
+}
+
+.app-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: #f8fbff;
+  background:
+    radial-gradient(circle at 50% 44%, rgba(37, 99, 235, 0.22), transparent 34%),
+    #111827;
+  opacity: 1;
+  transition: opacity 0.24s ease, visibility 0.24s ease;
+}
+
+.app-loading.done {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loading-panel {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  width: min(360px, 100%);
+  padding: 26px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.72);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
+}
+
+.loading-brand {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.loading-signal {
+  position: relative;
+  overflow: hidden;
+  width: min(220px, 72vw);
+  height: 18px;
+}
+
+.loading-signal::before {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 8px;
+  height: 2px;
+  content: "";
+  background: rgba(56, 189, 248, 0.28);
+}
+
+.loading-signal span {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 46px;
+  height: 10px;
+  border-radius: 999px;
+  background: #8ee9ff;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.95), 0 0 28px rgba(37, 99, 235, 0.85);
+  animation: loading-signal-run 1.15s ease-in-out infinite;
+}
+
+.loading-panel p {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+@keyframes loading-signal-run {
+  0% {
+    transform: translateX(-52px);
+    opacity: 0;
+  }
+
+  18%,
+  78% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateX(226px);
+    opacity: 0;
+  }
 }
 
 .app-shell {
@@ -98,6 +194,10 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .brand-signal-pulse {
     opacity: 0;
+  }
+
+  .loading-signal span {
+    animation: none;
   }
 }
 

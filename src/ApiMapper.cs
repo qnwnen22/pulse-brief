@@ -10,27 +10,46 @@ public static class ApiMapper
 
         return groups.Select(group =>
         {
-            var groupArticles = group.ArticleIds.Select(id => byId.GetValueOrDefault(id)).Where(article => article is not null).Cast<Article>().ToArray();
+            var groupArticles = ArticleDedupe.EffectiveArticles(group.ArticleIds.Select(id => byId.GetValueOrDefault(id)));
             var latest = groupArticles.FirstOrDefault();
             var minutes = latest is null
                 ? 1
                 : Math.Max(1, (int)Math.Round((DateTimeOffset.UtcNow - latest.PublishedAt).TotalMinutes));
             var title = TextCleaner.Clean(group.RepresentativeTitle);
+            var sources = groupArticles
+                .Select(article => TextCleaner.Clean(article.Source))
+                .Where(source => !string.IsNullOrWhiteSpace(source))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            if (sources.Length == 0)
+            {
+                sources = group.Sources
+                    .Select(TextCleaner.Clean)
+                    .Where(source => !string.IsNullOrWhiteSpace(source))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+            }
+
+            var sourceCount = sources.Length;
+            var articleCount = groupArticles.Length;
+            var impact = articleCount > 0
+                ? IssueSignalCalculator.CalculateImpact(articleCount, sourceCount, title, sources)
+                : IssueSignalCalculator.CalculateImpact(group.ArticleCount, sourceCount, title, sources);
 
             return new BriefDto
             {
                 Title = title,
                 Category = group.Category,
-                Source = TextCleaner.Clean(string.Join(", ", group.Sources.Take(2))),
+                Source = TextCleaner.Clean(string.Join(", ", sources.DefaultIfEmpty().Take(2))),
                 Minutes = minutes,
-                Impact = group.Score,
-                Heat = group.Score >= 80 ? "hot" : "normal",
-                Summary = BuildSafeSummary(group, groupArticles),
+                Impact = impact,
+                Heat = IssueSignalCalculator.HeatFromImpact(impact),
+                Summary = BuildSafeSummary(group, groupArticles, articleCount, sourceCount),
                 ImageUrl = groupArticles.Select(article => article.ImageUrl).FirstOrDefault(imageUrl => !string.IsNullOrWhiteSpace(imageUrl)) ?? "",
                 Keywords = title.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(word => word.Length >= 2).Take(4).ToArray(),
-                ArticleCount = group.ArticleCount,
-                ArticleIds = group.ArticleIds,
-                LatestPublishedAt = group.LatestPublishedAt,
+                ArticleCount = articleCount,
+                ArticleIds = groupArticles.Select(article => article.Id).ToArray(),
+                LatestPublishedAt = latest?.PublishedAt ?? group.LatestPublishedAt,
                 RelatedLinks = groupArticles.Take(8).Select(article =>
                 {
                     return new RelatedLinkDto
@@ -48,7 +67,7 @@ public static class ApiMapper
     }
 
     /// <summary>뉴스검색 화면에는 원문 본문 대신 RSS 요약 또는 짧은 로컬 안내 문구만 내려줍니다.</summary>
-    private static string BuildSafeSummary(ArticleGroup group, IReadOnlyList<Article> articles)
+    private static string BuildSafeSummary(ArticleGroup group, IReadOnlyList<Article> articles, int articleCount, int sourceCount)
     {
         var rssSummary = articles
             .Select(article => TextCleaner.Clean(article.Summary))
@@ -59,12 +78,7 @@ public static class ApiMapper
             return rssSummary.Length > 220 ? $"{rssSummary[..220].Trim()}..." : rssSummary;
         }
 
-        var sourceCount = articles
-            .Select(article => article.Source)
-            .Where(source => !string.IsNullOrWhiteSpace(source))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Count();
-
-        return $"{group.ArticleCount}개 관련 기사가 묶인 이슈입니다. 자세한 내용은 원문 링크에서 확인해 주세요. 확인 출처 {sourceCount}개.";
+        var displayArticleCount = articleCount > 0 ? articleCount : group.ArticleCount;
+        return $"{displayArticleCount}개 관련 기사가 묶인 이슈입니다. 자세한 내용은 원문 링크에서 확인해 주세요. 확인 출처 {sourceCount}개.";
     }
 }
