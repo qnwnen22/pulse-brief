@@ -29,9 +29,12 @@ builder.Services.AddSingleton<ArticleClusterer>();
 builder.Services.AddSingleton<BriefGenerator>();
 builder.Services.AddHttpClient<OpenAiDailySummaryClient>();
 builder.Services.AddSingleton<DailySummaryService>();
+builder.Services.AddSingleton<PipelineRunTracker>();
+builder.Services.AddSingleton<OperationalDiagnosticsService>();
 builder.Services.AddSingleton<NewsPipeline>();
 builder.Services.AddHostedService<ScheduledRefreshService>();
 
+var appStartedAt = DateTimeOffset.UtcNow;
 var app = builder.Build();
 
 app.Use(async (context, next) =>
@@ -194,6 +197,13 @@ app.MapPost("/api/admin/fetch-missing-images", async (HttpContext context, int? 
         afterMissing,
         withImage = articles.Count - afterMissing
     });
+});
+
+app.MapGet("/api/admin/diagnostics", async (HttpContext context, OperationalDiagnosticsService diagnostics, IConfiguration configuration) =>
+{
+    if (!IsAdminRequest(context, configuration)) return AdminRequired();
+
+    return Results.Ok(await diagnostics.BuildAsync(appStartedAt));
 });
 
 app.MapFallbackToFile("index.html");

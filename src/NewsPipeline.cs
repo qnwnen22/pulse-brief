@@ -9,7 +9,8 @@ public sealed class NewsPipeline(
     EmbeddingService embeddingService,
     ArticleClusterer clusterer,
     BriefGenerator briefGenerator,
-    DailySummaryService dailySummaryService)
+    DailySummaryService dailySummaryService,
+    PipelineRunTracker pipelineRunTracker)
 {
     private readonly SemaphoreSlim _lock = new(1, 1);
 
@@ -17,6 +18,7 @@ public sealed class NewsPipeline(
     public async Task<PipelineResult> RunAsync(CancellationToken cancellationToken = default)
     {
         await _lock.WaitAsync(cancellationToken);
+        var runId = pipelineRunTracker.MarkStarted();
         try
         {
             var feeds = await paths.ReadFeedUrlsAsync();
@@ -32,7 +34,19 @@ public sealed class NewsPipeline(
             await store.SaveGroupsAsync(enriched);
             await dailySummaryService.RefreshYesterdaySummaryAsync(cancellationToken);
 
-            return new PipelineResult(fetched.Count, articles.Count, enriched.Count, DateTimeOffset.UtcNow);
+            var result = new PipelineResult(fetched.Count, articles.Count, enriched.Count, DateTimeOffset.UtcNow);
+            pipelineRunTracker.MarkCompleted(runId, result);
+            return result;
+        }
+        catch (OperationCanceledException error)
+        {
+            pipelineRunTracker.MarkFailed(runId, error, "cancelled");
+            throw;
+        }
+        catch (Exception error)
+        {
+            pipelineRunTracker.MarkFailed(runId, error);
+            throw;
         }
         finally
         {

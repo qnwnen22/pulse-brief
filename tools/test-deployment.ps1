@@ -66,7 +66,7 @@ if (-not $health.ok) {
 Write-Host "[OK] Database provider: $($health.database)"
 Write-Host "[OK] RSS feed count: $($health.rssFeedCount)"
 
-$adminStatus = Invoke-Status -Uri (Join-Url $BaseUrl "/api/articles") -Headers $headers
+$adminStatus = Invoke-Status -Uri (Join-Url $BaseUrl "/api/admin/diagnostics") -Headers $headers
 if ($AllowLoopbackAdmin) {
     Assert-Status -Name "Admin API without token" -Actual $adminStatus -Expected @(200, 401)
 }
@@ -76,7 +76,7 @@ else {
 
 if (-not [string]::IsNullOrWhiteSpace($AdminToken)) {
     $adminHeaders = @{ "X-Admin-Token" = $AdminToken }
-    $authorizedStatus = Invoke-Status -Uri (Join-Url $BaseUrl "/api/articles") -Headers $adminHeaders
+    $authorizedStatus = Invoke-Status -Uri (Join-Url $BaseUrl "/api/admin/diagnostics") -Headers $adminHeaders
     Assert-Status -Name "Admin API with token" -Actual $authorizedStatus -Expected @(200)
 }
 else {

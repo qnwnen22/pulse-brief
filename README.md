@@ -96,6 +96,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\restore-mongodb.ps1 
 - `GET /api/articles`: 저장된 기사 목록과 본문 수집 상태
 - `GET /api/groups`: 유사 기사 그룹 목록
 - `POST /api/refresh`: RSS 수집부터 요약 갱신까지 파이프라인 실행
+- `GET /api/admin/diagnostics`: 기사/그룹/요약 수, 본문 수집 상태, 마지막 파이프라인 실행 상태
 - `POST /api/admin/fetch-missing-content`: 누락된 기사 본문 재수집
 - `POST /api/admin/fetch-missing-images`: 누락된 기사 이미지 재수집
 
