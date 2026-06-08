@@ -45,6 +45,24 @@ MongoDB 컬렉션은 다음 구조를 사용합니다.
 
 SQLite 저장소는 제거되었고, 기존 SQLite 데이터는 MongoDB로 마이그레이션 완료된 상태입니다.
 
+## 백업과 복구
+
+MongoDB 백업과 복구에는 MongoDB Database Tools의 `mongodump`, `mongorestore`가 필요합니다. 현재 PC의 PATH에 도구가 없다면 MongoDB Database Tools를 설치하거나 스크립트 실행 시 도구 경로를 직접 전달하세요.
+
+백업:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\backup-mongodb.ps1
+```
+
+복구:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\restore-mongodb.ps1 -BackupPath .\backups\mongodb\pulsebrief_YYYYMMDD_HHMMSS -ConfirmRestore
+```
+
+백업 결과물은 `backups/` 아래에 생성되며 Git에는 포함하지 않습니다. 배포 전, 스크래핑 로직 변경 전, 대량 데이터 정리 전에는 백업을 먼저 만들어 두는 것을 권장합니다.
+
 ## 서버 파이프라인
 
 1. RSS 수집
