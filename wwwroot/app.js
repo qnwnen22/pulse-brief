@@ -129,9 +129,6 @@ function renderRelatedLinks(issue) {
       source: link.source || issue.source,
       url: safeUrl(link.url),
       imageUrl: safeUrl(link.imageUrl),
-      contentPreview: compactText(link.contentPreview || "", 120),
-      contentPreviewSource: link.contentPreviewSource || "",
-      contentPreviewLabel: link.contentPreviewLabel || "",
       contentFetchStatus: link.contentFetchStatus || "",
       contentFetchError: link.contentFetchError || "",
     }))
@@ -147,8 +144,6 @@ function renderRelatedLinks(issue) {
         <a class="source-link" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">
           <strong>${escapeHtml(link.source)}</strong>
           <span>${escapeHtml(link.title)}</span>
-          ${link.contentPreviewLabel ? `<b class="preview-source ${escapeHtml(link.contentPreviewSource)}">${escapeHtml(link.contentPreviewLabel)}</b>` : ""}
-          ${link.contentPreview ? `<small>${escapeHtml(link.contentPreview)}</small>` : ""}
           ${link.contentFetchStatus === "failed" && link.contentFetchError ? `<em>${escapeHtml(link.contentFetchError)}</em>` : ""}
         </a>
       `;
@@ -193,8 +188,8 @@ function renderNews() {
     const keywords = issue.keywords.map((keyword) => `#${escapeHtml(keyword)}`).join(" ");
     card.innerHTML = `
       <details class="source-picker">
-        <summary class="signal-art" aria-label="관련 출처 링크 선택">
-          <span class="source-hint">출처 선택</span>
+        <summary class="signal-art" aria-label="관련 본문 링크 선택">
+          <span class="source-hint">본문 보기</span>
         </summary>
         <div class="source-menu">
           ${renderRelatedLinks(issue)}
