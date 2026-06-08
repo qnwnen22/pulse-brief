@@ -19,6 +19,9 @@ public sealed class Article
     /// <summary>RSS 채널명 또는 언론사/출처 이름입니다.</summary>
     public string Source { get; set; } = "";
 
+    /// <summary>RSS 항목에서 확인된 기사 작성자 또는 제공자 이름입니다. 제공되지 않으면 빈 문자열입니다.</summary>
+    public string Author { get; set; } = "";
+
     /// <summary>이 기사를 발견한 RSS 피드 URL입니다.</summary>
     public string FeedUrl { get; set; } = "";
 

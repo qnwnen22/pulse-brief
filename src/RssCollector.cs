@@ -61,6 +61,10 @@ public sealed partial class RssCollector(HttpClient httpClient)
                 ElementValue(item, "description")
                 ?? ElementValue(item, "summary")
                 ?? ElementValue(item, "content"));
+            var author = TextCleaner.Clean(
+                ElementValue(item, "author")
+                ?? ElementValue(item, "creator")
+                ?? ElementValue(item, "dc:creator"));
             var imageUrl = ExtractImageUrl(item, url);
             var publishedRaw = ElementValue(item, "pubDate") ?? ElementValue(item, "published") ?? ElementValue(item, "updated");
             var publishedAt = DateTimeOffset.TryParse(publishedRaw, out var parsed)
@@ -75,6 +79,7 @@ public sealed partial class RssCollector(HttpClient httpClient)
                 Title = title,
                 Url = url,
                 Source = source,
+                Author = author,
                 FeedUrl = feedUrl,
                 Summary = summary,
                 ImageUrl = imageUrl,

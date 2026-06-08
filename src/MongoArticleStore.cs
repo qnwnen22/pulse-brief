@@ -107,6 +107,7 @@ public sealed class MongoArticleStore : IArticleStore
                 article.Embedding ??= existing.Embedding;
                 article.FirstSeenAt = existing.FirstSeenAt;
                 article.Content = existing.Content;
+                article.Author = string.IsNullOrWhiteSpace(article.Author) ? existing.Author : article.Author;
                 article.ImageUrl = string.IsNullOrWhiteSpace(article.ImageUrl) ? existing.ImageUrl : article.ImageUrl;
                 article.ContentFetchedAt = existing.ContentFetchedAt;
                 article.ContentFetchStatus = existing.ContentFetchStatus;
