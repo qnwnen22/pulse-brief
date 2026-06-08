@@ -6,9 +6,7 @@ try {
     $projectPath = 'C:\Users\User\source\repos\pulse-brief'
     $sitePath = 'C:\inetpub\pulse-brief'
     $publishPath = Join-Path $projectPath 'publish\iis'
-    $dbSource = Join-Path $projectPath 'data\pulsebrief.db'
     $envSource = Join-Path $projectPath '.env'
-    $dataPath = Join-Path $sitePath 'data'
     $appcmd = 'C:\Windows\System32\inetsrv\appcmd.exe'
     $offlinePath = Join-Path $sitePath 'app_offline.htm'
 
@@ -22,13 +20,12 @@ try {
     '<html><body>Deploying Pulse Brief...</body></html>' | Out-File -FilePath $offlinePath -Encoding utf8
     Start-Sleep -Seconds 2
 
+    Get-ChildItem -LiteralPath $sitePath -Force |
+        Where-Object { $_.Name -ne 'app_offline.htm' } |
+        Remove-Item -Recurse -Force
     Copy-Item -Path (Join-Path $publishPath '*') -Destination $sitePath -Recurse -Force
     if (Test-Path -LiteralPath $envSource) {
         Copy-Item -LiteralPath $envSource -Destination (Join-Path $sitePath '.env') -Force
-    }
-    New-Item -ItemType Directory -Path $dataPath -Force | Out-Null
-    if (-not (Test-Path -LiteralPath (Join-Path $dataPath 'pulsebrief.db'))) {
-        Copy-Item -LiteralPath $dbSource -Destination (Join-Path $dataPath 'pulsebrief.db') -Force
     }
 
     $existingSite = & $appcmd list site /name:$siteName
@@ -45,7 +42,6 @@ try {
     }
     & $appcmd set app $siteName/ /applicationPool:$appPool | Out-Null
     & $appcmd set app $siteName/ /preloadEnabled:true | Out-Null
-    icacls $dataPath /grant "IIS AppPool\${appPool}:(OI)(CI)M" /T | Out-Null
     if (Test-Path -LiteralPath $offlinePath) { Remove-Item -LiteralPath $offlinePath -Force }
     Start-Service W3SVC
     & $appcmd start apppool $appPool | Out-Null

@@ -12,7 +12,6 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 });
 builder.Services.AddHttpClient<RssCollector>();
 builder.Services.AddSingleton<AppPaths>();
-builder.Services.AddSingleton<ArticleStore>();
 builder.Services.AddSingleton<MongoArticleStore>();
 builder.Services.AddSingleton<IArticleStore>(services => services.GetRequiredService<MongoArticleStore>());
 builder.Services.AddHttpClient<ArticleContentFetcher>();
@@ -89,27 +88,6 @@ app.MapPost("/api/refresh", async (NewsPipeline pipeline, CancellationToken canc
 {
     var result = await pipeline.RunAsync(cancellationToken);
     return Results.Ok(result);
-});
-
-app.MapPost("/api/admin/migrate-to-mongo", async (ArticleStore sqliteStore, MongoArticleStore mongoStore) =>
-{
-    var articles = await sqliteStore.ReadArticlesAsync();
-    var groups = await sqliteStore.ReadGroupsAsync();
-    var summaries = await sqliteStore.ReadDailySummariesAsync();
-
-    await mongoStore.SaveArticlesAsync(articles);
-    await mongoStore.SaveGroupsAsync(groups);
-    foreach (var summary in summaries)
-    {
-        await mongoStore.SaveDailySummaryAsync(summary);
-    }
-
-    return Results.Ok(new
-    {
-        migratedArticles = articles.Count,
-        migratedGroups = groups.Count,
-        migratedSummaries = summaries.Count
-    });
 });
 
 app.MapFallbackToFile("index.html");
