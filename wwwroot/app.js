@@ -63,7 +63,6 @@ const sampleIssues = [
 
 let issues = [...sampleIssues];
 let dailyBrief = null;
-const trendPoints = [18, 26, 24, 38, 52, 48, 61, 74, 70, 86, 91, 96];
 let activeFilter = "전체";
 let currentPage = 1;
 let activeWeeklyCategory = "전체";
@@ -74,13 +73,15 @@ const searchInput = document.querySelector("#searchInput");
 const topicCount = document.querySelector("#topicCount");
 const impactScore = document.querySelector("#impactScore");
 const updateTime = document.querySelector("#updateTime");
-const keywordCloud = document.querySelector("#keywordCloud");
-const trendCanvas = document.querySelector("#trendCanvas");
+const metricGrid = document.querySelector(".metric-grid");
 const categoryFilters = document.querySelector("#categoryFilters");
 const paginationControls = document.querySelector("#paginationControls");
-const dailySummary = document.querySelector("#dailySummary");
+const categorySummary = document.querySelector("#categorySummary");
 const weeklySummary = document.querySelector("#weeklySummary");
 const weeklyCategoryTabs = document.querySelector("#weeklyCategoryTabs");
+const weeklyStats = document.querySelector("#weeklyStats");
+const navItems = document.querySelectorAll(".nav-item[data-view]");
+const viewPanels = document.querySelectorAll(".view-panel[data-panel]");
 
 const preferredCategories = [
   "정치/정책",
@@ -92,7 +93,6 @@ const preferredCategories = [
   "스포츠",
   "생활/건강",
   "지역",
-  "영상/포토",
 ];
 
 function escapeHtml(value) {
@@ -139,7 +139,7 @@ function renderRelatedLinks(issue) {
 }
 
 function getVisibleIssues() {
-  const query = searchInput.value.trim().toLowerCase();
+  const query = (searchInput?.value || "").trim().toLowerCase();
   return issues.filter((issue) => {
     const matchesFilter = activeFilter === "전체" || issue.category === activeFilter;
     const text = `${issue.title} ${issue.category} ${issue.source} ${issue.summary} ${issue.keywords.join(" ")}`.toLowerCase();
@@ -160,8 +160,6 @@ function renderNews() {
     newsList.innerHTML = '<div class="empty-state">검색 조건에 맞는 이슈가 없습니다.</div>';
     renderMetrics(visible);
     renderWeeklySummary();
-    renderKeywords(visible);
-    drawTrend();
     renderPagination(0);
     return;
   }
@@ -200,8 +198,6 @@ function renderNews() {
 
   renderMetrics(visible);
   renderWeeklySummary();
-  renderKeywords(visible);
-  drawTrend();
   renderPagination(visible.length);
 }
 
@@ -210,33 +206,53 @@ function getIssueDate(issue) {
   return Number.isNaN(date.getTime()) ? new Date() : date;
 }
 
-function renderDailySummary() {
-  if (!dailySummary) return;
+function getCategoryIssues(category) {
+  return category === "전체" ? issues : issues.filter((issue) => issue.category === category);
+}
 
-  if (!dailyBrief || !dailyBrief.issueCount) {
-    dailySummary.innerHTML = '<div class="empty-state">어제 생성된 이슈 요약이 아직 없습니다.</div>';
+function renderCategorySummary() {
+  if (!categorySummary) return;
+
+  const selectedCategory = activeWeeklyCategory;
+  if (!selectedCategory) {
+    categorySummary.innerHTML = '<div class="empty-state">요약을 확인할 카테고리를 선택해 주세요.</div>';
     return;
   }
 
-  const topIssues = (dailyBrief.topIssues || []).slice(0, 5);
-  const providerLabel = dailyBrief.provider === "openai" ? `AI 요약 · ${dailyBrief.model || "OpenAI"}` : "로컬 요약";
-  dailySummary.innerHTML = `
-    <div class="daily-provider">${escapeHtml(providerLabel)}</div>
-    <p>${escapeHtml(dailyBrief.summary)}</p>
-    <div class="daily-kpis">
+  const selectedIssues = getCategoryIssues(selectedCategory);
+  const providerLabel = dailyBrief?.provider === "openai" ? `AI 요약 · ${dailyBrief.model || "OpenAI"}` : "로컬 요약";
+  const matchedCategory = (dailyBrief?.categories || []).find((category) => category.category === selectedCategory);
+  const categoryIssues = (dailyBrief?.topIssues || []).filter((issue) => issue.category === selectedCategory).slice(0, 4);
+  const title = `${selectedCategory} 전날 이슈 요약`;
+  const summary = matchedCategory?.summary
+    || buildLocalCategorySummary(selectedCategory, selectedIssues);
+
+  if (!selectedIssues.length && !matchedCategory) {
+    categorySummary.innerHTML = '<div class="empty-state">선택한 카테고리의 요약 정보가 없습니다.</div>';
+    return;
+  }
+
+  categorySummary.innerHTML = `
+    <div class="category-summary-top">
       <div>
-        <strong>${Number(dailyBrief.issueCount || 0).toLocaleString("ko-KR")}</strong>
-        <span>이슈</span>
+        <span class="daily-provider">${escapeHtml(providerLabel)}</span>
+        <h3>${escapeHtml(title)}</h3>
       </div>
-      <div>
-        <strong>${Number(dailyBrief.articleCount || 0).toLocaleString("ko-KR")}</strong>
-        <span>기사</span>
-      </div>
-      <div>
-        <strong>${Number(dailyBrief.sourceCount || 0).toLocaleString("ko-KR")}</strong>
-        <span>출처</span>
-      </div>
+      <span>${dailyBrief?.date ? `${escapeHtml(dailyBrief.date)} 기준` : "저장 데이터 기준"}</span>
     </div>
+    <p>${escapeHtml(summary)}</p>
+    ${categoryIssues.length ? renderDailyIssueList(categoryIssues) : ""}
+  `;
+}
+
+function buildLocalCategorySummary(category, items) {
+  if (!items.length) return "해당 카테고리에서 확인된 이슈가 없습니다.";
+  const topIssue = [...items].sort((a, b) => b.impact - a.impact)[0];
+  return `${category}에서 ${items.length.toLocaleString("ko-KR")}개 이슈가 확인됐습니다. 현재 가장 주목도가 높은 이슈는 ${topIssue.title}입니다.`;
+}
+
+function renderDailyIssueList(topIssues) {
+  return `
     <ol class="daily-issue-list">
       ${topIssues
         .map((issue) => {
@@ -257,13 +273,22 @@ function renderWeeklySummary() {
   const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
   const weeklyItems = issues.filter((issue) => getIssueDate(issue).getTime() >= weekAgo);
   const baseItems = weeklyItems.length ? weeklyItems : issues;
-  const categories = ["전체", ...preferredCategories.filter((category) => baseItems.some((issue) => issue.category === category))];
+  const categories = preferredCategories.filter((category) => baseItems.some((issue) => issue.category === category));
   const extraCategories = [...new Set(baseItems.map((issue) => issue.category))]
     .filter((category) => !categories.includes(category))
     .sort((a, b) => a.localeCompare(b, "ko"));
   const allCategories = [...categories, ...extraCategories];
 
-  if (!allCategories.includes(activeWeeklyCategory)) activeWeeklyCategory = "전체";
+  if (!allCategories.length) {
+    activeWeeklyCategory = "";
+    weeklyCategoryTabs.innerHTML = "";
+    weeklyStats.innerHTML = "";
+    categorySummary.innerHTML = '<div class="empty-state">요약할 이슈 데이터가 없습니다.</div>';
+    weeklySummary.innerHTML = '<div class="empty-state">주간 이슈 데이터가 없습니다.</div>';
+    return;
+  }
+
+  if (!allCategories.includes(activeWeeklyCategory)) activeWeeklyCategory = allCategories[0];
 
   weeklyCategoryTabs.innerHTML = allCategories
     .map((category) => {
@@ -272,15 +297,7 @@ function renderWeeklySummary() {
     })
     .join("");
 
-  const targetItems =
-    activeWeeklyCategory === "전체" ? baseItems : baseItems.filter((issue) => issue.category === activeWeeklyCategory);
-  const categoryCounts = targetItems.reduce((acc, issue) => {
-    acc[issue.category] = (acc[issue.category] || 0) + 1;
-    return acc;
-  }, {});
-  const topCategories = Object.entries(categoryCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, activeWeeklyCategory === "전체" ? 4 : 1);
+  const targetItems = baseItems.filter((issue) => issue.category === activeWeeklyCategory);
   const topIssues = [...targetItems]
     .sort((a, b) => {
       const impactDiff = b.impact - a.impact;
@@ -292,33 +309,18 @@ function renderWeeklySummary() {
   const weeklyLabel = weeklyItems.length ? "최근 7일" : "저장 데이터 기준";
 
   if (!targetItems.length) {
+    weeklyStats.innerHTML = "";
     weeklySummary.innerHTML = '<div class="empty-state">선택한 카테고리의 주간 이슈가 없습니다.</div>';
+    renderCategorySummary();
     return;
   }
 
+  renderWeeklyStats(activeWeeklyCategory, targetItems, sourceCount, weeklyLabel);
+  renderCategorySummary();
   weeklySummary.innerHTML = `
-    <div class="weekly-kpis">
-      <div>
-        <strong>${targetItems.length.toLocaleString("ko-KR")}</strong>
-        <span>${weeklyLabel} 이슈</span>
-      </div>
-      <div>
-        <strong>${sourceCount.toLocaleString("ko-KR")}</strong>
-        <span>확인 출처</span>
-      </div>
-    </div>
-    <div class="weekly-category-list">
-      ${topCategories
-        .map(([category, count]) => {
-          const percent = Math.max(4, Math.round((count / targetItems.length) * 100));
-          return `
-            <div class="weekly-category">
-              <div><span>${escapeHtml(category)}</span><strong>${count.toLocaleString("ko-KR")}</strong></div>
-              <i style="width:${percent}%"></i>
-            </div>
-          `;
-        })
-        .join("")}
+    <div class="weekly-summary-card">
+      <h3>${escapeHtml(activeWeeklyCategory)} 주간 요약</h3>
+      <p>${escapeHtml(buildWeeklyCategorySummary(activeWeeklyCategory, targetItems, weeklyLabel))}</p>
     </div>
     <ol class="weekly-issue-list">
       ${topIssues
@@ -326,6 +328,54 @@ function renderWeeklySummary() {
         .join("")}
     </ol>
   `;
+}
+
+function renderWeeklyStats(category, targetItems, sourceCount, weeklyLabel) {
+  if (!weeklyStats) return;
+
+  const articleCount = targetItems.reduce((sum, issue) => sum + (issue.articleCount || 1), 0);
+  const topIssue = [...targetItems].sort((a, b) => b.impact - a.impact)[0];
+  const averageImpact = targetItems.length
+    ? targetItems.reduce((sum, issue) => sum + issue.impact, 0) / targetItems.length
+    : 0;
+
+  weeklyStats.innerHTML = `
+    <div>
+      <span>선택 카테고리</span>
+      <strong>${escapeHtml(category)}</strong>
+    </div>
+    <div>
+      <span>${escapeHtml(weeklyLabel)} 이슈</span>
+      <strong>${targetItems.length.toLocaleString("ko-KR")}</strong>
+    </div>
+    <div>
+      <span>확인 출처</span>
+      <strong>${sourceCount.toLocaleString("ko-KR")}</strong>
+    </div>
+    <div>
+      <span>관련 기사</span>
+      <strong>${articleCount.toLocaleString("ko-KR")}</strong>
+    </div>
+    <div>
+      <span>중요도 평균</span>
+      <strong>${averageImpact.toFixed(1)}</strong>
+    </div>
+    <div>
+      <span>최상위 이슈</span>
+      <strong>${escapeHtml(topIssue?.title || "-")}</strong>
+    </div>
+  `;
+}
+
+function buildWeeklyCategorySummary(category, items, weeklyLabel) {
+  if (!items.length) return `${category} 카테고리의 주간 이슈가 없습니다.`;
+  const topIssue = [...items].sort((a, b) => {
+    const impactDiff = b.impact - a.impact;
+    if (impactDiff) return impactDiff;
+    return getIssueDate(b) - getIssueDate(a);
+  })[0];
+  const sourceCount = new Set(items.flatMap((issue) => (issue.source || "").split(", ").filter(Boolean))).size;
+  return `${weeklyLabel} 동안 ${category} 카테고리에서는 ${items.length.toLocaleString("ko-KR")}개 이슈가 확인됐고, ${sourceCount.toLocaleString("ko-KR")}개 출처에서 관련 흐름이 포착됐습니다. 가장 주목도가 높은 흐름은 ${topIssue.title}입니다.`;
 }
 
 function renderPagination(totalItems) {
@@ -393,77 +443,22 @@ function renderMetrics(items) {
   });
 }
 
-function renderKeywords(items) {
-  const keywords = items.flatMap((issue) => issue.keywords);
-  const counts = keywords.reduce((acc, keyword) => {
-    acc[keyword] = (acc[keyword] || 0) + 1;
-    return acc;
-  }, {});
-
-  keywordCloud.innerHTML = "";
-  Object.entries(counts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 12)
-    .forEach(([keyword, count]) => {
-      const chip = document.createElement("button");
-      chip.type = "button";
-      chip.className = "keyword-chip";
-      chip.textContent = `#${keyword}${count > 1 ? ` ${count}` : ""}`;
-      chip.addEventListener("click", () => {
-        searchInput.value = keyword;
-        currentPage = 1;
-        renderNews();
-      });
-      keywordCloud.appendChild(chip);
-    });
+function showView(view) {
+  const targetView = [...viewPanels].some((panel) => panel.dataset.panel === view) ? view : "briefing";
+  navItems.forEach((item) => {
+    item.classList.toggle("active", item.dataset.view === targetView);
+  });
+  viewPanels.forEach((panel) => {
+    panel.classList.toggle("active", panel.dataset.panel === targetView);
+  });
+  metricGrid?.classList.toggle("hidden", targetView === "briefing");
 }
 
-function drawTrend() {
-  const canvas = trendCanvas;
-  const ctx = canvas.getContext("2d");
-  const width = canvas.width;
-  const height = canvas.height;
-  const padding = 34;
-
-  ctx.clearRect(0, 0, width, height);
-  ctx.strokeStyle = "#dde4ec";
-  ctx.lineWidth = 1;
-
-  for (let i = 0; i < 5; i += 1) {
-    const y = padding + i * ((height - padding * 2) / 4);
-    ctx.beginPath();
-    ctx.moveTo(padding, y);
-    ctx.lineTo(width - padding, y);
-    ctx.stroke();
-  }
-
-  const points = trendPoints.map((value, index) => {
-    const x = padding + index * ((width - padding * 2) / (trendPoints.length - 1));
-    const y = height - padding - (value / 100) * (height - padding * 2);
-    return { x, y };
+navItems.forEach((item) => {
+  item.addEventListener("click", () => {
+    showView(item.dataset.view);
   });
-
-  ctx.beginPath();
-  points.forEach((point, index) => {
-    if (index === 0) ctx.moveTo(point.x, point.y);
-    else ctx.lineTo(point.x, point.y);
-  });
-  ctx.strokeStyle = "#2563eb";
-  ctx.lineWidth = 4;
-  ctx.stroke();
-
-  points.forEach((point, index) => {
-    ctx.beginPath();
-    ctx.arc(point.x, point.y, index === points.length - 1 ? 6 : 4, 0, Math.PI * 2);
-    ctx.fillStyle = index === points.length - 1 ? "#c2410c" : "#13805a";
-    ctx.fill();
-  });
-
-  ctx.fillStyle = "#657080";
-  ctx.font = "14px Segoe UI, sans-serif";
-  ctx.fillText("확산도", padding, 22);
-  ctx.fillText("최근 12구간", width - 112, height - 12);
-}
+});
 
 categoryFilters.addEventListener("click", (event) => {
   const button = event.target.closest(".segment");
@@ -516,11 +511,11 @@ async function loadDailySummary() {
     const response = await fetch("/api/daily-summary");
     if (!response.ok) throw new Error(`daily-summary ${response.status}`);
     dailyBrief = await response.json();
-    renderDailySummary();
+    renderWeeklySummary();
     return true;
   } catch (error) {
     console.warn(`[daily-summary] ${error.message}`);
-    renderDailySummary();
+    renderWeeklySummary();
     return false;
   }
 }
@@ -547,7 +542,7 @@ async function refreshFromServer() {
   renderNews();
 }
 
-searchInput.addEventListener("input", () => {
+searchInput?.addEventListener("input", () => {
   currentPage = 1;
   renderNews();
 });
@@ -557,6 +552,7 @@ document.addEventListener("click", (event) => {
   });
 });
 loadServerBriefs().then(() => {
+  showView("briefing");
   loadDailySummary();
   renderCategoryFilters();
   renderNews();

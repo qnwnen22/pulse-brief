@@ -31,8 +31,10 @@ public sealed class OpenAiDailySummaryClient(HttpClient httpClient, IConfigurati
                     role = "system",
                     content = """
                         You are a Korean news briefing editor.
+                        Summarize yesterday's issues by category first.
                         Summarize only the facts present in the provided issue data.
                         Do not invent facts, numbers, causes, quotes, or outcomes.
+                        The categories array is the most important output. Write one useful sentence for each major category.
                         Return only valid JSON with this shape:
                         {
                           "headline": "short Korean headline",

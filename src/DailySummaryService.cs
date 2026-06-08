@@ -65,7 +65,7 @@ public sealed class DailySummaryService(ArticleStore store, OpenAiDailySummaryCl
                     Category = group.Key,
                     IssueCount = group.Count(),
                     ArticleCount = group.SelectMany(item => item.ArticleIds).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
-                    Summary = $"{Clean(topGroup.RepresentativeTitle)} 중심으로 {group.Count()}개 이슈가 확인됐습니다."
+                    Summary = $"{Clean(topGroup.RepresentativeTitle)} 이슈가 가장 두드러졌고, 이 카테고리에서 {group.Count()}개 이슈가 확인됐습니다."
                 };
             })
             .ToArray();
