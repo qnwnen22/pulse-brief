@@ -30,6 +30,7 @@ builder.Services.AddSingleton<BriefGenerator>();
 builder.Services.AddHttpClient<OpenAiDailySummaryClient>();
 builder.Services.AddSingleton<DailySummaryService>();
 builder.Services.AddSingleton<PipelineRunTracker>();
+builder.Services.AddSingleton<OperationalLogService>();
 builder.Services.AddSingleton<OperationalDiagnosticsService>();
 builder.Services.AddSingleton<NewsPipeline>();
 builder.Services.AddHostedService<ScheduledRefreshService>();
@@ -142,10 +143,11 @@ app.MapGet("/api/weekly-summary", async (HttpContext context, string? endDate, b
     }
 });
 
-app.MapPost("/api/refresh", async (HttpContext context, NewsPipeline pipeline, IConfiguration configuration, CancellationToken cancellationToken) =>
+app.MapPost("/api/refresh", async (HttpContext context, NewsPipeline pipeline, OperationalLogService operationalLog, IConfiguration configuration, CancellationToken cancellationToken) =>
 {
     if (!IsAdminRequest(context, configuration)) return AdminRequired();
 
+    await operationalLog.RecordAsync("info", "manual_refresh_requested", "Manual refresh was requested by an administrator.", cancellationToken: cancellationToken);
     var result = await pipeline.RunAsync(cancellationToken);
     return Results.Ok(result);
 });

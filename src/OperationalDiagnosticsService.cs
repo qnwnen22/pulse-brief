@@ -5,6 +5,7 @@ public sealed class OperationalDiagnosticsService(
     IArticleStore store,
     AppPaths paths,
     PipelineRunTracker pipelineRunTracker,
+    OperationalLogService operationalLog,
     OpenAiDailySummaryClient openAiClient,
     IConfiguration configuration)
 {
@@ -93,7 +94,8 @@ public sealed class OperationalDiagnosticsService(
                     articleCount = group.Sum(item => item.ArticleCount)
                 })
                 .ToArray(),
-            pipeline = pipelineRunTracker.Current
+            pipeline = pipelineRunTracker.Current,
+            recentEvents = operationalLog.ReadRecentEvents(20)
         };
     }
 

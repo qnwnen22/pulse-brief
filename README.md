@@ -75,6 +75,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\restore-mongodb.ps1 
 
 백업 결과물은 `backups/` 아래에 생성되며 Git에는 포함하지 않습니다. 배포 전, 스크래핑 로직 변경 전, 대량 데이터 정리 전에는 백업을 먼저 만들어 두는 것을 권장합니다.
 
+## 운영 로그
+
+수집 파이프라인 시작, 성공, 실패 같은 운영 이벤트는 기본적으로 실행 폴더의 `logs/` 아래 날짜별 `.log` 파일에 JSON Lines 형식으로 저장됩니다. 관리자 전용 `/api/admin/diagnostics` 응답에서도 현재 프로세스에서 기록한 최근 이벤트를 확인할 수 있습니다.
+
+로그 저장 위치는 `OperationalLog:Directory`, 진단 API에 보관할 최근 이벤트 수는 `OperationalLog:RecentEventCount` 설정으로 조정할 수 있습니다.
+
 ## 서버 파이프라인
 
 1. RSS 수집
@@ -96,7 +102,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\restore-mongodb.ps1 
 - `GET /api/articles`: 저장된 기사 목록과 본문 수집 상태
 - `GET /api/groups`: 유사 기사 그룹 목록
 - `POST /api/refresh`: RSS 수집부터 요약 갱신까지 파이프라인 실행
-- `GET /api/admin/diagnostics`: 기사/그룹/요약 수, 본문 수집 상태, 마지막 파이프라인 실행 상태
+- `GET /api/admin/diagnostics`: 기사/그룹/요약 수, 본문 수집 상태, 마지막 파이프라인 실행 상태, 최근 운영 이벤트
 - `POST /api/admin/fetch-missing-content`: 누락된 기사 본문 재수집
 - `POST /api/admin/fetch-missing-images`: 누락된 기사 이미지 재수집
 

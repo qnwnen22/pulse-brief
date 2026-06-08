@@ -1,7 +1,7 @@
 namespace PulseBrief;
 
 /// <summary>설정된 주기마다 뉴스 수집 파이프라인을 자동 실행하는 백그라운드 서비스입니다.</summary>
-public sealed class ScheduledRefreshService(NewsPipeline pipeline, IConfiguration configuration) : BackgroundService
+public sealed class ScheduledRefreshService(NewsPipeline pipeline, IConfiguration configuration, OperationalLogService operationalLog) : BackgroundService
 {
     private readonly TimeSpan _interval = TimeSpan.FromMinutes(configuration.GetValue("AutoRefreshMinutes", 10));
 
@@ -15,6 +15,10 @@ public sealed class ScheduledRefreshService(NewsPipeline pipeline, IConfiguratio
             try
             {
                 Console.WriteLine("[refresh] scheduled pipeline started");
+                await operationalLog.RecordAsync("info", "scheduled_refresh_started", "Scheduled refresh started.", new
+                {
+                    intervalMinutes = _interval.TotalMinutes
+                }, stoppingToken);
                 var result = await pipeline.RunAsync(stoppingToken);
                 Console.WriteLine($"[refresh] scheduled pipeline finished: fetched={result.FetchedCount}, articles={result.ArticleCount}, groups={result.GroupCount}");
             }
@@ -25,6 +29,11 @@ public sealed class ScheduledRefreshService(NewsPipeline pipeline, IConfiguratio
             catch (Exception error)
             {
                 Console.WriteLine($"[refresh] scheduled pipeline failed: {error}");
+                await operationalLog.RecordAsync("error", "scheduled_refresh_failed", "Scheduled refresh failed.", new
+                {
+                    errorType = error.GetType().Name,
+                    error.Message
+                }, CancellationToken.None);
             }
         }
     }

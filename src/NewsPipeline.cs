@@ -10,7 +10,8 @@ public sealed class NewsPipeline(
     ArticleClusterer clusterer,
     BriefGenerator briefGenerator,
     DailySummaryService dailySummaryService,
-    PipelineRunTracker pipelineRunTracker)
+    PipelineRunTracker pipelineRunTracker,
+    OperationalLogService operationalLog)
 {
     private readonly SemaphoreSlim _lock = new(1, 1);
 
@@ -19,6 +20,7 @@ public sealed class NewsPipeline(
     {
         await _lock.WaitAsync(cancellationToken);
         var runId = pipelineRunTracker.MarkStarted();
+        await operationalLog.RecordAsync("info", "pipeline_started", "News pipeline started.", cancellationToken: cancellationToken);
         try
         {
             var feeds = await paths.ReadFeedUrlsAsync();
@@ -36,16 +38,33 @@ public sealed class NewsPipeline(
 
             var result = new PipelineResult(fetched.Count, articles.Count, enriched.Count, DateTimeOffset.UtcNow);
             pipelineRunTracker.MarkCompleted(runId, result);
+            await operationalLog.RecordAsync("info", "pipeline_completed", "News pipeline completed.", new
+            {
+                result.FetchedCount,
+                result.ArticleCount,
+                result.GroupCount,
+                result.UpdatedAt
+            }, CancellationToken.None);
             return result;
         }
         catch (OperationCanceledException error)
         {
             pipelineRunTracker.MarkFailed(runId, error, "cancelled");
+            await operationalLog.RecordAsync("warning", "pipeline_cancelled", "News pipeline was cancelled.", new
+            {
+                errorType = error.GetType().Name,
+                error.Message
+            }, CancellationToken.None);
             throw;
         }
         catch (Exception error)
         {
             pipelineRunTracker.MarkFailed(runId, error);
+            await operationalLog.RecordAsync("error", "pipeline_failed", "News pipeline failed.", new
+            {
+                errorType = error.GetType().Name,
+                error.Message
+            }, CancellationToken.None);
             throw;
         }
         finally
