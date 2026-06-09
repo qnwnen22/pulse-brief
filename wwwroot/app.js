@@ -96,6 +96,7 @@ const weeklyStats = document.querySelector("#weeklyStats");
 const navItems = document.querySelectorAll(".nav-item[data-view]");
 const viewPanels = document.querySelectorAll(".view-panel[data-panel]");
 const appLoading = document.querySelector("#appLoading");
+const refreshButton = document.querySelector("#refreshButton");
 
 const preferredCategories = [
   "정치/정책",
@@ -847,9 +848,16 @@ weeklyCategoryTabs.addEventListener("click", (event) => {
   renderWeeklySummary();
 });
 
-document.querySelector("#refreshButton").addEventListener("click", () => {
+refreshButton?.addEventListener("click", () => {
   refreshFromServer();
 });
+
+function setRefreshButtonBusy(isBusy) {
+  if (!refreshButton) return;
+  refreshButton.disabled = isBusy;
+  refreshButton.setAttribute("aria-busy", String(isBusy));
+  refreshButton.classList.toggle("is-loading", isBusy);
+}
 
 async function loadServerBriefs() {
   if (location.protocol === "file:") return false;
@@ -900,28 +908,27 @@ async function loadWeeklySummary() {
 }
 
 async function refreshFromServer() {
-  if (location.protocol !== "file:") {
-    try {
-      const response = await fetch("/api/refresh", { method: "POST" });
-      if (!response.ok) throw new Error(`refresh ${response.status}`);
-      await loadServerBriefs();
-      await loadDailySummary();
-      await loadWeeklySummary();
-      currentPage = 1;
-      renderSourceFilter();
-      renderCategoryFilters();
-      renderNews();
-      return;
-    } catch (error) {
-      console.warn(`[refresh] ${error.message}`);
-      return;
-    }
-  }
+  if (refreshButton?.disabled) return;
 
-  issues.unshift(issues.pop());
-  currentPage = 1;
-  renderCategoryFilters();
-  renderNews();
+  setRefreshButtonBusy(true);
+  try {
+    if (location.protocol !== "file:") {
+      const loaded = await loadServerBriefs();
+      if (!loaded) console.warn("[refresh] failed to reload briefs");
+      await Promise.all([loadDailySummary(), loadWeeklySummary()]);
+    } else {
+      issues.unshift(issues.pop());
+    }
+
+    currentPage = 1;
+    renderSourceFilter();
+    renderCategoryFilters();
+    renderNews();
+  } catch (error) {
+    console.warn(`[refresh] ${error.message}`);
+  } finally {
+    setRefreshButtonBusy(false);
+  }
 }
 
 searchInput?.addEventListener("input", () => {

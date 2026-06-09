@@ -199,6 +199,10 @@ button {
   .loading-signal span {
     animation: none;
   }
+
+  .icon-button.is-loading {
+    animation: none;
+  }
 }
 
 .nav-list {
@@ -328,6 +332,22 @@ h2 {
 .icon-button {
   width: 44px;
   font-size: 20px;
+}
+
+.icon-button:disabled {
+  cursor: progress;
+  opacity: 0.72;
+}
+
+.icon-button.is-loading {
+  color: var(--blue);
+  animation: refresh-spin 0.7s linear infinite;
+}
+
+@keyframes refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .ghost-button {
