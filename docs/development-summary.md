@@ -187,6 +187,8 @@ Security:AllowLoopbackAdmin = false
 - `tools/deploy-iis.ps1`: IIS 배포 반영
 - `tools/setup-iis.ps1`: IIS 사이트 초기 설정
 - `tools/test-deployment.ps1`: 배포 후 상태 점검
+- `tools/deploy-collector.ps1`: 웹 서버와 분리된 Collector 운영 폴더 배포
+- `tools/install-collector-task.ps1`: Windows 시작 시 Collector를 자동 실행하는 작업 스케줄러 등록
 - `tools/backup-mongodb.ps1`: MongoDB 백업
 - `tools/restore-mongodb.ps1`: MongoDB 복구
 

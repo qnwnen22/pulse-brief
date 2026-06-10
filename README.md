@@ -112,6 +112,16 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\restore-mongodb.ps1 
 .\tools\run-collector.ps1 -Once
 ```
 
+운영 환경에서 웹 서버와 독립적으로 계속 수집하려면 Collector를 별도 폴더에 배포한 뒤 Windows 작업 스케줄러에 등록합니다. 이 작업은 IIS 웹 서버가 꺼져도 PC와 MongoDB가 켜져 있으면 계속 동작합니다.
+
+```powershell
+dotnet publish .\PulseBrief.Collector\PulseBrief.Collector.csproj -c Release -o .\publish\collector
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\deploy-collector.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\install-collector-task.ps1
+```
+
+등록되는 작업 이름은 `PulseBrief Collector`입니다. 작업은 Windows 시작 시 `SYSTEM` 계정으로 실행되며, `C:\inetpub\pulse-brief-collector\logs\collector-service.log`에 실행 로그를 남깁니다.
+
 기본 설정에서는 웹 서버의 자동 수집과 관리자 화면의 RSS 수동 수집이 꺼져 있습니다. 웹 서버에서 다시 수집을 허용해야 하는 특수 상황에서는 `Collector:EnableInWebHost` 또는 `Collector:AllowWebManualRefresh` 설정을 명시적으로 `true`로 바꿔야 합니다.
 
 ## 버전 관리
@@ -119,7 +129,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\restore-mongodb.ps1 
 Pulse Brief는 `SemVer` 형식으로 버전을 관리합니다. 현재 버전은 `VERSION`과 `Directory.Build.props`에 기록되며, 관리자 대시보드와 `/api/health` 응답에서도 확인할 수 있습니다.
 
 ```powershell
-.\tools\release-version.ps1 -Version 0.2.0 -Notes "관리자 기능 개선" -Notes "수집기 안정화"
+.\tools\release-version.ps1 -Version 0.2.0 -Notes "관리자 기능 개선","수집기 안정화"
 ```
 
 Git 태그까지 함께 만들려면 `-Tag` 옵션을 추가합니다. 배포 전에는 `CHANGELOG.md`의 해당 버전 내용을 확인하고, 빌드가 통과한 뒤 커밋/푸시합니다.
