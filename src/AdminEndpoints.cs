@@ -282,6 +282,22 @@ public static class AdminEndpoints
             return Results.Ok(summary);
         });
 
+        app.MapPost("/api/admin/summaries/daily/preview", async (
+            HttpContext context,
+            AdminJobRequest request,
+            DailySummaryService dailySummaryService,
+            OperationalLogService operationalLog,
+            AdminAuthService adminAuth,
+            CancellationToken cancellationToken) =>
+        {
+            if (!RequireAdmin(context, adminAuth, requireCsrf: true, out var denied)) return denied;
+            if (!TryParseDate(request.Date, "date", out var date, out var error)) return error!;
+
+            var summary = await dailySummaryService.GenerateSummaryPreviewAsync(date, cancellationToken);
+            await operationalLog.RecordAsync("info", "admin_daily_summary_preview_generated", "Daily summary preview was generated without saving.", new { summary.Date, summary.Provider, summary.Model, saved = false }, cancellationToken);
+            return Results.Ok(new { saved = false, summary });
+        });
+
         app.MapPost("/api/admin/summaries/weekly/regenerate", async (
             HttpContext context,
             AdminJobRequest request,

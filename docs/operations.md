@@ -480,6 +480,20 @@ sudo systemctl restart pulsebrief-collector
 sudo systemctl restart pulsebrief-collector
 ```
 
+### 기존 요약을 보존한 비교 요약 생성
+
+관리자 preview API는 기존 MongoDB `summaries` 문서를 덮어쓰지 않고 새 전날 요약 결과만 반환한다.
+
+```bash
+curl -fsS \
+  -H "X-Admin-Token: ${Security__AdminToken}" \
+  -H "Content-Type: application/json" \
+  -d '{"date":"YYYY-MM-DD"}' \
+  http://127.0.0.1:8085/api/admin/summaries/daily/preview
+```
+
+응답의 `saved` 값이 `false`이면 비교용으로만 생성된 결과다.
+
 ### 디스크 용량 부족
 
 ```bash

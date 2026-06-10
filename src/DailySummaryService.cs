@@ -44,6 +44,19 @@ public sealed class DailySummaryService(IArticleStore store, OpenAiDailySummaryC
         return summary;
     }
 
+    /// <summary>기존 저장 요약을 덮어쓰지 않고 지정 날짜의 일간 요약을 새 로직으로 생성해 반환합니다.</summary>
+    public async Task<DailyIssueSummary> GenerateSummaryPreviewAsync(DateOnly? date = null, CancellationToken cancellationToken = default)
+    {
+        var targetDate = date ?? GetYesterdayInKorea();
+        var key = targetDate.ToString("yyyy-MM-dd");
+
+        var articles = await store.ReadArticlesAsync();
+        var groups = await store.ReadGroupsAsync();
+        var summary = BuildSummary(key, groups, articles);
+        var aiSummary = await openAiClient.TryGenerateAsync(summary, cancellationToken: cancellationToken);
+        return aiSummary ?? summary;
+    }
+
     /// <summary>한국 시간 기준 전날 요약을 강제로 다시 생성합니다.</summary>
     public async Task EnsureScheduledSummariesAsync(CancellationToken cancellationToken = default)
     {
