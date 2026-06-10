@@ -3,6 +3,8 @@ param(
     [ValidatePattern('^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$')]
     [string]$Version,
 
+    [string]$Commit = 'HEAD',
+
     [switch]$Push
 )
 
@@ -19,7 +21,7 @@ if ($Version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') {
     throw "Version must follow SemVer format, such as 0.2.0 or 1.0.0-beta.1."
 }
 
-$head = (& git -C $projectPath rev-parse HEAD).Trim()
+$targetCommit = (& git -C $projectPath rev-parse $Commit).Trim()
 $unstaged = & git -C $projectPath diff --name-only
 $staged = & git -C $projectPath diff --cached --name-only
 
@@ -28,18 +30,18 @@ if ($unstaged -or $staged) {
 }
 
 $tagName = "v$Version"
-$existingTag = (& git -C $projectPath tag --list $tagName).Trim()
+$existingTag = ((& git -C $projectPath tag --list $tagName) -join '').Trim()
 
 if ($existingTag) {
     $tagCommit = (& git -C $projectPath rev-list -n 1 $tagName).Trim()
-    if ($tagCommit -eq $head) {
-        Write-Host "Release tag $tagName already points to HEAD $head"
+    if ($tagCommit -eq $targetCommit) {
+        Write-Host "Release tag $tagName already points to $targetCommit"
     } else {
-        throw "Release tag $tagName already exists and points to $tagCommit, not HEAD $head."
+        throw "Release tag $tagName already exists and points to $tagCommit, not $targetCommit."
     }
 } else {
-    & git -C $projectPath tag -a $tagName -m "Pulse Brief $tagName"
-    Write-Host "Created release tag $tagName at $head"
+    & git -C $projectPath tag -a $tagName $targetCommit -m "Pulse Brief $tagName"
+    Write-Host "Created release tag $tagName at $targetCommit"
 }
 
 if ($Push) {
