@@ -406,7 +406,23 @@ button:disabled {
   color: var(--blue);
 }
 
+.source-guide-link {
+  color: var(--blue);
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.source-guide-link:hover {
+  text-decoration: underline;
+}
+
 .article-title span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.muted-text {
   color: var(--muted);
   font-size: 13px;
 }

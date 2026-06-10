@@ -87,9 +87,17 @@ app.MapGet("/api/groups", async (HttpContext context, IArticleStore store, Admin
     return Results.Ok(await store.ReadGroupsAsync());
 });
 
-app.MapGet("/api/briefs", async (IArticleStore store) =>
+app.MapGet("/api/briefs", async (IArticleStore store, AppPaths paths) =>
 {
     var articles = await store.ReadArticlesAsync();
+    var activeFeeds = (await paths.ReadFeedUrlsAsync()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+    if (activeFeeds.Count > 0)
+    {
+        articles = articles
+            .Where(article => activeFeeds.Contains(article.FeedUrl))
+            .ToList();
+    }
+
     var groups = await store.ReadGroupsAsync();
     return Results.Ok(ApiMapper.ToBriefs(groups, articles));
 });

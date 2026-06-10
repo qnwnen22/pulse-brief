@@ -603,7 +603,7 @@ h2 {
 
 .search-tools {
   display: grid;
-  grid-template-columns: repeat(5, minmax(130px, 1fr)) auto auto;
+  grid-template-columns: repeat(4, minmax(130px, 1fr)) auto;
   align-items: end;
   gap: 10px;
   padding: 12px;
@@ -913,15 +913,6 @@ h2 {
   color: #0f5132;
   background: #dff5ea;
   font-weight: 700;
-}
-
-.hot-marker {
-  padding: 3px 7px;
-  border-radius: 999px;
-  color: #7c2d12;
-  background: #ffedd5;
-  font-size: 12px;
-  font-weight: 900;
 }
 
 .news-card h3 {

@@ -72,10 +72,9 @@ const pageSize = 10;
 const newsList = document.querySelector("#newsList");
 const searchInput = document.querySelector("#searchInput");
 const dateFilter = document.querySelector("#dateFilter");
-const sourceFilter = document.querySelector("#sourceFilter");
+const publisherFilter = document.querySelector("#publisherFilter");
 const articleCountFilter = document.querySelector("#articleCountFilter");
 const sortSelect = document.querySelector("#sortSelect");
-const hotOnlyFilter = document.querySelector("#hotOnlyFilter");
 const resetFiltersButton = document.querySelector("#resetFiltersButton");
 const todayKeywords = document.querySelector("#todayKeywords");
 const topicCount = document.querySelector("#topicCount");
@@ -310,6 +309,16 @@ function getSourceNames(issue) {
   return [...new Set(values)];
 }
 
+function getPublisherNames(issue) {
+  const values = [
+    ...(issue.publishers || []),
+    ...(issue.relatedLinks || []).map((link) => link.publisher),
+  ]
+    .map((publisher) => String(publisher || "").trim())
+    .filter(Boolean);
+  return [...new Set(values)];
+}
+
 function getSourceCount(issue) {
   return getSourceNames(issue).length || (issue.source ? 1 : 0);
 }
@@ -332,10 +341,10 @@ function matchesDateFilter(issue) {
   return true;
 }
 
-function matchesSourceFilter(issue) {
-  const selectedSource = sourceFilter?.value || "all";
-  if (selectedSource === "all") return true;
-  return getSourceNames(issue).includes(selectedSource);
+function matchesPublisherFilter(issue) {
+  const selectedPublisher = publisherFilter?.value || "all";
+  if (selectedPublisher === "all") return true;
+  return getPublisherNames(issue).includes(selectedPublisher);
 }
 
 function matchesArticleCountFilter(issue) {
@@ -349,15 +358,12 @@ function compareIssues(a, b) {
   const dateDiff = getIssueDate(b) - getIssueDate(a);
   const impactDiff = Number(b.impact || 0) - Number(a.impact || 0);
   const articleDiff = Number(b.articleCount || 1) - Number(a.articleCount || 1);
-  const sourceDiff = getSourceCount(b) - getSourceCount(a);
 
   if (sortValue === "oldest") return getIssueDate(a) - getIssueDate(b);
   if (sortValue === "impactDesc") return impactDiff || dateDiff;
   if (sortValue === "impactAsc") return -impactDiff || dateDiff;
   if (sortValue === "articleCountDesc") return articleDiff || impactDiff || dateDiff;
   if (sortValue === "articleCountAsc") return -articleDiff || dateDiff;
-  if (sortValue === "sourceCountDesc") return sourceDiff || articleDiff || dateDiff;
-  if (sortValue === "sourceCountAsc") return -sourceDiff || dateDiff;
   if (sortValue === "titleAsc") return String(a.title || "").localeCompare(String(b.title || ""), "ko") || dateDiff;
   return dateDiff || impactDiff;
 }
@@ -366,14 +372,14 @@ function getVisibleIssues() {
   const query = (searchInput?.value || "").trim().toLowerCase();
   return issues.filter((issue) => {
     const matchesFilter = activeFilter === "전체" || issue.category === activeFilter;
-    const relatedText = (issue.relatedLinks || []).map((link) => `${link.title} ${link.source}`).join(" ");
-    const text = `${issue.title} ${issue.category} ${issue.source} ${issue.summary} ${relatedText} ${issue.keywords.join(" ")}`.toLowerCase();
+    const publisherText = getPublisherNames(issue).join(" ");
+    const relatedText = (issue.relatedLinks || []).map((link) => `${link.title} ${link.source} ${link.publisher || ""}`).join(" ");
+    const text = `${issue.title} ${issue.category} ${issue.source} ${publisherText} ${issue.summary} ${relatedText} ${issue.keywords.join(" ")}`.toLowerCase();
     return matchesFilter
       && (!query || text.includes(query))
       && matchesDateFilter(issue)
-      && matchesSourceFilter(issue)
+      && matchesPublisherFilter(issue)
       && matchesArticleCountFilter(issue)
-      && (!hotOnlyFilter?.checked || issue.heat === "hot");
   }).sort(compareIssues);
 }
 
@@ -405,7 +411,6 @@ function renderNews() {
       <div>
         <div class="card-meta">
           <span class="badge">${escapeHtml(issue.category)}</span>
-          ${issue.heat === "hot" ? '<span class="hot-marker">HOT</span>' : ""}
           <span>${escapeHtml(issue.source)}</span>
           <span>${formatIssueTime(issue)}</span>
         </div>
@@ -699,18 +704,18 @@ function renderCategoryFilters() {
     .join("");
 }
 
-function renderSourceFilter() {
-  if (!sourceFilter) return;
+function renderPublisherFilter() {
+  if (!publisherFilter) return;
 
-  const currentValue = sourceFilter.value || "all";
-  const sourceNames = [...new Set(issues.flatMap(getSourceNames))]
+  const currentValue = publisherFilter.value || "all";
+  const publisherNames = [...new Set(issues.flatMap(getPublisherNames))]
     .sort((a, b) => a.localeCompare(b, "ko"));
 
-  sourceFilter.innerHTML = [
-    '<option value="all">전체 출처</option>',
-    ...sourceNames.map((source) => `<option value="${escapeHtml(source)}">${escapeHtml(source)}</option>`),
+  publisherFilter.innerHTML = [
+    '<option value="all">전체 언론사</option>',
+    ...publisherNames.map((publisher) => `<option value="${escapeHtml(publisher)}">${escapeHtml(publisher)}</option>`),
   ].join("");
-  sourceFilter.value = sourceNames.includes(currentValue) ? currentValue : "all";
+  publisherFilter.value = publisherNames.includes(currentValue) ? currentValue : "all";
 }
 
 function renderTodayKeywords() {
@@ -815,10 +820,9 @@ document.querySelectorAll("[data-view].footer-link").forEach((item) => {
 function resetSearchFilters() {
   if (searchInput) searchInput.value = "";
   if (dateFilter) dateFilter.value = "all";
-  if (sourceFilter) sourceFilter.value = "all";
+  if (publisherFilter) publisherFilter.value = "all";
   if (articleCountFilter) articleCountFilter.value = "all";
   if (sortSelect) sortSelect.value = "latest";
-  if (hotOnlyFilter) hotOnlyFilter.checked = false;
   currentPage = 1;
   renderNews();
 }
@@ -943,7 +947,7 @@ async function refreshFromServer() {
     }
 
     currentPage = 1;
-    renderSourceFilter();
+    renderPublisherFilter();
     renderCategoryFilters();
     renderNews();
   } catch (error) {
@@ -958,7 +962,7 @@ searchInput?.addEventListener("input", () => {
   renderNews();
 });
 
-[dateFilter, sourceFilter, articleCountFilter, sortSelect, hotOnlyFilter]
+[dateFilter, publisherFilter, articleCountFilter, sortSelect]
   .filter(Boolean)
   .forEach((control) => {
     control.addEventListener("change", () => {
@@ -1000,7 +1004,7 @@ async function initializeApp() {
   try {
     await loadServerBriefs();
     showView("briefing");
-    renderSourceFilter();
+    renderPublisherFilter();
     renderCategoryFilters();
     renderNews();
     loadAppVersion().catch((error) => {

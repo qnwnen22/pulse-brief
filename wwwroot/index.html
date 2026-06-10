@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Pulse Brief</title>
     <link rel="icon" type="image/svg+xml" href="assets/pulse-brief-favicon.svg" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=20260610-search-filters" />
   </head>
   <body>
     <div id="appLoading" class="app-loading" role="status" aria-live="polite" aria-label="사이트 로딩 중">
@@ -148,7 +148,7 @@
               </div>
               <div class="search-wrap">
                 <span aria-hidden="true">⌕</span>
-                <input id="searchInput" type="search" placeholder="키워드, 출처, 분야 검색" />
+                <input id="searchInput" type="search" placeholder="키워드, 언론사, 분야 검색" />
               </div>
             </div>
             <div class="feed-controls">
@@ -164,9 +164,9 @@
                   </select>
                 </label>
                 <label>
-                  출처
-                  <select id="sourceFilter">
-                    <option value="all">전체 출처</option>
+                  언론사
+                  <select id="publisherFilter">
+                    <option value="all">전체 언론사</option>
                   </select>
                 </label>
                 <label>
@@ -187,14 +187,8 @@
                     <option value="impactAsc">중요도 낮은순</option>
                     <option value="articleCountDesc">묶인 기사 많은순</option>
                     <option value="articleCountAsc">묶인 기사 적은순</option>
-                    <option value="sourceCountDesc">출처 많은순</option>
-                    <option value="sourceCountAsc">출처 적은순</option>
                     <option value="titleAsc">제목 가나다순</option>
                   </select>
-                </label>
-                <label class="check-filter">
-                  <input id="hotOnlyFilter" type="checkbox" />
-                  HOT만
                 </label>
                 <button id="resetFiltersButton" class="ghost-button" type="button">초기화</button>
               </div>
@@ -277,6 +271,6 @@
       </main>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=20260610-search-filters"></script>
   </body>
 </html>

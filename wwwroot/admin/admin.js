@@ -413,6 +413,11 @@ async function loadFeeds() {
     <tr>
       <td><strong>${escapeHtml(feed.publisher || "알 수 없음")}</strong></td>
       <td><a href="${escapeHtml(feed.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(feed.url)}</a></td>
+      <td>
+        ${feed.guideUrl
+          ? `<a class="source-guide-link" href="${escapeHtml(feed.guideUrl)}" target="_blank" rel="noopener noreferrer">안내 페이지</a>`
+          : '<span class="muted-text">-</span>'}
+      </td>
       <td><span class="badge ${feed.isActive ? "success" : "pending"}">${feed.isActive ? "활성" : "비활성"}</span></td>
       <td>
         <div class="row-actions">

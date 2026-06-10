@@ -109,6 +109,8 @@ public sealed class BriefDto
     /// <summary>프론트엔드에 표시할 대표 출처 문자열입니다.</summary>
     public string Source { get; set; } = "";
 
+    public string[] Publishers { get; set; } = [];
+
     /// <summary>가장 최근 기사 발행 후 경과 시간(분)입니다.</summary>
     public int Minutes { get; set; }
 
@@ -148,6 +150,10 @@ public sealed class RelatedLinkDto
 
     /// <summary>관련 원문 기사 출처입니다.</summary>
     public string Source { get; set; } = "";
+
+    public string Publisher { get; set; } = "";
+
+    public string FeedUrl { get; set; } = "";
 
     /// <summary>관련 원문 기사 URL입니다.</summary>
     public string Url { get; set; } = "";

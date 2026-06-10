@@ -1,0 +1,20 @@
+[Unit]
+Description=Pulse Brief news collector
+After=network-online.target mongod.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pulsebrief
+Group=pulsebrief
+WorkingDirectory=/opt/pulsebrief/collector
+EnvironmentFile=-/etc/pulsebrief/pulsebrief.env
+ExecStart=/usr/bin/dotnet /opt/pulsebrief/collector/PulseBrief.Collector.dll
+Restart=always
+RestartSec=30
+KillSignal=SIGINT
+SyslogIdentifier=pulsebrief-collector
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

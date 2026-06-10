@@ -1,0 +1,7 @@
+[Unit]
+Description=Pulse Brief MongoDB backup
+After=mongod.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/pulsebrief-mongodb-backup.sh

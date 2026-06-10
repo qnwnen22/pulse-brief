@@ -325,30 +325,14 @@ public static class AdminEndpoints
 
     private static object ToAdminRssFeed(RssFeedEntry feed)
     {
+        var source = RssSourceCatalog.SourceInfoForUrl(feed.Url);
         return new
         {
             feed.Url,
             feed.IsActive,
-            publisher = PublisherForFeedUrl(feed.Url)
+            publisher = source.Publisher,
+            guideUrl = source.GuideUrl
         };
-    }
-
-    private static string PublisherForFeedUrl(string url)
-    {
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return "알 수 없음";
-
-        var host = uri.Host.Replace("www.", "", StringComparison.OrdinalIgnoreCase).ToLowerInvariant();
-        if (host.Contains("yna.co.kr", StringComparison.OrdinalIgnoreCase)) return "연합뉴스";
-        if (host.Contains("hani.co.kr", StringComparison.OrdinalIgnoreCase)) return "한겨레";
-        if (host.Contains("etnews.com", StringComparison.OrdinalIgnoreCase)) return "전자신문";
-        if (host.Contains("news.sbs.co.kr", StringComparison.OrdinalIgnoreCase)) return "SBS 뉴스";
-        if (host.Contains("newsis.com", StringComparison.OrdinalIgnoreCase)) return "뉴시스";
-        if (host.Contains("korea.kr", StringComparison.OrdinalIgnoreCase)) return "정책브리핑";
-        if (host.Contains("imbc.com", StringComparison.OrdinalIgnoreCase)) return "MBC 뉴스";
-        if (host.Contains("jtbc.co.kr", StringComparison.OrdinalIgnoreCase)) return "JTBC 뉴스";
-        if (host.Contains("bbc.com", StringComparison.OrdinalIgnoreCase)) return "BBC";
-
-        return host;
     }
 
     private static object BuildArticleSearchResult(IReadOnlyList<Article> articles, IReadOnlyList<ArticleGroup> groups, AdminArticleQuery query)

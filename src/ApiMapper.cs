@@ -11,6 +11,8 @@ public static class ApiMapper
         return groups.Select(group =>
         {
             var groupArticles = ArticleDedupe.EffectiveArticles(group.ArticleIds.Select(id => byId.GetValueOrDefault(id)));
+            if (groupArticles.Length == 0) return null;
+
             var latest = groupArticles.FirstOrDefault();
             var minutes = latest is null
                 ? 1
@@ -32,6 +34,11 @@ public static class ApiMapper
 
             var sourceCount = sources.Length;
             var articleCount = groupArticles.Length;
+            var publishers = groupArticles
+                .Select(article => RssSourceCatalog.SourceInfoForUrl(article.FeedUrl).Publisher)
+                .Where(publisher => !string.IsNullOrWhiteSpace(publisher))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
             var impact = articleCount > 0
                 ? IssueSignalCalculator.CalculateImpact(articleCount, sourceCount, title, sources)
                 : IssueSignalCalculator.CalculateImpact(group.ArticleCount, sourceCount, title, sources);
@@ -41,6 +48,7 @@ public static class ApiMapper
                 Title = title,
                 Category = group.Category,
                 Source = TextCleaner.Clean(string.Join(", ", sources.DefaultIfEmpty().Take(2))),
+                Publishers = publishers,
                 Minutes = minutes,
                 Impact = impact,
                 Heat = IssueSignalCalculator.HeatFromImpact(impact),
@@ -52,10 +60,13 @@ public static class ApiMapper
                 LatestPublishedAt = latest?.PublishedAt ?? group.LatestPublishedAt,
                 RelatedLinks = groupArticles.Take(8).Select(article =>
                 {
+                    var source = RssSourceCatalog.SourceInfoForUrl(article.FeedUrl);
                     return new RelatedLinkDto
                     {
                         Title = TextCleaner.Clean(article.Title),
                         Source = TextCleaner.Clean(article.Source),
+                        Publisher = source.Publisher,
+                        FeedUrl = article.FeedUrl,
                         Url = article.Url,
                         ImageUrl = article.ImageUrl,
                         ContentFetchStatus = article.ContentFetchStatus,
@@ -63,7 +74,7 @@ public static class ApiMapper
                     };
                 }).ToArray()
             };
-        });
+        }).OfType<BriefDto>();
     }
 
     /// <summary>뉴스검색 화면에는 원문 본문 대신 RSS 요약 또는 짧은 로컬 안내 문구만 내려줍니다.</summary>
