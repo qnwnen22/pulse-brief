@@ -517,7 +517,7 @@ function renderCategorySummary() {
       <span>${dailyBrief?.date ? `${escapeHtml(dailyBrief.date)} 기준` : "저장 데이터 기준"}</span>
     </div>
     <p>${escapeHtml(summary)}</p>
-    ${categoryIssues.length ? renderDailyIssueList(categoryIssues, selectedIssues) : ""}
+    ${categoryIssues.length ? renderDailyIssueList(categoryIssues, issues) : ""}
   `;
 }
 
@@ -595,7 +595,7 @@ function renderWeeklySummary() {
       <h3>${escapeHtml(activeWeeklyCategory)} 주간 요약</h3>
       <p>${escapeHtml(weeklyText)}</p>
     </div>
-    ${renderTrackedIssueList(weeklyIssueItems, targetItems, {
+    ${renderTrackedIssueList(weeklyIssueItems, baseItems, {
       listClass: "weekly-issue-list tracked-issue-list",
       pickerClass: "weekly-source-picker",
       ariaLabel: "주간 주요 이슈 관련 기사 보기",
