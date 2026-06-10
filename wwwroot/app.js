@@ -240,13 +240,48 @@ function normalizeTitle(value) {
     .toLowerCase();
 }
 
+function mergeTrackedIssues(summaryIssue, matchedIssues) {
+  const linksByUrl = new Map();
+  const articleIds = new Set((summaryIssue.articleIds || []).filter(Boolean));
+  const publishers = new Set();
+  const sources = new Set();
+
+  matchedIssues.forEach((issue) => {
+    (issue.articleIds || []).forEach((articleId) => {
+      if (articleId) articleIds.add(articleId);
+    });
+    (issue.publishers || []).forEach((publisher) => {
+      if (publisher) publishers.add(publisher);
+    });
+    getSourceNames(issue).forEach((source) => sources.add(source));
+    (issue.relatedLinks || []).forEach((link) => {
+      const url = safeUrl(link.url);
+      if (!url || linksByUrl.has(url)) return;
+      linksByUrl.set(url, link);
+    });
+  });
+
+  const first = matchedIssues[0] || {};
+  return {
+    ...first,
+    title: summaryIssue.title || first.title,
+    category: summaryIssue.category || first.category,
+    summary: summaryIssue.summary || first.summary,
+    source: [...sources].slice(0, 2).join(", ") || first.source,
+    publishers: [...publishers],
+    articleCount: Number(summaryIssue.articleCount || articleIds.size || first.articleCount || linksByUrl.size || 0),
+    articleIds: [...articleIds],
+    relatedLinks: [...linksByUrl.values()],
+  };
+}
+
 function findTrackedIssue(summaryIssue, candidates) {
   const articleIds = new Set((summaryIssue.articleIds || []).filter(Boolean));
   if (articleIds.size) {
-    const byArticleId = candidates.find((candidate) =>
+    const byArticleId = candidates.filter((candidate) =>
       (candidate.articleIds || []).some((articleId) => articleIds.has(articleId))
     );
-    if (byArticleId) return byArticleId;
+    if (byArticleId.length) return mergeTrackedIssues(summaryIssue, byArticleId);
   }
 
   const title = normalizeTitle(summaryIssue.title);
