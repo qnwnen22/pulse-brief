@@ -1,13 +1,14 @@
 ﻿<Project>
   <PropertyGroup>
-    <PulseBriefVersion>0.1.10</PulseBriefVersion>
+    <PulseBriefVersion>0.1.11</PulseBriefVersion>
     <Version>$(PulseBriefVersion)</Version>
-    <AssemblyVersion>0.1.10.0</AssemblyVersion>
-    <FileVersion>0.1.10.0</FileVersion>
+    <AssemblyVersion>0.1.11.0</AssemblyVersion>
+    <FileVersion>0.1.11.0</FileVersion>
     <InformationalVersion>$(PulseBriefVersion)</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 </Project>
+
 
 
 

@@ -13,6 +13,7 @@ $projectPath = Split-Path -Parent $PSScriptRoot
 $versionPath = Join-Path $projectPath 'VERSION'
 $propsPath = Join-Path $projectPath 'Directory.Build.props'
 $changelogPath = Join-Path $projectPath 'CHANGELOG.md'
+$indexPath = Join-Path $projectPath 'wwwroot\index.html'
 
 $versionMatch = [regex]::Match($Version, '^(\d+)\.(\d+)\.(\d+)(?:-[0-9A-Za-z.-]+)?$')
 if (-not $versionMatch.Success) {
@@ -32,6 +33,12 @@ $props = [regex]::Replace($props, '(<PulseBriefVersion>).*?(</PulseBriefVersion>
 $props = [regex]::Replace($props, '(<AssemblyVersion>).*?(</AssemblyVersion>)', "`${1}$assemblyVersion`${2}")
 $props = [regex]::Replace($props, '(<FileVersion>).*?(</FileVersion>)', "`${1}$assemblyVersion`${2}")
 Set-Content -LiteralPath $propsPath -Value $props -Encoding UTF8
+
+if (Test-Path -LiteralPath $indexPath) {
+    $index = Get-Content -LiteralPath $indexPath -Raw -Encoding UTF8
+    $index = [regex]::Replace($index, 'app\.js\?v=[^"''<>\s]+', "app.js?v=$Version")
+    Set-Content -LiteralPath $indexPath -Value $index -Encoding UTF8
+}
 
 $date = Get-Date -Format 'yyyy-MM-dd'
 $lines = if ($Notes.Count -gt 0) {
