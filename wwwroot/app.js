@@ -98,6 +98,13 @@ const appLoading = document.querySelector("#appLoading");
 const refreshButton = document.querySelector("#refreshButton");
 const appVersion = document.querySelector("#appVersion");
 
+const koreaDateFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Seoul",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
 const preferredCategories = [
   "정치/정책",
   "경제/산업",
@@ -482,6 +489,33 @@ function getIssueDate(issue) {
   return Number.isNaN(date.getTime()) ? new Date() : date;
 }
 
+function getKoreaDateKey(date) {
+  const parts = koreaDateFormatter.formatToParts(date)
+    .reduce((result, part) => {
+      if (part.type !== "literal") result[part.type] = part.value;
+      return result;
+    }, {});
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function getIssuesForDateKey(dateKey, sourceItems = issues) {
+  if (!dateKey) return sourceItems;
+  return sourceItems.filter((issue) => getKoreaDateKey(getIssueDate(issue)) === dateKey);
+}
+
+function parseWeeklySummaryRange(summary) {
+  const match = /^weekly:(\d{4}-\d{2}-\d{2}):(\d{4}-\d{2}-\d{2})$/.exec(summary?.date || "");
+  return match ? { start: match[1], end: match[2] } : null;
+}
+
+function getIssuesForDateRange(range, sourceItems = issues) {
+  if (!range) return sourceItems;
+  return sourceItems.filter((issue) => {
+    const dateKey = getKoreaDateKey(getIssueDate(issue));
+    return dateKey >= range.start && dateKey <= range.end;
+  });
+}
+
 function getCategoryIssues(category) {
   return category === "전체" ? issues : issues.filter((issue) => issue.category === category);
 }
@@ -495,7 +529,10 @@ function renderCategorySummary() {
     return;
   }
 
-  const selectedIssues = getCategoryIssues(selectedCategory);
+  const dailyItems = dailyBrief?.date ? getIssuesForDateKey(dailyBrief.date) : issues;
+  const selectedIssues = selectedCategory === "전체"
+    ? dailyItems
+    : dailyItems.filter((issue) => issue.category === selectedCategory);
   const providerLabel = dailyBrief?.provider === "openai" ? `AI 요약 · ${dailyBrief.model || "OpenAI"}` : "로컬 요약";
   const matchedCategory = (dailyBrief?.categories || []).find((category) => category.category === selectedCategory);
   const categoryIssues = (dailyBrief?.topIssues || []).filter((issue) => issue.category === selectedCategory).slice(0, 4);
@@ -517,7 +554,7 @@ function renderCategorySummary() {
       <span>${dailyBrief?.date ? `${escapeHtml(dailyBrief.date)} 기준` : "저장 데이터 기준"}</span>
     </div>
     <p>${escapeHtml(summary)}</p>
-    ${categoryIssues.length ? renderDailyIssueList(categoryIssues, issues) : ""}
+    ${categoryIssues.length ? renderDailyIssueList(categoryIssues, dailyItems) : ""}
   `;
 }
 
@@ -538,8 +575,10 @@ function renderDailyIssueList(topIssues, targetItems) {
 function renderWeeklySummary() {
   const now = Date.now();
   const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
-  const weeklyItems = issues.filter((issue) => getIssueDate(issue).getTime() >= weekAgo);
-  const baseItems = weeklyItems.length ? weeklyItems : issues;
+  const weeklyRange = parseWeeklySummaryRange(weeklyBrief);
+  const summaryRangeItems = weeklyRange ? getIssuesForDateRange(weeklyRange) : [];
+  const recentItems = issues.filter((issue) => getIssueDate(issue).getTime() >= weekAgo);
+  const baseItems = weeklyRange ? summaryRangeItems : (recentItems.length ? recentItems : issues);
   const categories = preferredCategories.filter((category) => baseItems.some((issue) => issue.category === category));
   const extraCategories = [...new Set(baseItems.map((issue) => issue.category))]
     .filter((category) => !categories.includes(category))
@@ -573,7 +612,7 @@ function renderWeeklySummary() {
     })
     .slice(0, 4);
   const sourceCount = new Set(targetItems.flatMap((issue) => (issue.source || "").split(", ").filter(Boolean))).size;
-  const weeklyLabel = weeklyItems.length ? "최근 7일" : "저장 데이터 기준";
+  const weeklyLabel = weeklyRange ? `${weeklyRange.start}~${weeklyRange.end}` : (recentItems.length ? "최근 7일" : "저장 데이터 기준");
   const weeklyCategorySummary = (weeklyBrief?.categories || []).find((category) => category.category === activeWeeklyCategory);
   const aiWeeklyIssues = (weeklyBrief?.topIssues || []).filter((issue) => issue.category === activeWeeklyCategory).slice(0, 4);
   const weeklyIssueItems = aiWeeklyIssues.length ? aiWeeklyIssues : topIssues;
@@ -587,7 +626,10 @@ function renderWeeklySummary() {
     return;
   }
 
-  renderWeeklyStats(activeWeeklyCategory, targetItems, sourceCount, weeklyLabel);
+  renderWeeklyStats(activeWeeklyCategory, targetItems, sourceCount, weeklyLabel, {
+    categorySummary: weeklyCategorySummary,
+    topIssue: weeklyIssueItems[0],
+  });
   renderCategorySummary();
   weeklySummary.innerHTML = `
     <div class="weekly-summary-card">
@@ -603,11 +645,17 @@ function renderWeeklySummary() {
   `;
 }
 
-function renderWeeklyStats(category, targetItems, sourceCount, weeklyLabel) {
+function renderWeeklyStats(category, targetItems, sourceCount, weeklyLabel, summaryContext = {}) {
   if (!weeklyStats) return;
 
-  const articleCount = targetItems.reduce((sum, issue) => sum + (issue.articleCount || 1), 0);
-  const topIssue = [...targetItems].sort((a, b) => b.impact - a.impact)[0];
+  const rawArticleCount = targetItems.reduce((sum, issue) => sum + (issue.articleCount || 1), 0);
+  const rawTopIssue = [...targetItems].sort((a, b) => b.impact - a.impact)[0];
+  const summaryIssueCount = Number(summaryContext.categorySummary?.issueCount || 0);
+  const summaryArticleCount = Number(summaryContext.categorySummary?.articleCount || 0);
+  const issueCount = summaryIssueCount || targetItems.length;
+  const articleCount = summaryArticleCount || rawArticleCount;
+  const topIssue = summaryContext.topIssue || rawTopIssue;
+  const countBasis = summaryIssueCount ? `${weeklyLabel} 요약 기준` : "선택 카테고리 기준";
   const averageImpact = targetItems.length
     ? targetItems.reduce((sum, issue) => sum + issue.impact, 0) / targetItems.length
     : 0;
@@ -621,10 +669,10 @@ function renderWeeklyStats(category, targetItems, sourceCount, weeklyLabel) {
       "compact-value"
     )}
     ${renderMetricCard(
-      `${weeklyLabel} 이슈`,
-      targetItems.length.toLocaleString("ko-KR"),
-      "선택 카테고리 기준",
-      "최근 7일 데이터가 있으면 최근 7일 이슈 묶음 수를, 없으면 저장된 데이터 전체 기준 이슈 묶음 수를 보여줍니다."
+      "주간 이슈",
+      issueCount.toLocaleString("ko-KR"),
+      countBasis,
+      "저장된 주간 요약이 있으면 요약에 포함된 대표 이슈 수를 보여줍니다. 뉴스 검색의 전체 이슈 수와는 집계 기준이 다를 수 있습니다."
     )}
     ${renderMetricCard(
       "확인 출처",
@@ -635,8 +683,8 @@ function renderWeeklyStats(category, targetItems, sourceCount, weeklyLabel) {
     ${renderMetricCard(
       "관련 기사",
       articleCount.toLocaleString("ko-KR"),
-      "그룹에 포함된 기사",
-      "선택 카테고리의 이슈 묶음 안에 포함된 개별 기사 수의 합계입니다."
+      countBasis,
+      "저장된 주간 요약이 있으면 요약에 포함된 대표 기사 수를 보여줍니다. 관련 기사 링크는 같은 기간의 원문 그룹에서 추적합니다."
     )}
     ${renderMetricCard(
       "중요도 평균",
