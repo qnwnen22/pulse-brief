@@ -90,11 +90,19 @@ app.MapGet("/api/groups", async (HttpContext context, IArticleStore store, Admin
 app.MapGet("/api/briefs", async (IArticleStore store, AppPaths paths) =>
 {
     var articles = await store.ReadArticlesAsync();
-    var activeFeeds = (await paths.ReadFeedUrlsAsync()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+    var feedUrls = await paths.ReadFeedUrlsAsync();
+    var activeFeeds = feedUrls.ToHashSet(StringComparer.OrdinalIgnoreCase);
+    var activePublishers = feedUrls
+        .Select(feedUrl => RssSourceCatalog.SourceInfoForUrl(feedUrl).Publisher)
+        .Where(publisher => !string.IsNullOrWhiteSpace(publisher))
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
     if (activeFeeds.Count > 0)
     {
         articles = articles
-            .Where(article => activeFeeds.Contains(article.FeedUrl))
+            .Where(article =>
+                activeFeeds.Contains(article.FeedUrl) ||
+                activePublishers.Contains(RssSourceCatalog.SourceInfoForUrl(article.FeedUrl).Publisher))
             .ToList();
     }
 
