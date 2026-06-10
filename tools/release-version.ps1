@@ -19,6 +19,10 @@ if (-not $versionMatch.Success) {
     throw "Version must follow SemVer format, such as 0.2.0 or 1.0.0-beta.1."
 }
 
+if ($Notes.Count -eq 1 -and $Notes[0] -match ',') {
+    $Notes = $Notes[0].Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+}
+
 $assemblyVersion = '{0}.{1}.{2}.0' -f $versionMatch.Groups[1].Value, $versionMatch.Groups[2].Value, $versionMatch.Groups[3].Value
 
 Set-Content -LiteralPath $versionPath -Value $Version -Encoding UTF8
