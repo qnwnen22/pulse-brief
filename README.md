@@ -98,7 +98,7 @@ Lightsail 서버 반영:
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\cloud\deploy-to-ubuntu.ps1 `
   -HostName SERVER_IP `
-  -KeyPath C:\Users\User\.ssh\pulse-brief-lightsail.pem `
+  -KeyPath C:\path\to\lightsail-key.pem `
   -SkipBootstrap `
   -StartServices
 ```
@@ -131,7 +131,9 @@ systemctl is-active pulsebrief-web pulsebrief-collector mongod cloudflared
 운영 MongoDB는 서버 로컬에서만 열고, 필요할 때 SSH 터널로 접근합니다.
 
 ```powershell
-.\tools\cloud\open-mongodb-tunnel.ps1
+.\tools\cloud\open-mongodb-tunnel.ps1 `
+  -HostName SERVER_IP `
+  -KeyPath C:\path\to\lightsail-key.pem
 ```
 
 MongoDB Compass 접속 URI:

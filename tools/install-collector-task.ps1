@@ -1,4 +1,5 @@
-$log = 'C:\Users\User\source\repos\pulse-brief\collector-task.log'
+$projectPath = Resolve-Path (Join-Path $PSScriptRoot '..')
+$log = Join-Path $projectPath 'collector-task.log'
 try {
     $ErrorActionPreference = 'Stop'
     $taskName = 'PulseBrief Collector'

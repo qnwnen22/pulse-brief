@@ -1,7 +1,7 @@
-$log = 'C:\Users\User\source\repos\pulse-brief\collector-deploy.log'
+$projectPath = Resolve-Path (Join-Path $PSScriptRoot '..')
+$log = Join-Path $projectPath 'collector-deploy.log'
 try {
     $ErrorActionPreference = 'Stop'
-    $projectPath = 'C:\Users\User\source\repos\pulse-brief'
     $webSitePath = 'C:\inetpub\pulse-brief'
     $collectorPath = 'C:\inetpub\pulse-brief-collector'
     $publishPath = Join-Path $projectPath 'publish\collector'

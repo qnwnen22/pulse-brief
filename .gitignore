@@ -4,6 +4,13 @@ backups/
 node_modules/
 .env
 appsettings.Production.json
+diagnostic-report.md
+*.pem
+*.key
+*.pfx
+*.p12
+*.ppk
+id_rsa*
 bin/
 obj/
 .vs/

@@ -21,9 +21,9 @@
 
 | 항목 | 값 |
 | --- | --- |
-| Public IPv4 | `54.180.1.28` |
-| Private IPv4 | `172.26.15.242` |
-| Public IPv6 | `2406:da12:5d6:3300:c280:133d:3808:afb4` |
+| Public IPv4 | AWS Lightsail 콘솔에서 확인 |
+| Private IPv4 | AWS Lightsail 콘솔에서 확인 |
+| Public IPv6 | AWS Lightsail 콘솔에서 확인 |
 | OS | Ubuntu 24.04 LTS |
 | SSH alias | `pulse-brief-prod` |
 | 공개 URL | `https://news.pulse-brief.co.kr` |
@@ -207,8 +207,8 @@ news.pulse-brief.co.kr
 | OpenAI API Key | 서버 `/etc/pulsebrief/pulsebrief.env` |
 | 관리자 토큰 | 서버 `/etc/pulsebrief/pulsebrief.env` |
 | Cloudflare Tunnel Token | 서버 cloudflared 서비스에 설치됨 |
-| Lightsail SSH Key | 로컬 `C:\Users\User\.ssh\pulse-brief-lightsail.pem` |
-| SSH alias | 로컬 `C:\Users\User\.ssh\config`, `pulse-brief-prod` |
+| Lightsail SSH Key | 로컬 SSH 키 보관 경로 |
+| SSH alias | 로컬 SSH config의 `pulse-brief-prod` |
 | GitHub 계정 | 저장소 push 권한 |
 | AWS 계정 | Lightsail, billing |
 | Cloudflare 계정 | DNS, Tunnel |
@@ -299,10 +299,10 @@ Connection Name: Pulse Brief Production
 URI: mongodb://127.0.0.1:27017/pulsebrief
 Authentication: None
 SSH Tunnel: Use Identity File
-SSH Hostname: 54.180.1.28
+SSH Hostname: SERVER_IP
 SSH Port: 22
 SSH Username: ubuntu
-SSH Identity Key File: C:\Users\User\.ssh\pulse-brief-lightsail.pem
+SSH Identity Key File: C:\path\to\lightsail-key.pem
 SSH Passphrase: 비움
 ```
 
@@ -388,9 +388,9 @@ powershell -ExecutionPolicy Bypass -File .\tools\cloud\publish-cloud.ps1
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tools\cloud\deploy-to-ubuntu.ps1 `
-  -HostName 54.180.1.28 `
+  -HostName SERVER_IP `
   -UserName ubuntu `
-  -KeyPath C:\Users\User\.ssh\pulse-brief-lightsail.pem `
+  -KeyPath C:\path\to\lightsail-key.pem `
   -SkipBootstrap
 ```
 
@@ -554,6 +554,7 @@ curl -fsS http://127.0.0.1:8085/api/health
 - Cloudflare Tunnel을 통해서만 웹을 공개한다.
 - SSH 키를 공유하지 않는다.
 - OpenAI API Key를 Git에 넣지 않는다.
+- Public 저장소에는 실제 서버 IP, 개인 PC 경로, SSH 키 파일명을 직접 기록하지 않는다.
 
 ## 13. 현재 로컬 PC 상태
 

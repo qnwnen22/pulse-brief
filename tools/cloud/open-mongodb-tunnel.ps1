@@ -1,13 +1,21 @@
 [CmdletBinding()]
 param(
-    [string]$HostName = "54.180.1.28",
+    [string]$HostName = $env:PULSEBRIEF_SSH_HOST,
     [string]$UserName = "ubuntu",
-    [string]$KeyPath = "$env:USERPROFILE\.ssh\pulse-brief-lightsail.pem",
+    [string]$KeyPath = $env:PULSEBRIEF_SSH_KEY_PATH,
     [int]$LocalPort = 27018,
     [int]$RemotePort = 27017
 )
 
 $ErrorActionPreference = "Stop"
+
+if ([string]::IsNullOrWhiteSpace($HostName)) {
+    throw "HostName was not provided. Pass -HostName SERVER_IP or set PULSEBRIEF_SSH_HOST."
+}
+
+if ([string]::IsNullOrWhiteSpace($KeyPath)) {
+    throw "KeyPath was not provided. Pass -KeyPath C:\path\to\lightsail-key.pem or set PULSEBRIEF_SSH_KEY_PATH."
+}
 
 if (-not (Test-Path -LiteralPath $KeyPath)) {
     throw "SSH key was not found: $KeyPath"

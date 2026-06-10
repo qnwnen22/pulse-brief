@@ -1,4 +1,5 @@
-$log = 'C:\Users\User\source\repos\pulse-brief\iis-site-create.log'
+$projectPath = Resolve-Path (Join-Path $PSScriptRoot '..')
+$log = Join-Path $projectPath 'iis-site-create.log'
 try {
     $ErrorActionPreference = 'Stop'
     $siteName = 'PulseBrief'
