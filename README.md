@@ -1,10 +1,62 @@
 # Pulse Brief
 
-RSS 뉴스와 기사 원문 본문을 수집해 유사 이슈로 그룹화하고, 카테고리별 전날/주간 이슈 요약을 제공하는 개인용 뉴스 브리핑 서버입니다.
+Pulse Brief는 RSS 뉴스와 원문 기사 본문을 수집해 유사 이슈로 묶고, 카테고리별 전날/주간 이슈 요약을 제공하는 공개 뉴스 브리핑 서비스입니다.
 
-현재 개발/배포 현황은 [개발 현황 문서](docs/development-summary.md)에서 확인할 수 있습니다.
+공개 서비스는 [news.pulse-brief.co.kr](https://news.pulse-brief.co.kr)에서 운영합니다. 현재 배포 버전은 [VERSION](VERSION) 파일과 `/api/health` 응답을 기준으로 확인합니다.
 
-## 실행
+## 현재 구조
+
+```text
+사용자
+-> Cloudflare DNS / Tunnel
+-> AWS Lightsail Ubuntu
+-> PulseBrief Web :8085
+-> MongoDB localhost:27017
+-> PulseBrief Collector
+-> RSS / 원문 기사 / OpenAI API
+```
+
+운영 서버는 개인 PC가 아니라 AWS Lightsail Ubuntu 인스턴스입니다. 웹 서버와 수집기는 systemd 서비스로 분리되어 있고, 운영 MongoDB 데이터가 실제 서비스 기준 데이터입니다.
+
+주요 운영 서비스:
+
+- `pulsebrief-web`: ASP.NET Core 웹/API 서버
+- `pulsebrief-collector`: RSS 수집, 본문 수집, 그룹화, 요약 생성 작업자
+- `mongod`: 운영 MongoDB
+- `cloudflared`: Cloudflare Tunnel
+- `pulsebrief-mongodb-backup.timer`: MongoDB 일일 백업
+
+## 주요 기능
+
+- RSS/Atom 피드 기반 뉴스 수집
+- 기사 원문 본문과 대표 이미지 수집
+- 유사 기사 그룹화와 카테고리 분류
+- 뉴스 검색, 언론사 필터, 날짜/기사 수/정렬 필터
+- 카테고리별 전날 이슈 요약
+- 완료 주간 기준 주간 이슈 요약
+- 관리자 페이지의 RSS 소스 관리, 기사/그룹 관리, 진단, 요약 재생성
+- 운영 로그와 진단 API
+
+## 요약 생성 기준
+
+공개 API는 사이트 접속 시 OpenAI 요약을 새로 생성하지 않고, MongoDB에 저장된 요약만 반환합니다.
+
+- 전날 요약: 한국 시간 기준 전날 기사 그룹을 기반으로 생성합니다.
+- 전날 요약은 제목, RSS 요약, 수집 본문 일부, 키워드 분포, 출처 수, 기사 수를 반영한 후보를 OpenAI에 전달합니다.
+- 주간 요약: 최근 완료 주간, 즉 월요일 00시 이후 직전 월요일부터 일요일까지의 일간 요약을 기반으로 로컬에서 생성합니다.
+- 주간 요약은 현재 OpenAI API를 호출하지 않습니다.
+
+수집 및 요약 생성은 기본적으로 `pulsebrief-collector`가 담당합니다. 기본 실행 주기는 `AutoRefreshMinutes=10`입니다.
+
+## 로컬 실행
+
+필요 조건:
+
+- .NET 10 SDK
+- MongoDB
+- PowerShell
+
+웹 서버 실행:
 
 ```powershell
 dotnet run --urls http://localhost:4000
@@ -12,142 +64,164 @@ dotnet run --urls http://localhost:4000
 
 브라우저에서 `http://localhost:4000`으로 접속합니다.
 
-## 구성
-
-- ASP.NET Core 서버
-- `wwwroot/` 정적 프론트엔드
-- `config/rss-feeds.txt` RSS 피드 목록
-- MongoDB Community Server 로컬 저장소
-- AngleSharp 기반 기사 본문 추출
-- 10분 주기 자동 RSS 갱신 `BackgroundService`
-
-기본 MongoDB 연결값은 `mongodb://127.0.0.1:27017`, 데이터베이스 이름은 `pulsebrief`입니다.
-
-## 배포 보안
-
-외부 공개 배포 전에는 관리자 토큰을 환경 변수로 설정하는 것을 권장합니다.
-
-```powershell
-setx PULSEBRIEF_ADMIN_TOKEN "긴-랜덤-토큰"
-```
-
-관리자 전용 API는 `X-Admin-Token` 헤더가 일치할 때 허용됩니다. 로컬 개발 편의를 위해 `Security__AllowLoopbackAdmin=true`를 설정하면 루프백 요청도 관리자 요청으로 인정할 수 있지만, Cloudflare Tunnel, 리버스 프록시, 외부 공개 배포에서는 반드시 `false`로 유지하세요.
-
-프로젝트의 `.env` 파일은 Git에 포함하지 않습니다. IIS 운영 환경에서는 가능하면 `.env`를 배포 산출물로 복사하지 말고 Windows 환경 변수 또는 App Pool 환경 변수로 관리하세요.
-
-IIS 배포 폴더의 `appsettings.Production.json`에 운영 전용 관리자 토큰을 둘 수 있습니다. 이 파일은 Git 추적 대상이 아니며, 배포 스크립트가 기존 파일을 보존합니다.
-
-배포 후 기본 점검:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\test-deployment.ps1
-```
-
-관리자 토큰까지 함께 확인하려면 다음처럼 실행합니다.
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\test-deployment.ps1 -AdminToken "운영-관리자-토큰"
-```
-
-## 데이터 저장소
-
-MongoDB 컬렉션은 다음 구조를 사용합니다.
-
-- `articles`: RSS 기사, 원문 URL, 본문 추출 결과, 본문 수집 상태
-- `articleGroups`: 유사 기사 그룹과 카테고리/중요도 정보
-- `summaries`: 전날 AI 요약과 주간 로컬 요약 결과
-
-SQLite 저장소는 제거되었고, 기존 SQLite 데이터는 MongoDB로 마이그레이션 완료된 상태입니다.
-
-## 백업과 복구
-
-MongoDB 백업과 복구에는 MongoDB Database Tools의 `mongodump`, `mongorestore`가 필요합니다. 현재 PC의 PATH에 도구가 없다면 MongoDB Database Tools를 설치하거나 스크립트 실행 시 도구 경로를 직접 전달하세요.
-
-백업:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\backup-mongodb.ps1
-```
-
-복구:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\restore-mongodb.ps1 -BackupPath .\backups\mongodb\pulsebrief_YYYYMMDD_HHMMSS -ConfirmRestore
-```
-
-백업 결과물은 `backups/` 아래에 생성되며 Git에는 포함하지 않습니다. 배포 전, 스크래핑 로직 변경 전, 대량 데이터 정리 전에는 백업을 먼저 만들어 두는 것을 권장합니다.
-
-## 운영 로그
-
-수집 파이프라인 시작, 성공, 실패 같은 운영 이벤트는 기본적으로 실행 폴더의 `logs/` 아래 날짜별 `.log` 파일에 JSON Lines 형식으로 저장됩니다. 관리자 전용 `/api/admin/diagnostics` 응답에서도 현재 프로세스에서 기록한 최근 이벤트를 확인할 수 있습니다.
-
-로그 저장 위치는 `OperationalLog:Directory`, 진단 API에 보관할 최근 이벤트 수는 `OperationalLog:RecentEventCount` 설정으로 조정할 수 있습니다.
-
-## 운영 진단
-
-관리자 전용 `/api/admin/diagnostics`는 기사 수, 본문 수집 성공률, 요약 생성 상태, 마지막 파이프라인 실행 상태와 함께 `warnings` 목록을 반환합니다. 기본 경고 기준은 최신 기사 갱신 12시간 지연, 최신 요약 생성 36시간 지연, 본문 수집 실패율 50% 이상, 중복 기사 비율 35% 이상입니다.
-
-경고 기준은 `Diagnostics:StaleArticleHours`, `Diagnostics:StaleSummaryHours`, `Diagnostics:LongRunningPipelineMinutes`, `Diagnostics:ContentFetchFailureRateWarning`, `Diagnostics:DuplicateArticleRateWarning`, `Diagnostics:MinimumArticlesForRateWarnings` 설정으로 조정할 수 있습니다.
-
-## 서버 파이프라인
-
-1. RSS 수집
-2. 기사 저장
-3. 기사 URL 접근 및 본문 추출
-4. 로컬 임베딩 생성
-5. 유사 기사 그룹화
-6. 전날 OpenAI 요약 및 주간 로컬 요약 생성
-
-## 수집기 분리 실행
-
-웹 서버는 기본적으로 MongoDB에 저장된 데이터를 조회해 화면과 API를 제공합니다. RSS 수집, 본문 수집, 그룹화, 요약 생성은 별도 Collector 프로젝트에서 실행합니다.
-
-```powershell
-.\tools\run-collector.ps1
-```
-
-테스트나 작업 스케줄러에서 한 번만 실행하려면 다음처럼 실행합니다.
+Collector 1회 실행:
 
 ```powershell
 .\tools\run-collector.ps1 -Once
 ```
 
-운영 환경에서 웹 서버와 독립적으로 계속 수집하려면 Collector를 별도 폴더에 배포한 뒤 Windows 작업 스케줄러에 등록합니다. 이 작업은 IIS 웹 서버가 꺼져도 PC와 MongoDB가 켜져 있으면 계속 동작합니다.
+Collector 주기 실행:
 
 ```powershell
-dotnet publish .\PulseBrief.Collector\PulseBrief.Collector.csproj -c Release -o .\publish\collector
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\deploy-collector.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\install-collector-task.ps1
+.\tools\run-collector.ps1
 ```
 
-등록되는 작업 이름은 `PulseBrief Collector`입니다. 작업은 Windows 시작 시 `SYSTEM` 계정으로 실행되며, `C:\inetpub\pulse-brief-collector\logs\collector-service.log`에 실행 로그를 남깁니다.
+기본 MongoDB 설정:
 
-기본 설정에서는 웹 서버의 자동 수집과 관리자 화면의 RSS 수동 수집이 꺼져 있습니다. 웹 서버에서 다시 수집을 허용해야 하는 특수 상황에서는 `Collector:EnableInWebHost` 또는 `Collector:AllowWebManualRefresh` 설정을 명시적으로 `true`로 바꿔야 합니다.
+```text
+mongodb://127.0.0.1:27017
+database: pulsebrief
+```
+
+## 운영 배포
+
+운영 배포는 `tools/cloud` 스크립트를 사용합니다.
+
+배포 패키지 생성:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\cloud\publish-cloud.ps1
+```
+
+Lightsail 서버 반영:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\cloud\deploy-to-ubuntu.ps1 `
+  -HostName SERVER_IP `
+  -KeyPath C:\Users\User\.ssh\pulse-brief-lightsail.pem `
+  -SkipBootstrap `
+  -StartServices
+```
+
+배포 패키지는 `.env`, `appsettings.Production.json`, API 키, SSH 키를 포함하지 않습니다. 운영 비밀값은 서버의 `/etc/pulsebrief/pulsebrief.env`에서 관리합니다.
+
+대표 운영 환경 변수:
+
+```bash
+ASPNETCORE_ENVIRONMENT=Production
+DOTNET_ENVIRONMENT=Production
+ASPNETCORE_URLS=http://127.0.0.1:8085
+Mongo__ConnectionString=mongodb://127.0.0.1:27017
+Mongo__DatabaseName=pulsebrief
+Collector__EnableInWebHost=false
+Collector__AllowWebManualRefresh=false
+OpenAI__ApiKey=REPLACE_ME
+Security__AdminToken=REPLACE_ME
+```
+
+운영 서버 상태 확인:
+
+```bash
+curl -fsS http://127.0.0.1:8085/api/health
+systemctl is-active pulsebrief-web pulsebrief-collector mongod cloudflared
+```
+
+## 운영 MongoDB 접근
+
+운영 MongoDB는 서버 로컬에서만 열고, 필요할 때 SSH 터널로 접근합니다.
+
+```powershell
+.\tools\cloud\open-mongodb-tunnel.ps1
+```
+
+MongoDB Compass 접속 URI:
+
+```text
+mongodb://127.0.0.1:27018/pulsebrief
+```
+
+터널을 사용하는 동안에는 PowerShell 창을 열어 둬야 합니다.
+
+## 백업과 복구
+
+MongoDB 백업과 복구에는 MongoDB Database Tools의 `mongodump`, `mongorestore`가 필요합니다.
+
+로컬 백업:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\backup-mongodb.ps1
+```
+
+로컬 복구:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\restore-mongodb.ps1 `
+  -BackupPath .\backups\mongodb\pulsebrief_YYYYMMDD_HHMMSS `
+  -ConfirmRestore
+```
+
+운영 서버에는 `pulsebrief-mongodb-backup.timer`를 통해 일일 백업을 두는 구성이 포함되어 있습니다.
 
 ## 버전 관리
 
-Pulse Brief는 `SemVer` 형식으로 버전을 관리합니다. 현재 버전은 `VERSION`과 `Directory.Build.props`에 기록되며, 관리자 대시보드와 `/api/health` 응답에서도 확인할 수 있습니다.
+서비스 버전은 SemVer 기준으로 관리합니다.
+
+- `VERSION`
+- `Directory.Build.props`
+- `CHANGELOG.md`
+- `/api/health`
+- 사이트 푸터 버전 표시
+- `wwwroot/index.html`의 `app.js?v=...` 캐시 버스터
+
+버전 갱신:
 
 ```powershell
-.\tools\release-version.ps1 -Version 0.2.0 -Notes "관리자 기능 개선","수집기 안정화"
+.\tools\release-version.ps1 -Version 0.1.13 -Notes "변경 내용 1","변경 내용 2"
 ```
 
-Git 태그까지 함께 만들려면 `-Tag` 옵션을 추가합니다. 배포 전에는 `CHANGELOG.md`의 해당 버전 내용을 확인하고, 빌드가 통과한 뒤 커밋/푸시합니다.
+현재 운영 정책:
+
+- 작업 완료 후 검증합니다.
+- 서비스에 반영되는 변경은 SemVer 기준으로 버전을 올립니다.
+- 한글 상세 커밋 메시지로 커밋하고 `master`에 push합니다.
+- 배포가 필요한 변경은 Lightsail 서버에 배포합니다.
+- Git 태그는 초기 개발 단계에서는 기본 생성하지 않고, 안정화 기준점이 필요할 때만 별도 확인 후 생성합니다.
 
 ## API
 
-- `GET /api/health`: 서버 상태
+공개 API:
+
+- `GET /api/health`: 서버 상태와 배포 버전
 - `GET /api/briefs`: 프론트엔드 이슈 피드 데이터
-- `GET /api/daily-summary`: 전날 이슈 요약
-- `GET /api/weekly-summary`: 주간 이슈 요약
+- `GET /api/daily-summary`: 저장된 전날 요약
+- `GET /api/weekly-summary`: 저장된 주간 요약
 
-관리자 전용 API:
+관리자 API:
 
-- `GET /api/articles`: 저장된 기사 목록과 본문 수집 상태
+- `GET /api/articles`: 저장 기사 목록과 본문 수집 상태
 - `GET /api/groups`: 유사 기사 그룹 목록
-- `POST /api/refresh`: RSS 수집부터 요약 갱신까지 파이프라인 실행
-- `GET /api/admin/diagnostics`: 기사/그룹/요약 수, 본문 수집 상태, 마지막 파이프라인 실행 상태, 운영 경고, 최근 운영 이벤트
-- `POST /api/admin/fetch-missing-content`: 누락된 기사 본문 재수집
-- `POST /api/admin/fetch-missing-images`: 누락된 기사 이미지 재수집
+- `POST /api/refresh`: 수집 파이프라인 수동 실행, 기본 운영 설정에서는 비활성
+- `GET /api/admin/diagnostics`: 기사/그룹/요약/본문 수집/운영 로그 진단
+- `POST /api/admin/fetch-missing-content`: 누락 본문 재수집
+- `POST /api/admin/fetch-missing-images`: 누락 이미지 재수집
+- `POST /api/admin/summaries/daily/regenerate`: 전날 요약 재생성
+- `POST /api/admin/summaries/daily/preview`: 저장하지 않고 새 전날 요약 미리보기
+- `POST /api/admin/summaries/weekly/regenerate`: 주간 요약 재생성
+- `GET/POST/PATCH /api/admin/rss-feeds`: RSS 소스 관리
 
-`/api/daily-summary`의 `date` 또는 `force` 파라미터, `/api/weekly-summary`의 `endDate` 또는 `force` 파라미터도 관리자 권한이 필요합니다.
+관리자 API는 `Security__AdminToken` 또는 관리자 세션 인증을 사용합니다.
+
+## 문서
+
+- [운영 관리 문서](docs/operations.md): 계정, 비용, 서버, MongoDB, 백업, 보안 운영 기준
+- [클라우드 이전 런북](docs/cloud-migration.md): Lightsail Ubuntu 배포 절차
+- [버전 관리 정책](docs/versioning.md): SemVer, 커밋, 배포, 태그 정책
+- [개발 현황 문서](docs/development-summary.md): 초기 개발 과정 기록
+
+## 보안 기준
+
+- `.env`, API 키, SSH 키, `appsettings.Production.json`은 Git에 포함하지 않습니다.
+- 운영 관리자 토큰은 서버 환경 변수로 관리합니다.
+- 운영 MongoDB는 외부에 직접 공개하지 않습니다.
+- Cloudflare Tunnel token과 OpenAI API key는 외부에 노출하지 않습니다.
+- 배포 전후 `/api/health`와 systemd 서비스 상태를 확인합니다.
