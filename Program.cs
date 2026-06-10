@@ -32,7 +32,10 @@ builder.Services.AddSingleton<OperationalLogService>();
 builder.Services.AddSingleton<OperationalDiagnosticsService>();
 builder.Services.AddSingleton<AdminAuthService>();
 builder.Services.AddSingleton<NewsPipeline>();
-builder.Services.AddHostedService<ScheduledRefreshService>();
+if (builder.Configuration.GetValue("Collector:EnableInWebHost", false))
+{
+    builder.Services.AddHostedService<ScheduledRefreshService>();
+}
 
 var appStartedAt = DateTimeOffset.UtcNow;
 var app = builder.Build();
@@ -148,10 +151,20 @@ app.MapGet("/api/weekly-summary", async (HttpContext context, string? endDate, b
     }
 });
 
-app.MapPost("/api/refresh", async (HttpContext context, NewsPipeline pipeline, OperationalLogService operationalLog, AdminAuthService adminAuth, CancellationToken cancellationToken) =>
+app.MapPost("/api/refresh", async (HttpContext context, NewsPipeline pipeline, OperationalLogService operationalLog, AdminAuthService adminAuth, IConfiguration configuration, CancellationToken cancellationToken) =>
 {
     if (!adminAuth.IsAuthenticated(context)) return AdminAuthService.AdminRequired();
     if (!adminAuth.HasValidCsrf(context)) return AdminAuthService.CsrfRequired();
+    if (!configuration.GetValue("Collector:AllowWebManualRefresh", false))
+    {
+        return Results.Json(
+            new
+            {
+                error = "collector_separated",
+                message = "RSS 수집은 PulseBrief.Collector에서 실행됩니다."
+            },
+            statusCode: StatusCodes.Status409Conflict);
+    }
 
     await operationalLog.RecordAsync("info", "manual_refresh_requested", "Manual refresh was requested by an administrator.", cancellationToken: cancellationToken);
     var result = await pipeline.RunAsync(cancellationToken);

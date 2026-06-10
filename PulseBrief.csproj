@@ -9,6 +9,9 @@
     <PackageReference Include="MongoDB.Driver" Version="3.9.0" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Remove="PulseBrief.Collector\**\*.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <Content Include="config\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>

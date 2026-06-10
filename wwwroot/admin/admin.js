@@ -175,6 +175,7 @@ async function loadDashboard() {
   state.dashboard = dashboard;
   renderDashboard(dashboard);
   renderLogs(dashboard.recentEvents || []);
+  applyCollectorPolicy(dashboard);
 }
 
 function renderDashboard(dashboard) {
@@ -188,9 +189,9 @@ function renderDashboard(dashboard) {
     metricCard("본문 성공", `${Math.round((contentFetch.successRate || 0) * 100)}%`, `실패 ${formatNumber(contentFetch.failed)}건`),
     metricCard("요약", `${formatNumber(summaries.dailyCount)} / ${formatNumber(summaries.weeklyCount)}`, "일간 / 주간"),
     metricCard("RSS", formatNumber(dashboard.rss?.feedCount), `${dashboard.rss?.refreshIntervalMinutes || 10}분 주기`),
+    metricCard("수집 모드", dashboard.collector?.webHostedRefreshEnabled ? "웹 내장" : "분리", dashboard.collector?.webManualRefreshEnabled ? "웹 수동 수집 가능" : "Collector 전용"),
     metricCard("AI", dashboard.server?.openAiConfigured ? "연결됨" : "미연결", dashboard.server?.database || "MongoDB"),
     metricCard("파이프라인", pipeline.status || "not_started", pipeline.finishedAt ? formatDate(pipeline.finishedAt) : "대기 중"),
-    metricCard("업타임", `${formatNumber(dashboard.server?.uptimeMinutes)}분`, formatDate(dashboard.server?.startedAt)),
   ].join("");
 
   const warnings = dashboard.warnings || [];
@@ -212,6 +213,17 @@ function renderDashboard(dashboard) {
         </div>
       `).join("")
     : '<div class="stack-item"><strong>카테고리 없음</strong><span>저장된 그룹 데이터가 없습니다.</span></div>';
+}
+
+function applyCollectorPolicy(dashboard) {
+  const refreshButton = document.querySelector('.job-button[data-job="refresh"]');
+  if (!refreshButton) return;
+
+  const manualRefreshEnabled = Boolean(dashboard.collector?.webManualRefreshEnabled);
+  refreshButton.disabled = !manualRefreshEnabled;
+  refreshButton.title = manualRefreshEnabled
+    ? "웹 관리자 페이지에서 RSS 수집을 실행합니다."
+    : "RSS 수집은 PulseBrief.Collector에서 실행됩니다.";
 }
 
 function metricCard(label, value, detail) {

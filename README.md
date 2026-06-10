@@ -98,6 +98,22 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\restore-mongodb.ps1 
 5. 유사 기사 그룹화
 6. 전날/주간 요약 생성
 
+## 수집기 분리 실행
+
+웹 서버는 기본적으로 MongoDB에 저장된 데이터를 조회해 화면과 API를 제공합니다. RSS 수집, 본문 수집, 그룹화, 요약 생성은 별도 Collector 프로젝트에서 실행합니다.
+
+```powershell
+.\tools\run-collector.ps1
+```
+
+테스트나 작업 스케줄러에서 한 번만 실행하려면 다음처럼 실행합니다.
+
+```powershell
+.\tools\run-collector.ps1 -Once
+```
+
+기본 설정에서는 웹 서버의 자동 수집과 관리자 화면의 RSS 수동 수집이 꺼져 있습니다. 웹 서버에서 다시 수집을 허용해야 하는 특수 상황에서는 `Collector:EnableInWebHost` 또는 `Collector:AllowWebManualRefresh` 설정을 명시적으로 `true`로 바꿔야 합니다.
+
 ## API
 
 - `GET /api/health`: 서버 상태

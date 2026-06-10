@@ -246,9 +246,20 @@ public static class AdminEndpoints
             NewsPipeline pipeline,
             OperationalLogService operationalLog,
             AdminAuthService adminAuth,
+            IConfiguration configuration,
             CancellationToken cancellationToken) =>
         {
             if (!RequireAdmin(context, adminAuth, requireCsrf: true, out var denied)) return denied;
+            if (!configuration.GetValue("Collector:AllowWebManualRefresh", false))
+            {
+                return Results.Json(
+                    new
+                    {
+                        error = "collector_separated",
+                        message = "RSS 수집은 PulseBrief.Collector에서 실행됩니다."
+                    },
+                    statusCode: StatusCodes.Status409Conflict);
+            }
 
             await operationalLog.RecordAsync("info", "manual_refresh_requested", "Manual refresh was requested from admin console.", cancellationToken: cancellationToken);
             var result = await pipeline.RunAsync(cancellationToken);

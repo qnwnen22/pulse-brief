@@ -4,7 +4,7 @@ using System.Text.Json;
 namespace PulseBrief;
 
 /// <summary>운영 중 확인이 필요한 수집, 배포, 오류 이벤트를 파일과 메모리 버퍼에 기록합니다.</summary>
-public sealed class OperationalLogService(IConfiguration configuration, IWebHostEnvironment environment)
+public sealed class OperationalLogService(IConfiguration configuration, IHostEnvironment environment)
 {
     private readonly object _sync = new();
     private readonly Queue<OperationalEvent> _recentEvents = new();

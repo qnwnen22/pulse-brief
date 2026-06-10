@@ -68,6 +68,12 @@ public sealed class OperationalDiagnosticsService(
                 feedCount = feeds.Count,
                 refreshIntervalMinutes = configuration.GetValue("AutoRefreshMinutes", 10)
             },
+            collector = new
+            {
+                webHostedRefreshEnabled = configuration.GetValue("Collector:EnableInWebHost", false),
+                webManualRefreshEnabled = configuration.GetValue("Collector:AllowWebManualRefresh", false),
+                runOnStartup = configuration.GetValue("Collector:RunOnStartup", true)
+            },
             storage = new
             {
                 articleCount = articles.Count,

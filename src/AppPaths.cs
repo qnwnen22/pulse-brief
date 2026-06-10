@@ -1,7 +1,7 @@
 namespace PulseBrief;
 
 /// <summary>애플리케이션이 사용하는 설정 파일 경로를 계산합니다.</summary>
-public sealed class AppPaths(IWebHostEnvironment environment)
+public sealed class AppPaths(IHostEnvironment environment)
 {
     private readonly string _root = environment.ContentRootPath;
 
