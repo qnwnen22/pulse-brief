@@ -21,7 +21,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| Public IPv4 | `13.124.97.153` |
+| Public IPv4 | `54.180.1.28` |
 | Private IPv4 | `172.26.15.242` |
 | Public IPv6 | `2406:da12:5d6:3300:c280:133d:3808:afb4` |
 | OS | Ubuntu 24.04 LTS |
@@ -299,7 +299,7 @@ Connection Name: Pulse Brief Production
 URI: mongodb://127.0.0.1:27017/pulsebrief
 Authentication: None
 SSH Tunnel: Use Identity File
-SSH Hostname: 13.124.97.153
+SSH Hostname: 54.180.1.28
 SSH Port: 22
 SSH Username: ubuntu
 SSH Identity Key File: C:\Users\User\.ssh\pulse-brief-lightsail.pem
@@ -388,7 +388,7 @@ powershell -ExecutionPolicy Bypass -File .\tools\cloud\publish-cloud.ps1
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tools\cloud\deploy-to-ubuntu.ps1 `
-  -HostName 13.124.97.153 `
+  -HostName 54.180.1.28 `
   -UserName ubuntu `
   -KeyPath C:\Users\User\.ssh\pulse-brief-lightsail.pem `
   -SkipBootstrap

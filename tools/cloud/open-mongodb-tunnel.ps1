@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$HostName = "13.124.97.153",
+    [string]$HostName = "54.180.1.28",
     [string]$UserName = "ubuntu",
     [string]$KeyPath = "$env:USERPROFILE\.ssh\pulse-brief-lightsail.pem",
     [int]$LocalPort = 27018,
