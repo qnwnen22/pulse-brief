@@ -97,6 +97,7 @@ const navItems = document.querySelectorAll(".nav-item[data-view]");
 const viewPanels = document.querySelectorAll(".view-panel[data-panel]");
 const appLoading = document.querySelector("#appLoading");
 const refreshButton = document.querySelector("#refreshButton");
+const appVersion = document.querySelector("#appVersion");
 
 const preferredCategories = [
   "정치/정책",
@@ -907,6 +908,27 @@ async function loadWeeklySummary() {
   }
 }
 
+async function loadAppVersion() {
+  if (!appVersion || location.protocol === "file:") return false;
+
+  try {
+    const response = await fetch("/api/health", { cache: "no-store" });
+    if (!response.ok) throw new Error(`health ${response.status}`);
+
+    const health = await response.json();
+    const version = String(health.version || "").trim();
+    if (!version) return false;
+
+    appVersion.textContent = `v${version}`;
+    appVersion.title = `현재 배포 버전 ${version}`;
+    appVersion.hidden = false;
+    return true;
+  } catch (error) {
+    console.warn(`[app-version] ${error.message}`);
+    return false;
+  }
+}
+
 async function refreshFromServer() {
   if (refreshButton?.disabled) return;
 
@@ -981,6 +1003,9 @@ async function initializeApp() {
     renderSourceFilter();
     renderCategoryFilters();
     renderNews();
+    loadAppVersion().catch((error) => {
+      console.warn(`[app-version] ${error.message}`);
+    });
     Promise.all([loadDailySummary(), loadWeeklySummary()]).catch((error) => {
       console.warn(`[summary-load] ${error.message}`);
     });

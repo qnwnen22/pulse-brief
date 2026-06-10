@@ -23,7 +23,7 @@ $assemblyVersion = '{0}.{1}.{2}.0' -f $versionMatch.Groups[1].Value, $versionMat
 
 Set-Content -LiteralPath $versionPath -Value $Version -Encoding UTF8
 
-$props = Get-Content -LiteralPath $propsPath -Raw
+$props = Get-Content -LiteralPath $propsPath -Raw -Encoding UTF8
 $props = [regex]::Replace($props, '(<PulseBriefVersion>).*?(</PulseBriefVersion>)', "`${1}$Version`${2}")
 $props = [regex]::Replace($props, '(<AssemblyVersion>).*?(</AssemblyVersion>)', "`${1}$assemblyVersion`${2}")
 $props = [regex]::Replace($props, '(<FileVersion>).*?(</FileVersion>)', "`${1}$assemblyVersion`${2}")
@@ -37,7 +37,7 @@ $lines = if ($Notes.Count -gt 0) {
 }
 
 $entry = "## [$Version] - $date`r`n`r`n$($lines -join "`r`n")`r`n"
-$changelog = Get-Content -LiteralPath $changelogPath -Raw
+$changelog = Get-Content -LiteralPath $changelogPath -Raw -Encoding UTF8
 if ($changelog -notmatch [regex]::Escape("## [$Version]")) {
     $changelog = $changelog -replace "# Changelog\r?\n", "# Changelog`r`n`r`n$entry`r`n"
     Set-Content -LiteralPath $changelogPath -Value $changelog -Encoding UTF8
