@@ -85,7 +85,8 @@ master
 
 현재 사용 목적:
 
-- 일일/주간 뉴스 요약 생성
+- 전날 뉴스 요약 생성
+- 주간 뉴스 요약은 저장된 일간 요약 기반 로컬 집계로 생성
 - 현재 설정 모델: `gpt-5.4-nano`
 
 현재 공식 가격 확인 기준:
@@ -97,6 +98,7 @@ master
 관리 포인트:
 
 - 비용은 웹 방문자 수보다 수집 기사 수와 요약 생성량에 더 영향을 받는다.
+- 전날 요약은 선별된 대표 기사 본문 일부만 OpenAI에 전달하고, 주간 요약은 OpenAI를 호출하지 않는다.
 - OpenAI Billing에서 monthly budget 또는 hard limit을 설정한다.
 - API 키는 서버의 `/etc/pulsebrief/pulsebrief.env`에 있다.
 - API 키를 교체하면 `pulsebrief-web`, `pulsebrief-collector`를 재시작한다.

@@ -55,7 +55,7 @@ MongoDB 컬렉션은 다음 구조를 사용합니다.
 
 - `articles`: RSS 기사, 원문 URL, 본문 추출 결과, 본문 수집 상태
 - `articleGroups`: 유사 기사 그룹과 카테고리/중요도 정보
-- `summaries`: 전날/주간 AI 요약 결과
+- `summaries`: 전날 AI 요약과 주간 로컬 요약 결과
 
 SQLite 저장소는 제거되었고, 기존 SQLite 데이터는 MongoDB로 마이그레이션 완료된 상태입니다.
 
@@ -96,7 +96,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\restore-mongodb.ps1 
 3. 기사 URL 접근 및 본문 추출
 4. 로컬 임베딩 생성
 5. 유사 기사 그룹화
-6. 전날/주간 요약 생성
+6. 전날 OpenAI 요약 및 주간 로컬 요약 생성
 
 ## 수집기 분리 실행
 

@@ -245,6 +245,33 @@ public sealed class DailyTopIssue
 
     /// <summary>대표 이슈를 보도한 주요 출처 목록입니다.</summary>
     public string[] Sources { get; set; } = [];
+
+    /// <summary>대표 이슈 선별에 사용한 주요 키워드 목록입니다.</summary>
+    public string[] Keywords { get; set; } = [];
+
+    /// <summary>OpenAI 입력에만 사용하는 대표 기사 근거입니다. 저장소와 공개 API 응답에는 포함하지 않습니다.</summary>
+    [BsonIgnore]
+    [JsonIgnore]
+    public DailyIssueEvidenceArticle[] EvidenceArticles { get; set; } = [];
+}
+
+/// <summary>AI 요약 생성 시 대표 이슈의 사실 근거로 넘기는 기사 일부입니다.</summary>
+public sealed class DailyIssueEvidenceArticle
+{
+    /// <summary>근거 기사 제목입니다.</summary>
+    public string Title { get; set; } = "";
+
+    /// <summary>근거 기사 출처입니다.</summary>
+    public string Source { get; set; } = "";
+
+    /// <summary>RSS에서 제공된 요약입니다.</summary>
+    public string Summary { get; set; } = "";
+
+    /// <summary>수집된 본문 일부입니다.</summary>
+    public string ContentExcerpt { get; set; } = "";
+
+    /// <summary>원문 URL입니다.</summary>
+    public string Url { get; set; } = "";
 }
 
 /// <summary>RSS 수집, 저장, 그룹화 파이프라인 실행 결과입니다.</summary>

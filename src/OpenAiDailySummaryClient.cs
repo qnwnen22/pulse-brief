@@ -37,6 +37,8 @@ public sealed class OpenAiDailySummaryClient(HttpClient httpClient, IConfigurati
                         Summarize the requested Korean news period by category first.
                         Summarize only the facts present in the provided issue data.
                         Do not invent facts, numbers, causes, quotes, or outcomes.
+                        When article evidence is provided, use it as the primary source of facts.
+                        Prefer issues supported by repeated keywords and multiple independent sources.
                         The categories array is the most important output. Write one useful sentence for each major category.
                         Return only valid JSON with this shape:
                         {
@@ -104,7 +106,24 @@ public sealed class OpenAiDailySummaryClient(HttpClient httpClient, IConfigurati
             .Select((issue, index) =>
             {
                 var sources = issue.Sources.Length == 0 ? "출처 없음" : string.Join(", ", issue.Sources.Take(4));
-                return $"{index + 1}. [{issue.Category}] {issue.Title}\n기사수: {issue.ArticleCount}, 점수: {issue.Score}, 출처: {sources}\n요약: {issue.Summary}";
+                var keywords = issue.Keywords.Length == 0 ? "키워드 없음" : string.Join(", ", issue.Keywords.Take(8));
+                var evidence = issue.EvidenceArticles.Length == 0
+                    ? "근거 기사 없음"
+                    : string.Join("\n", issue.EvidenceArticles.Take(2).Select((article, evidenceIndex) =>
+                        $"""
+                        - 근거 {evidenceIndex + 1}: {article.Source}
+                          제목: {article.Title}
+                          RSS 요약: {Compact(article.Summary, 350)}
+                          본문 일부: {Compact(article.ContentExcerpt, 900)}
+                        """));
+                return $"""
+                    {index + 1}. [{issue.Category}] {issue.Title}
+                    기사수: {issue.ArticleCount}, 점수: {issue.Score}, 출처: {sources}
+                    주요 키워드: {keywords}
+                    기존 요약: {issue.Summary}
+                    근거 기사:
+                    {evidence}
+                    """;
             });
         var categories = draft.Categories
             .Take(8)
@@ -123,6 +142,13 @@ public sealed class OpenAiDailySummaryClient(HttpClient httpClient, IConfigurati
             주요 이슈:
             {string.Join("\n\n", topIssues)}
             """;
+    }
+
+    private static string Compact(string? value, int maxLength)
+    {
+        var cleaned = TextCleaner.Clean(value ?? "");
+        if (cleaned.Length <= maxLength) return cleaned;
+        return $"{cleaned[..maxLength].TrimEnd()}...";
     }
 
     /// <summary>Responses API 응답 JSON에서 모델이 생성한 텍스트 출력을 추출합니다.</summary>

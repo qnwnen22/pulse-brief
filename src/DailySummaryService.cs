@@ -1,9 +1,20 @@
+using System.Text.RegularExpressions;
+
 namespace PulseBrief;
 
 /// <summary>저장된 이슈 그룹을 기반으로 일간/주간 요약을 만들고 OpenAI 요약 결과를 캐싱합니다.</summary>
 public sealed class DailySummaryService(IArticleStore store, OpenAiDailySummaryClient openAiClient)
 {
     private static readonly TimeZoneInfo KoreaTimeZone = ResolveKoreaTimeZone();
+    private static readonly Regex KeywordRegex = new("[a-z0-9가-힣]{2,}", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly HashSet<string> KeywordStopwords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "기자", "뉴스", "사진", "영상", "제공", "출처", "관련", "이번", "지난", "오는", "오늘", "내일", "어제",
+        "오전", "오후", "이날", "최근", "현재", "대한", "통해", "위해", "대해", "따라", "등을", "등의",
+        "있다", "했다", "한다", "됐다", "밝혔다", "말했다", "전했다", "설명했다", "나타났다", "것으로",
+        "가운데", "그리고", "그러나", "하지만", "또는", "면서", "에서", "으로", "에게", "까지", "부터",
+        "본문", "광고", "무단", "전재", "재배포", "금지", "copyright", "your", "browser", "support", "audio", "element"
+    };
 
     public async Task<DailyIssueSummary?> GetStoredDailySummaryAsync(DateOnly? date = null)
     {
@@ -57,14 +68,11 @@ public sealed class DailySummaryService(IArticleStore store, OpenAiDailySummaryC
         if (!force)
         {
             var existing = await store.ReadDailySummaryAsync(key);
-            if (existing is not null && (!openAiClient.IsConfigured || existing.Provider == "openai")) return existing;
+            if (existing is not null && existing.Provider == "local") return existing;
         }
 
-        var articles = await store.ReadArticlesAsync();
-        var groups = await store.ReadGroupsAsync();
-        var summary = BuildSummary(key, groups, articles, startDate, targetEndDate, "주간");
-        var aiSummary = await openAiClient.TryGenerateAsync(summary, "최근 7일 주간 이슈", cancellationToken);
-        if (aiSummary is not null) summary = aiSummary;
+        var dailySummaries = await ReadDailySummariesAsync(startDate, targetEndDate);
+        var summary = BuildWeeklySummaryFromDailySummaries(key, startDate, targetEndDate, dailySummaries);
 
         await store.SaveDailySummaryAsync(summary);
         return summary;
@@ -104,58 +112,52 @@ public sealed class DailySummaryService(IArticleStore store, OpenAiDailySummaryC
             .Where(source => !string.IsNullOrWhiteSpace(source))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Count();
-        var categorySummaries = targetGroups
-            .GroupBy(group => group.Category)
+        var candidates = targetGroups
+            .Select(group => BuildCandidate(group, articleById))
+            .ToArray();
+        ApplyKeywordDistributionScores(candidates);
+
+        var categorySummaries = candidates
+            .GroupBy(candidate => candidate.Group.Category)
             .OrderByDescending(group => group.Count())
             .ThenBy(group => group.Key)
             .Take(5)
             .Select(group =>
             {
                 var topGroup = group
-                    .OrderBy(item => IsLowBriefingValueGroup(item) ? 1 : 0)
-                    .ThenByDescending(item => ArticleDedupe.EffectiveSourceCount(item, articleById))
-                    .ThenByDescending(item => ArticleDedupe.EffectiveArticleCount(item, articleById))
-                    .ThenByDescending(item => EffectiveScore(item, articleById))
+                    .OrderBy(item => IsLowBriefingValueGroup(item.Group) ? 1 : 0)
+                    .ThenByDescending(item => item.SelectionScore)
+                    .ThenByDescending(item => item.Sources.Length)
+                    .ThenByDescending(item => item.EffectiveArticleCount)
                     .First();
+                var keywordText = topGroup.Keywords.Length == 0
+                    ? ""
+                    : $" 주요 키워드는 {string.Join(", ", topGroup.Keywords.Take(4))}입니다.";
                 return new DailyCategorySummary
                 {
                     Category = group.Key,
                     IssueCount = group.Count(),
-                    ArticleCount = group.SelectMany(item => ArticleDedupe.EffectiveArticleIds(item, articleById)).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
-                    Summary = $"{Clean(topGroup.RepresentativeTitle)} 이슈가 가장 두드러졌고, 이 카테고리에서 {group.Count()}개 이슈가 확인됐습니다."
+                    ArticleCount = group.SelectMany(item => item.EffectiveArticleIds).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+                    Summary = $"{Clean(topGroup.Group.RepresentativeTitle)} 이슈가 가장 두드러졌고, 이 카테고리에서 {group.Count()}개 이슈가 확인됐습니다.{keywordText}"
                 };
             })
             .ToArray();
-        var topIssues = targetGroups
-            .GroupBy(group => group.Category)
+        var topIssues = candidates
+            .GroupBy(candidate => candidate.Group.Category)
             .SelectMany(group => group
-                .OrderBy(item => IsLowBriefingValueGroup(item) ? 1 : 0)
-                .ThenByDescending(item => ArticleDedupe.EffectiveSourceCount(item, articleById))
-                .ThenByDescending(item => ArticleDedupe.EffectiveArticleCount(item, articleById))
-                .ThenByDescending(item => EffectiveScore(item, articleById))
-                .ThenByDescending(item => item.LatestPublishedAt)
+                .OrderBy(item => IsLowBriefingValueGroup(item.Group) ? 1 : 0)
+                .ThenByDescending(item => item.SelectionScore)
+                .ThenByDescending(item => item.Sources.Length)
+                .ThenByDescending(item => item.EffectiveArticleCount)
+                .ThenByDescending(item => item.Group.LatestPublishedAt)
                 .Take(4))
-            .OrderByDescending(group => categorySummaries.FirstOrDefault(category => category.Category == group.Category)?.IssueCount ?? 0)
-            .ThenBy(group => IsLowBriefingValueGroup(group) ? 1 : 0)
-            .ThenByDescending(group => ArticleDedupe.EffectiveSourceCount(group, articleById))
-            .ThenByDescending(group => ArticleDedupe.EffectiveArticleCount(group, articleById))
-            .ThenByDescending(group => EffectiveScore(group, articleById))
+            .OrderByDescending(candidate => categorySummaries.FirstOrDefault(category => category.Category == candidate.Group.Category)?.IssueCount ?? 0)
+            .ThenBy(candidate => IsLowBriefingValueGroup(candidate.Group) ? 1 : 0)
+            .ThenByDescending(candidate => candidate.SelectionScore)
+            .ThenByDescending(candidate => candidate.Sources.Length)
+            .ThenByDescending(candidate => candidate.EffectiveArticleCount)
             .Take(20)
-            .Select(group =>
-            {
-                var effectiveIds = ArticleDedupe.EffectiveArticleIds(group, articleById);
-                var effectiveSources = EffectiveSources(group, articleById);
-                return new DailyTopIssue
-                {
-                    Title = Clean(group.RepresentativeTitle),
-                    Category = group.Category,
-                    Summary = Clean(group.Summary),
-                    ArticleCount = effectiveIds.Length,
-                    ArticleIds = effectiveIds,
-                    Score = EffectiveScore(group, articleById),
-                    Sources = effectiveSources.Take(4).ToArray()
-                };
-            })
+            .Select(ToDailyTopIssue)
             .ToArray();
 
         var headline = targetGroups.Count == 0
@@ -180,6 +182,225 @@ public sealed class DailySummaryService(IArticleStore store, OpenAiDailySummaryC
         };
     }
 
+    private async Task<IReadOnlyList<DailyIssueSummary>> ReadDailySummariesAsync(DateOnly startDate, DateOnly endDate)
+    {
+        var tasks = EachDate(startDate, endDate)
+            .Select(date => store.ReadDailySummaryAsync(date.ToString("yyyy-MM-dd")))
+            .ToArray();
+        var summaries = await Task.WhenAll(tasks);
+        return summaries
+            .Where(summary => summary is not null && !summary.Date.StartsWith("weekly:", StringComparison.OrdinalIgnoreCase))
+            .Cast<DailyIssueSummary>()
+            .OrderBy(summary => summary.Date)
+            .ToArray();
+    }
+
+    private static DailyIssueSummary BuildWeeklySummaryFromDailySummaries(
+        string key,
+        DateOnly startDate,
+        DateOnly endDate,
+        IReadOnlyList<DailyIssueSummary> dailySummaries)
+    {
+        var summaries = dailySummaries
+            .Where(summary => DateOnly.TryParse(summary.Date, out var date) && date >= startDate && date <= endDate)
+            .OrderBy(summary => summary.Date)
+            .ToArray();
+
+        if (summaries.Length == 0)
+        {
+            return new DailyIssueSummary
+            {
+                Date = key,
+                GeneratedAt = DateTimeOffset.UtcNow,
+                Provider = "local",
+                Headline = $"{startDate:yyyy-MM-dd}~{endDate:yyyy-MM-dd} 주간 요약 준비 중",
+                Summary = "해당 주간에 생성된 일간 요약이 아직 없습니다.",
+                IssueCount = 0,
+                ArticleCount = 0,
+                SourceCount = 0,
+                Categories = [],
+                TopIssues = []
+            };
+        }
+
+        var dailyIssues = summaries
+            .SelectMany(summary => summary.TopIssues.Select(issue => new DailyIssueContext(summary.Date, issue)))
+            .Where(item => !string.IsNullOrWhiteSpace(item.Issue.Title))
+            .ToArray();
+        var topIssues = dailyIssues
+            .GroupBy(item => item.Issue.Title, StringComparer.OrdinalIgnoreCase)
+            .Select(group =>
+            {
+                var best = group
+                    .OrderByDescending(item => item.Issue.Score)
+                    .ThenByDescending(item => item.Issue.ArticleCount)
+                    .First()
+                    .Issue;
+                var articleIds = group
+                    .SelectMany(item => item.Issue.ArticleIds)
+                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+                var sources = group
+                    .SelectMany(item => item.Issue.Sources)
+                    .Where(source => !string.IsNullOrWhiteSpace(source))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Take(4)
+                    .ToArray();
+                var keywords = group
+                    .SelectMany(item => item.Issue.Keywords)
+                    .Where(keyword => !string.IsNullOrWhiteSpace(keyword))
+                    .GroupBy(keyword => keyword, StringComparer.OrdinalIgnoreCase)
+                    .OrderByDescending(keywordGroup => keywordGroup.Count())
+                    .ThenBy(keywordGroup => keywordGroup.Key)
+                    .Take(8)
+                    .Select(keywordGroup => keywordGroup.Key)
+                    .ToArray();
+
+                return new DailyTopIssue
+                {
+                    Title = Clean(best.Title),
+                    Category = best.Category,
+                    Summary = Clean(best.Summary),
+                    ArticleCount = articleIds.Length > 0 ? articleIds.Length : group.Sum(item => item.Issue.ArticleCount),
+                    ArticleIds = articleIds,
+                    Score = Math.Min(100, group.Max(item => item.Issue.Score) + Math.Min(20, (group.Count() - 1) * 5)),
+                    Sources = sources,
+                    Keywords = keywords
+                };
+            })
+            .OrderByDescending(issue => issue.Score)
+            .ThenByDescending(issue => issue.ArticleCount)
+            .Take(20)
+            .ToArray();
+
+        var categories = summaries
+            .SelectMany(summary => summary.Categories)
+            .Where(category => !string.IsNullOrWhiteSpace(category.Category))
+            .GroupBy(category => category.Category, StringComparer.OrdinalIgnoreCase)
+            .Select(group =>
+            {
+                var categoryTopIssue = topIssues
+                    .Where(issue => string.Equals(issue.Category, group.Key, StringComparison.OrdinalIgnoreCase))
+                    .OrderByDescending(issue => issue.Score)
+                    .ThenByDescending(issue => issue.ArticleCount)
+                    .FirstOrDefault();
+                var issueCount = group.Sum(category => category.IssueCount);
+                var articleCount = group.Sum(category => category.ArticleCount);
+                var summary = categoryTopIssue is null
+                    ? $"{group.Key} 분야에서 {issueCount}개 이슈와 {articleCount}개 기사가 확인됐습니다."
+                    : $"{Clean(categoryTopIssue.Title)} 이슈를 중심으로 {issueCount}개 이슈와 {articleCount}개 기사가 확인됐습니다.";
+
+                return new DailyCategorySummary
+                {
+                    Category = group.Key,
+                    IssueCount = issueCount,
+                    ArticleCount = articleCount,
+                    Summary = summary
+                };
+            })
+            .OrderByDescending(category => category.IssueCount)
+            .ThenBy(category => category.Category)
+            .Take(5)
+            .ToArray();
+
+        var distinctSources = topIssues
+            .SelectMany(issue => issue.Sources)
+            .Where(source => !string.IsNullOrWhiteSpace(source))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count();
+        var headline = $"{startDate:yyyy-MM-dd}~{endDate:yyyy-MM-dd} 주간 주요 이슈 {topIssues.Length}건";
+        var summaryText = BuildWeeklyNarrative(categories, topIssues, summaries.Length);
+
+        return new DailyIssueSummary
+        {
+            Date = key,
+            GeneratedAt = DateTimeOffset.UtcNow,
+            Provider = "local",
+            Headline = headline,
+            Summary = summaryText,
+            IssueCount = summaries.Sum(summary => summary.IssueCount),
+            ArticleCount = summaries.Sum(summary => summary.ArticleCount),
+            SourceCount = Math.Max(distinctSources, summaries.Max(summary => summary.SourceCount)),
+            Categories = categories,
+            TopIssues = topIssues
+        };
+    }
+
+    private static SummaryCandidate BuildCandidate(ArticleGroup group, IReadOnlyDictionary<string, Article> articleById)
+    {
+        var articles = ArticleDedupe.EffectiveArticles(group.ArticleIds.Select(id => articleById.TryGetValue(id, out var article) ? article : null));
+        var effectiveIds = articles.Select(article => article.Id).ToArray();
+        var sources = articles
+            .Select(article => Clean(article.Source))
+            .Where(source => !string.IsNullOrWhiteSpace(source))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (sources.Length == 0)
+        {
+            sources = group.Sources
+                .Select(Clean)
+                .Where(source => !string.IsNullOrWhiteSpace(source))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
+        var keywordWeights = ExtractKeywordWeights(group, articles);
+        return new SummaryCandidate
+        {
+            Group = group,
+            Articles = articles,
+            EffectiveArticleIds = effectiveIds,
+            Sources = sources,
+            EffectiveScore = EffectiveScore(group, articleById),
+            EffectiveArticleCount = effectiveIds.Length > 0 ? effectiveIds.Length : group.ArticleCount,
+            KeywordWeights = keywordWeights,
+            Keywords = TopKeywords(keywordWeights, 8)
+        };
+    }
+
+    private static void ApplyKeywordDistributionScores(IReadOnlyCollection<SummaryCandidate> candidates)
+    {
+        var distributions = candidates
+            .GroupBy(candidate => candidate.Group.Category)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .SelectMany(candidate => candidate.KeywordWeights)
+                    .GroupBy(keyword => keyword.Key, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(keywordGroup => keywordGroup.Key, keywordGroup => keywordGroup.Sum(keyword => keyword.Value), StringComparer.OrdinalIgnoreCase),
+                StringComparer.OrdinalIgnoreCase);
+
+        foreach (var candidate in candidates)
+        {
+            distributions.TryGetValue(candidate.Group.Category, out var categoryDistribution);
+            var keywordScore = candidate.Keywords
+                .Take(6)
+                .Sum(keyword => categoryDistribution?.GetValueOrDefault(keyword) ?? 0);
+            candidate.KeywordDistributionScore = keywordScore;
+            candidate.SelectionScore = candidate.EffectiveScore
+                + Math.Min(40, (int)Math.Round(Math.Sqrt(keywordScore) * 4))
+                + Math.Min(20, candidate.Sources.Length * 4)
+                + Math.Min(15, candidate.EffectiveArticleCount * 2);
+        }
+    }
+
+    private static DailyTopIssue ToDailyTopIssue(SummaryCandidate candidate)
+    {
+        return new DailyTopIssue
+        {
+            Title = Clean(candidate.Group.RepresentativeTitle),
+            Category = candidate.Group.Category,
+            Summary = Clean(candidate.Group.Summary),
+            ArticleCount = candidate.EffectiveArticleCount,
+            ArticleIds = candidate.EffectiveArticleIds,
+            Score = candidate.EffectiveScore,
+            Sources = candidate.Sources.Take(4).ToArray(),
+            Keywords = candidate.Keywords,
+            EvidenceArticles = BuildEvidenceArticles(candidate.Articles)
+        };
+    }
+
     /// <summary>포토/화보처럼 사실 흐름 요약 가치가 낮은 이슈를 대표 요약 후보에서 후순위로 밀기 위해 판별합니다.</summary>
     private static bool IsLowBriefingValueGroup(ArticleGroup group)
     {
@@ -193,6 +414,71 @@ public sealed class DailySummaryService(IArticleStore store, OpenAiDailySummaryC
         var sources = EffectiveSources(group, articleById);
         var articleCount = effectiveArticleCount > 0 ? effectiveArticleCount : group.ArticleCount;
         return IssueSignalCalculator.CalculateImpact(articleCount, sources.Length, Clean(group.RepresentativeTitle), sources);
+    }
+
+    private static Dictionary<string, int> ExtractKeywordWeights(ArticleGroup group, IReadOnlyList<Article> articles)
+    {
+        var weights = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        AddKeywordWeights(weights, group.RepresentativeTitle, 4);
+        AddKeywordWeights(weights, group.SeedTitle, 3);
+        AddKeywordWeights(weights, group.Summary, 2);
+
+        foreach (var article in articles.Take(8))
+        {
+            AddKeywordWeights(weights, article.Title, 3);
+            AddKeywordWeights(weights, article.Summary, 2);
+            AddKeywordWeights(weights, Compact(article.Content, 2500), 1);
+        }
+
+        return weights;
+    }
+
+    private static void AddKeywordWeights(IDictionary<string, int> weights, string? text, int weight)
+    {
+        foreach (Match match in KeywordRegex.Matches(Clean(text ?? "")))
+        {
+            var keyword = match.Value.ToLowerInvariant();
+            if (!IsKeywordCandidate(keyword)) continue;
+            weights[keyword] = weights.TryGetValue(keyword, out var current)
+                ? current + weight
+                : weight;
+        }
+    }
+
+    private static bool IsKeywordCandidate(string keyword)
+    {
+        if (keyword.Length < 2 || keyword.Length > 30) return false;
+        if (keyword.All(char.IsDigit)) return false;
+        if (KeywordStopwords.Contains(keyword)) return false;
+        if (keyword.EndsWith("기자", StringComparison.OrdinalIgnoreCase) && keyword.Length <= 5) return false;
+        return true;
+    }
+
+    private static string[] TopKeywords(IReadOnlyDictionary<string, int> weights, int count)
+    {
+        return weights
+            .OrderByDescending(keyword => keyword.Value)
+            .ThenBy(keyword => keyword.Key)
+            .Take(count)
+            .Select(keyword => keyword.Key)
+            .ToArray();
+    }
+
+    private static DailyIssueEvidenceArticle[] BuildEvidenceArticles(IReadOnlyCollection<Article> articles)
+    {
+        return articles
+            .OrderBy(article => string.IsNullOrWhiteSpace(article.Content) ? 1 : 0)
+            .ThenByDescending(article => article.PublishedAt)
+            .Take(2)
+            .Select(article => new DailyIssueEvidenceArticle
+            {
+                Title = Clean(article.Title),
+                Source = Clean(article.Source),
+                Summary = Compact(article.Summary, 350),
+                ContentExcerpt = Compact(article.Content, 1000),
+                Url = article.Url
+            })
+            .ToArray();
     }
 
     /// <summary>중복 제거 후 남은 기사에서 출처를 추출하고, 기사 문서가 없으면 그룹의 저장 출처를 사용합니다.</summary>
@@ -219,6 +505,17 @@ public sealed class DailySummaryService(IArticleStore store, OpenAiDailySummaryC
             ? "대표 이슈는 아직 정리되지 않았습니다"
             : $"가장 주목할 이슈는 {topIssues[0].Title}입니다";
         return $"{categoryText}. {topText}. 아래 주요 이슈를 훑으면 {periodLabel} 뉴스 흐름을 빠르게 파악할 수 있습니다.";
+    }
+
+    private static string BuildWeeklyNarrative(IReadOnlyList<DailyCategorySummary> categories, IReadOnlyList<DailyTopIssue> topIssues, int dailySummaryCount)
+    {
+        var categoryText = categories.Count == 0
+            ? "주간 카테고리 흐름은 아직 충분히 쌓이지 않았습니다"
+            : $"{string.Join(", ", categories.Take(3).Select(category => category.Category))} 분야의 비중이 컸습니다";
+        var topText = topIssues.Count == 0
+            ? "반복적으로 확인된 대표 이슈는 아직 없습니다"
+            : $"가장 반복적으로 확인된 이슈는 {topIssues[0].Title}입니다";
+        return $"{dailySummaryCount}개 일간 요약을 바탕으로 정리했습니다. {categoryText}. {topText}.";
     }
 
     /// <summary>현재 시각을 한국 시간으로 변환해 오늘 날짜를 반환합니다.</summary>
@@ -249,6 +546,14 @@ public sealed class DailySummaryService(IArticleStore store, OpenAiDailySummaryC
         return $"weekly:{startDate:yyyy-MM-dd}:{endDate:yyyy-MM-dd}";
     }
 
+    private static IEnumerable<DateOnly> EachDate(DateOnly startDate, DateOnly endDate)
+    {
+        for (var date = startDate; date.DayNumber <= endDate.DayNumber; date = date.AddDays(1))
+        {
+            yield return date;
+        }
+    }
+
     /// <summary>UTC 또는 임의 오프셋 시각을 한국 날짜로 변환합니다.</summary>
     private static DateOnly ToKoreaDate(DateTimeOffset value)
     {
@@ -260,6 +565,13 @@ public sealed class DailySummaryService(IArticleStore store, OpenAiDailySummaryC
     private static string Clean(string value)
     {
         return TextCleaner.Clean(value).Trim();
+    }
+
+    private static string Compact(string? value, int maxLength)
+    {
+        var cleaned = Clean(value ?? "");
+        if (cleaned.Length <= maxLength) return cleaned;
+        return $"{cleaned[..maxLength].TrimEnd()}...";
     }
 
     /// <summary>Windows와 Linux 환경 모두에서 한국 표준 시간대를 찾습니다.</summary>
@@ -274,4 +586,29 @@ public sealed class DailySummaryService(IArticleStore store, OpenAiDailySummaryC
             return TimeZoneInfo.FindSystemTimeZoneById("Asia/Seoul");
         }
     }
+
+    private sealed class SummaryCandidate
+    {
+        public required ArticleGroup Group { get; init; }
+
+        public required Article[] Articles { get; init; }
+
+        public required string[] EffectiveArticleIds { get; init; }
+
+        public required string[] Sources { get; init; }
+
+        public required int EffectiveScore { get; init; }
+
+        public required int EffectiveArticleCount { get; init; }
+
+        public required Dictionary<string, int> KeywordWeights { get; init; }
+
+        public required string[] Keywords { get; init; }
+
+        public int KeywordDistributionScore { get; set; }
+
+        public int SelectionScore { get; set; }
+    }
+
+    private sealed record DailyIssueContext(string Date, DailyTopIssue Issue);
 }
