@@ -1,0 +1,7 @@
+# Changelog
+
+## [0.1.0] - 2026-06-10
+
+- Pulse Brief의 첫 공식 버전 기준을 추가했습니다.
+- RSS 수집, MongoDB 저장, 관리자 콘솔, OpenAI 요약, Cloudflare Tunnel 배포 구성을 포함합니다.
+- 웹 서버와 수집기 분리 구조를 포함합니다.

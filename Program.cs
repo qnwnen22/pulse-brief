@@ -66,6 +66,7 @@ app.MapGet("/api/health", async (HttpContext context, AppPaths paths, IConfigura
     {
         ok = true,
         server = ".NET",
+        version = AppVersion.Current,
         database = configuration["Storage:Provider"] ?? "MongoDB",
         rssFeedCount = feeds.Count,
         hasOpenAiKey = isAdmin

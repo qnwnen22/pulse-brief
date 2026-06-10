@@ -58,6 +58,7 @@ public sealed class OperationalDiagnosticsService(
             server = new
             {
                 environment = configuration["ASPNETCORE_ENVIRONMENT"] ?? "Production",
+                version = AppVersion.Current,
                 startedAt = appStartedAt,
                 uptimeMinutes = Math.Max(0, (int)Math.Round((now - appStartedAt).TotalMinutes)),
                 database = configuration["Storage:Provider"] ?? "MongoDB",

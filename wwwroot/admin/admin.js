@@ -190,6 +190,7 @@ function renderDashboard(dashboard) {
     metricCard("요약", `${formatNumber(summaries.dailyCount)} / ${formatNumber(summaries.weeklyCount)}`, "일간 / 주간"),
     metricCard("RSS", formatNumber(dashboard.rss?.feedCount), `${dashboard.rss?.refreshIntervalMinutes || 10}분 주기`),
     metricCard("수집 모드", dashboard.collector?.webHostedRefreshEnabled ? "웹 내장" : "분리", dashboard.collector?.webManualRefreshEnabled ? "웹 수동 수집 가능" : "Collector 전용"),
+    metricCard("버전", dashboard.server?.version || "-", dashboard.server?.environment || "Production"),
     metricCard("AI", dashboard.server?.openAiConfigured ? "연결됨" : "미연결", dashboard.server?.database || "MongoDB"),
     metricCard("파이프라인", pipeline.status || "not_started", pipeline.finishedAt ? formatDate(pipeline.finishedAt) : "대기 중"),
   ].join("");
