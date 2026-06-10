@@ -5,6 +5,12 @@ public sealed class DailySummaryService(IArticleStore store, OpenAiDailySummaryC
 {
     private static readonly TimeZoneInfo KoreaTimeZone = ResolveKoreaTimeZone();
 
+    public async Task<DailyIssueSummary?> GetStoredDailySummaryAsync(DateOnly? date = null)
+    {
+        var targetDate = date ?? GetYesterdayInKorea();
+        return await store.ReadDailySummaryAsync(targetDate.ToString("yyyy-MM-dd"));
+    }
+
     /// <summary>지정한 날짜의 일간 요약을 조회하거나 새로 생성합니다. 기본값은 한국 시간 기준 전날입니다.</summary>
     public async Task<DailyIssueSummary> GetOrCreateSummaryAsync(DateOnly? date = null, bool force = false, CancellationToken cancellationToken = default)
     {
@@ -28,17 +34,25 @@ public sealed class DailySummaryService(IArticleStore store, OpenAiDailySummaryC
     }
 
     /// <summary>한국 시간 기준 전날 요약을 강제로 다시 생성합니다.</summary>
-    public async Task RefreshYesterdaySummaryAsync(CancellationToken cancellationToken = default)
+    public async Task EnsureScheduledSummariesAsync(CancellationToken cancellationToken = default)
     {
-        await GetOrCreateSummaryAsync(GetYesterdayInKorea(), force: true, cancellationToken);
+        await GetOrCreateSummaryAsync(GetYesterdayInKorea(), force: false, cancellationToken);
+        await GetOrCreateWeeklySummaryAsync(GetLatestCompletedWeekEndInKorea(), force: false, cancellationToken);
+    }
+
+    public async Task<DailyIssueSummary?> GetStoredWeeklySummaryAsync(DateOnly? endDate = null)
+    {
+        var targetEndDate = endDate ?? GetLatestCompletedWeekEndInKorea();
+        var startDate = targetEndDate.AddDays(-6);
+        return await store.ReadDailySummaryAsync(WeeklyKey(startDate, targetEndDate));
     }
 
     /// <summary>종료일을 기준으로 최근 7일 주간 요약을 조회하거나 새로 생성합니다.</summary>
     public async Task<DailyIssueSummary> GetOrCreateWeeklySummaryAsync(DateOnly? endDate = null, bool force = false, CancellationToken cancellationToken = default)
     {
-        var targetEndDate = endDate ?? GetTodayInKorea();
+        var targetEndDate = endDate ?? GetLatestCompletedWeekEndInKorea();
         var startDate = targetEndDate.AddDays(-6);
-        var key = $"weekly:{startDate:yyyy-MM-dd}:{targetEndDate:yyyy-MM-dd}";
+        var key = WeeklyKey(startDate, targetEndDate);
 
         if (!force)
         {
@@ -219,6 +233,20 @@ public sealed class DailySummaryService(IArticleStore store, OpenAiDailySummaryC
     {
         var now = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, KoreaTimeZone);
         return DateOnly.FromDateTime(now.Date).AddDays(-1);
+    }
+
+    private static DateOnly GetLatestCompletedWeekEndInKorea()
+    {
+        var today = GetTodayInKorea();
+        var daysBack = today.DayOfWeek == DayOfWeek.Sunday
+            ? 7
+            : (int)today.DayOfWeek;
+        return today.AddDays(-daysBack);
+    }
+
+    private static string WeeklyKey(DateOnly startDate, DateOnly endDate)
+    {
+        return $"weekly:{startDate:yyyy-MM-dd}:{endDate:yyyy-MM-dd}";
     }
 
     /// <summary>UTC 또는 임의 오프셋 시각을 한국 날짜로 변환합니다.</summary>

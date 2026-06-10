@@ -130,7 +130,13 @@ app.MapGet("/api/daily-summary", async (HttpContext context, string? date, bool?
             targetDate = parsed;
         }
 
-        return Results.Ok(await dailySummaryService.GetOrCreateSummaryAsync(targetDate, force.GetValueOrDefault(), cancellationToken));
+        var summary = force.GetValueOrDefault()
+            ? await dailySummaryService.GetOrCreateSummaryAsync(targetDate, force: true, cancellationToken)
+            : await dailySummaryService.GetStoredDailySummaryAsync(targetDate);
+
+        return summary is null
+            ? Results.NotFound(new { error = "daily_summary_not_ready" })
+            : Results.Ok(summary);
     }
     catch (Exception error) when (error is not OperationCanceledException)
     {
@@ -159,7 +165,13 @@ app.MapGet("/api/weekly-summary", async (HttpContext context, string? endDate, b
             targetEndDate = parsed;
         }
 
-        return Results.Ok(await dailySummaryService.GetOrCreateWeeklySummaryAsync(targetEndDate, force.GetValueOrDefault(), cancellationToken));
+        var summary = force.GetValueOrDefault()
+            ? await dailySummaryService.GetOrCreateWeeklySummaryAsync(targetEndDate, force: true, cancellationToken)
+            : await dailySummaryService.GetStoredWeeklySummaryAsync(targetEndDate);
+
+        return summary is null
+            ? Results.NotFound(new { error = "weekly_summary_not_ready" })
+            : Results.Ok(summary);
     }
     catch (Exception error) when (error is not OperationCanceledException)
     {
