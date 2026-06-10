@@ -23,7 +23,7 @@ public sealed class ArticleClusterer(IConfiguration configuration)
     {
         var workingGroups = new List<WorkingGroup>();
 
-        foreach (var article in articles.Where(article => article.Embedding is { Length: > 0 }))
+        foreach (var article in articles.Where(article => !article.IsExcluded && article.Embedding is { Length: > 0 }))
         {
             WorkingGroup? bestGroup = null;
             var bestScore = 0.0;

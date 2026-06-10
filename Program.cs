@@ -1,6 +1,4 @@
 using System.Net;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using PulseBrief;
@@ -32,6 +30,7 @@ builder.Services.AddSingleton<DailySummaryService>();
 builder.Services.AddSingleton<PipelineRunTracker>();
 builder.Services.AddSingleton<OperationalLogService>();
 builder.Services.AddSingleton<OperationalDiagnosticsService>();
+builder.Services.AddSingleton<AdminAuthService>();
 builder.Services.AddSingleton<NewsPipeline>();
 builder.Services.AddHostedService<ScheduledRefreshService>();
 
@@ -44,16 +43,22 @@ app.Use(async (context, next) =>
     context.Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
     context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
     context.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+    if (context.Request.Path.StartsWithSegments("/admin"))
+    {
+        context.Response.Headers["X-Robots-Tag"] = "noindex,nofollow";
+        context.Response.Headers["Cache-Control"] = "no-store, no-cache, must-revalidate";
+    }
+
     await next();
 });
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-app.MapGet("/api/health", async (HttpContext context, AppPaths paths, IConfiguration configuration) =>
+app.MapGet("/api/health", async (HttpContext context, AppPaths paths, IConfiguration configuration, AdminAuthService adminAuth) =>
 {
     var feeds = await paths.ReadFeedUrlsAsync();
-    var isAdmin = IsAdminRequest(context, configuration);
+    var isAdmin = adminAuth.IsAuthenticated(context);
     return Results.Ok(new
     {
         ok = true,
@@ -66,15 +71,15 @@ app.MapGet("/api/health", async (HttpContext context, AppPaths paths, IConfigura
     });
 });
 
-app.MapGet("/api/articles", async (HttpContext context, IArticleStore store, IConfiguration configuration) =>
+app.MapGet("/api/articles", async (HttpContext context, IArticleStore store, AdminAuthService adminAuth) =>
 {
-    if (!IsAdminRequest(context, configuration)) return AdminRequired();
+    if (!adminAuth.IsAuthenticated(context)) return AdminAuthService.AdminRequired();
     return Results.Ok(await store.ReadArticlesAsync());
 });
 
-app.MapGet("/api/groups", async (HttpContext context, IArticleStore store, IConfiguration configuration) =>
+app.MapGet("/api/groups", async (HttpContext context, IArticleStore store, AdminAuthService adminAuth) =>
 {
-    if (!IsAdminRequest(context, configuration)) return AdminRequired();
+    if (!adminAuth.IsAuthenticated(context)) return AdminAuthService.AdminRequired();
     return Results.Ok(await store.ReadGroupsAsync());
 });
 
@@ -85,13 +90,13 @@ app.MapGet("/api/briefs", async (IArticleStore store) =>
     return Results.Ok(ApiMapper.ToBriefs(groups, articles));
 });
 
-app.MapGet("/api/daily-summary", async (HttpContext context, string? date, bool? force, DailySummaryService dailySummaryService, CancellationToken cancellationToken) =>
+app.MapGet("/api/daily-summary", async (HttpContext context, string? date, bool? force, DailySummaryService dailySummaryService, AdminAuthService adminAuth, CancellationToken cancellationToken) =>
 {
     try
     {
-        if ((force.GetValueOrDefault() || !string.IsNullOrWhiteSpace(date)) && !IsAdminRequest(context, app.Configuration))
+        if ((force.GetValueOrDefault() || !string.IsNullOrWhiteSpace(date)) && !adminAuth.IsAuthenticated(context))
         {
-            return AdminRequired();
+            return AdminAuthService.AdminRequired();
         }
 
         DateOnly? targetDate = null;
@@ -114,13 +119,13 @@ app.MapGet("/api/daily-summary", async (HttpContext context, string? date, bool?
     }
 });
 
-app.MapGet("/api/weekly-summary", async (HttpContext context, string? endDate, bool? force, DailySummaryService dailySummaryService, CancellationToken cancellationToken) =>
+app.MapGet("/api/weekly-summary", async (HttpContext context, string? endDate, bool? force, DailySummaryService dailySummaryService, AdminAuthService adminAuth, CancellationToken cancellationToken) =>
 {
     try
     {
-        if ((force.GetValueOrDefault() || !string.IsNullOrWhiteSpace(endDate)) && !IsAdminRequest(context, app.Configuration))
+        if ((force.GetValueOrDefault() || !string.IsNullOrWhiteSpace(endDate)) && !adminAuth.IsAuthenticated(context))
         {
-            return AdminRequired();
+            return AdminAuthService.AdminRequired();
         }
 
         DateOnly? targetEndDate = null;
@@ -143,18 +148,20 @@ app.MapGet("/api/weekly-summary", async (HttpContext context, string? endDate, b
     }
 });
 
-app.MapPost("/api/refresh", async (HttpContext context, NewsPipeline pipeline, OperationalLogService operationalLog, IConfiguration configuration, CancellationToken cancellationToken) =>
+app.MapPost("/api/refresh", async (HttpContext context, NewsPipeline pipeline, OperationalLogService operationalLog, AdminAuthService adminAuth, CancellationToken cancellationToken) =>
 {
-    if (!IsAdminRequest(context, configuration)) return AdminRequired();
+    if (!adminAuth.IsAuthenticated(context)) return AdminAuthService.AdminRequired();
+    if (!adminAuth.HasValidCsrf(context)) return AdminAuthService.CsrfRequired();
 
     await operationalLog.RecordAsync("info", "manual_refresh_requested", "Manual refresh was requested by an administrator.", cancellationToken: cancellationToken);
     var result = await pipeline.RunAsync(cancellationToken);
     return Results.Ok(result);
 });
 
-app.MapPost("/api/admin/fetch-missing-content", async (HttpContext context, int? limit, IArticleStore store, ArticleContentFetcher contentFetcher, IConfiguration configuration, CancellationToken cancellationToken) =>
+app.MapPost("/api/admin/fetch-missing-content", async (HttpContext context, int? limit, IArticleStore store, ArticleContentFetcher contentFetcher, AdminAuthService adminAuth, CancellationToken cancellationToken) =>
 {
-    if (!IsAdminRequest(context, configuration)) return AdminRequired();
+    if (!adminAuth.IsAuthenticated(context)) return AdminAuthService.AdminRequired();
+    if (!adminAuth.HasValidCsrf(context)) return AdminAuthService.CsrfRequired();
 
     var articles = await store.ReadArticlesAsync();
     var targetLimit = Math.Clamp(limit.GetValueOrDefault(500), 1, 2000);
@@ -178,9 +185,10 @@ app.MapPost("/api/admin/fetch-missing-content", async (HttpContext context, int?
     });
 });
 
-app.MapPost("/api/admin/fetch-missing-images", async (HttpContext context, int? limit, IArticleStore store, ArticleContentFetcher contentFetcher, IConfiguration configuration, CancellationToken cancellationToken) =>
+app.MapPost("/api/admin/fetch-missing-images", async (HttpContext context, int? limit, IArticleStore store, ArticleContentFetcher contentFetcher, AdminAuthService adminAuth, CancellationToken cancellationToken) =>
 {
-    if (!IsAdminRequest(context, configuration)) return AdminRequired();
+    if (!adminAuth.IsAuthenticated(context)) return AdminAuthService.AdminRequired();
+    if (!adminAuth.HasValidCsrf(context)) return AdminAuthService.CsrfRequired();
 
     var articles = await store.ReadArticlesAsync();
     var targetLimit = Math.Clamp(limit.GetValueOrDefault(500), 1, 2000);
@@ -201,13 +209,14 @@ app.MapPost("/api/admin/fetch-missing-images", async (HttpContext context, int? 
     });
 });
 
-app.MapGet("/api/admin/diagnostics", async (HttpContext context, OperationalDiagnosticsService diagnostics, IConfiguration configuration) =>
+app.MapGet("/api/admin/diagnostics", async (HttpContext context, OperationalDiagnosticsService diagnostics, AdminAuthService adminAuth) =>
 {
-    if (!IsAdminRequest(context, configuration)) return AdminRequired();
+    if (!adminAuth.IsAuthenticated(context)) return AdminAuthService.AdminRequired();
 
     return Results.Ok(await diagnostics.BuildAsync(appStartedAt));
 });
 
+app.MapAdminEndpoints(appStartedAt);
 app.MapFallbackToFile("index.html");
 
 app.Run();
@@ -218,40 +227,4 @@ static object CreateLocalError(HttpContext context, Exception error)
     return isLoopback
         ? new { error = error.GetType().Name, message = error.Message }
         : new { error = "summary_failed" };
-}
-
-static IResult AdminRequired()
-{
-    return Results.Json(new { error = "admin_required" }, statusCode: StatusCodes.Status401Unauthorized);
-}
-
-static bool IsAdminRequest(HttpContext context, IConfiguration configuration)
-{
-    var configuredToken = GetAdminToken(configuration);
-    if (!string.IsNullOrWhiteSpace(configuredToken))
-    {
-        var requestToken = context.Request.Headers["X-Admin-Token"].FirstOrDefault();
-        if (TokenEquals(requestToken, configuredToken)) return true;
-    }
-
-    return configuration.GetValue("Security:AllowLoopbackAdmin", false)
-        && context.Connection.RemoteIpAddress is { } remoteIpAddress
-        && IPAddress.IsLoopback(remoteIpAddress);
-}
-
-static string? GetAdminToken(IConfiguration configuration)
-{
-    return Environment.GetEnvironmentVariable("PULSEBRIEF_ADMIN_TOKEN")
-        ?? Environment.GetEnvironmentVariable("ADMIN_API_TOKEN")
-        ?? configuration["Security:AdminToken"];
-}
-
-static bool TokenEquals(string? requestToken, string configuredToken)
-{
-    if (string.IsNullOrWhiteSpace(requestToken)) return false;
-
-    var requestBytes = Encoding.UTF8.GetBytes(requestToken);
-    var configuredBytes = Encoding.UTF8.GetBytes(configuredToken);
-    return requestBytes.Length == configuredBytes.Length
-        && CryptographicOperations.FixedTimeEquals(requestBytes, configuredBytes);
 }

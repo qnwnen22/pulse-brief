@@ -28,6 +28,9 @@ public sealed class Article
     /// <summary>RSS에서 제공한 짧은 기사 요약 또는 설명입니다.</summary>
     public string Summary { get; set; } = "";
 
+    /// <summary>관리자 검수에서 공개 화면과 요약 후보에서 제외하도록 표시한 기사인지 여부입니다.</summary>
+    public bool IsExcluded { get; set; }
+
     /// <summary>RSS 이미지 태그 또는 원문 페이지의 og:image에서 수집한 대표 이미지 URL입니다.</summary>
     public string ImageUrl { get; set; } = "";
 

@@ -7,7 +7,7 @@ public static class ArticleDedupe
     public static Article[] EffectiveArticles(IEnumerable<Article?> articles)
     {
         return articles
-            .Where(article => article is not null)
+            .Where(article => article is not null && !article.IsExcluded)
             .Cast<Article>()
             .GroupBy(DuplicateKey, StringComparer.OrdinalIgnoreCase)
             .Select(group => group
