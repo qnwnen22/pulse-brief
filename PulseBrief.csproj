@@ -10,6 +10,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="PulseBrief.Collector\**\*.cs" />
+    <Content Remove="PulseBrief.Collector\**\*;publish\**\*" />
+    <None Remove="PulseBrief.Collector\**\*;publish\**\*" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="config\**\*">
