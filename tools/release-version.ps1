@@ -44,7 +44,8 @@ if ($changelog -notmatch [regex]::Escape("## [$Version]")) {
 }
 
 if ($Tag) {
-    git tag -a "v$Version" -m "Pulse Brief v$Version"
+    Write-Warning "The -Tag option does not create a tag here because release files must be committed first."
+    Write-Warning "After committing and deploying this version, run: powershell -ExecutionPolicy Bypass -File .\tools\tag-release.ps1 -Version $Version"
 }
 
 Write-Host "Pulse Brief version updated to $Version"

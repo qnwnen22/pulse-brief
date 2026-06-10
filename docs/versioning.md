@@ -55,7 +55,8 @@ Pulse Brief는 배포 버전을 SemVer 기준으로 관리한다.
 4. 한글 커밋 메시지에 변경 내용을 상세히 적어 커밋한다.
 5. 운영 서버에 배포한다.
 6. `/api/health`와 사이트 푸터에서 배포 버전이 맞는지 확인한다.
-7. 커밋을 GitHub에 push한다.
+7. 배포된 커밋에 `vMAJOR.MINOR.PATCH` 형식의 Git 태그를 만든다.
+8. 커밋과 태그를 GitHub에 push한다.
 
 기본 명령 예시:
 
@@ -64,19 +65,33 @@ Pulse Brief는 배포 버전을 SemVer 기준으로 관리한다.
 dotnet build
 git add VERSION Directory.Build.props CHANGELOG.md
 git commit -m "버전 0.2.0 릴리즈"
-git push
 ```
 
-Git 태그는 릴리즈 이력이 필요할 때만 사용한다.
+운영 배포와 검증이 끝난 뒤 태그를 만든다.
 
 ```powershell
-.\tools\release-version.ps1 -Version 0.2.0 -Notes "운영 서버 이전 반영" -Tag
-git push origin v0.2.0
+git push
+.\tools\tag-release.ps1 -Version 0.2.0 -Push
 ```
+
+## Deployment Tag Policy
+
+운영 서버에 배포한 커밋은 반드시 Git 태그로 관리한다.
+
+태그 규칙:
+
+- 태그 이름은 `vMAJOR.MINOR.PATCH` 형식을 사용한다.
+- 예시는 `v0.2.0`, `v0.2.1`, `v1.0.0`이다.
+- 태그는 운영 서버에 실제 배포한 커밋을 가리켜야 한다.
+- 같은 태그를 다른 커밋에 다시 붙이지 않는다.
+- 이미 배포된 동일 커밋을 단순 재시작하거나 재배포하는 경우 새 태그를 만들지 않는다.
+- 코드, 설정, 배포 산출물에 의미 있는 변경이 있으면 버전을 올리고 새 태그를 만든다.
+- 운영 롤백은 새 태그를 만들지 않고 기존 배포 태그 기준으로 되돌린다.
 
 ## Current Project Rule
 
 - 배포 가능한 사용자-facing 변경은 반드시 버전을 올린다.
+- 운영 서버에 배포한 버전 커밋은 반드시 Git 태그를 붙인다.
 - 기능 추가나 운영 구조 변경은 기본적으로 `MINOR` 후보로 본다.
 - 단순 오류 수정과 링크/문구/스크립트 보정은 기본적으로 `PATCH` 후보로 본다.
 - 배포 없이 문서만 수정하는 변경은 서비스 버전을 올리지 않는다.
