@@ -27,7 +27,7 @@ public sealed class NewsPipeline(
             var fetched = await rssCollector.FetchAsync(feeds, cancellationToken);
             var articles = await store.UpsertArticlesAsync(fetched);
 
-            await articleContentFetcher.EnrichMissingContentAsync(articles, Math.Max(fetched.Count, 50), cancellationToken);
+            await articleContentFetcher.EnrichMissingContentAsync(articles, cancellationToken);
             await embeddingService.EnsureEmbeddingsAsync(articles);
             await store.SaveArticlesAsync(articles);
 

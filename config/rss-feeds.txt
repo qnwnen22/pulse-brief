@@ -4,14 +4,29 @@ https://www.yna.co.kr/rss/news.xml
 # Yonhap News TV - latest
 https://www.yonhapnewstv.co.kr/browse/feed/
 
-# Newsis - breaking
-https://www.newsis.com/RSS/sokbo.xml
+# Newsis - politics
+https://www.newsis.com/RSS/politics.xml
+
+# Newsis - economy
+https://www.newsis.com/RSS/economy.xml
+
+# Newsis - society
+https://www.newsis.com/RSS/society.xml
+
+# Newsis - international
+https://www.newsis.com/RSS/international.xml
+
+# Newsis - industry
+https://www.newsis.com/RSS/industry.xml
+
+# Newsis - IT/Bio
+https://www.newsis.com/RSS/health.xml
 
 # Hankyung - all news
 https://www.hankyung.com/feed/all-news
 
-# Maeil Business Newspaper - headline
-https://www.mk.co.kr/rss/30000001/
+# Maeil Business Newspaper - all news
+https://www.mk.co.kr/rss/40300001/
 
 # ETNews - today
 https://rss.etnews.com/Section901.xml
@@ -28,8 +43,20 @@ https://www.khan.co.kr/rss/rssdata/total_news.xml
 # SBS - latest
 https://news.sbs.co.kr/news/newsflashRssFeed.do?plink=RSSREADER
 
-# JTBC - latest
-https://news-ex.jtbc.co.kr/v1/get/rss/newsflesh
+# JTBC - politics
+https://news-ex.jtbc.co.kr/v1/get/rss/section/politics
+
+# JTBC - economy
+https://news-ex.jtbc.co.kr/v1/get/rss/section/economy
+
+# JTBC - society
+https://news-ex.jtbc.co.kr/v1/get/rss/section/society
+
+# JTBC - international
+https://news-ex.jtbc.co.kr/v1/get/rss/section/international
+
+# JTBC - culture
+https://news-ex.jtbc.co.kr/v1/get/rss/section/culture
 
 # Korea.kr - policy
 https://www.korea.kr/rss/policy.xml

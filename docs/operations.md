@@ -319,10 +319,13 @@ RSS는 운영 안정성을 위해 언론사별 대표 feed 1개를 우선 사용
 기준:
 
 1. 전체뉴스 RSS가 있으면 전체뉴스 RSS만 사용한다.
-2. 전체뉴스가 없으면 최신뉴스, 속보, 헤드라인 중 하나를 대표 RSS로 사용한다.
-3. 전체뉴스와 섹션별 RSS를 동시에 대량 등록하지 않는다.
-4. 특정 분야가 명확히 부족할 때만 예외적으로 섹션 RSS를 추가한다.
-5. HTML로 응답하거나 리다이렉트 처리가 불안정한 RSS는 운영 목록에서 제외한다.
+2. 전체뉴스가 없고 최신/대표 RSS가 있으면 해당 RSS를 우선 사용한다.
+3. 전체뉴스가 없고 속보 또는 일부 주제 RSS만 제공하는 언론사는 주요 섹션 RSS를 제한적으로 등록한다.
+4. 전체뉴스와 섹션별 RSS를 동시에 대량 등록하지 않는다.
+5. 특정 분야가 명확히 부족할 때만 예외적으로 섹션 RSS를 추가한다.
+6. HTML로 응답하거나 리다이렉트 처리가 불안정한 RSS는 운영 목록에서 제외한다.
+
+RSS feed 수가 늘어나더라도 본문 보강은 `ArticleContent:MaxArticlesPerRun` 기준으로 회당 50건만 처리한다.
 
 현재 운영 RSS 목록은 `config/rss-feeds.txt`에서 관리한다.
 
@@ -332,15 +335,15 @@ RSS는 운영 안정성을 위해 언론사별 대표 feed 1개를 우선 사용
 | --- | --- |
 | Yonhap News | all news |
 | Yonhap News TV | latest |
-| Newsis | breaking |
+| Newsis | selected sections |
 | Hankyung | all news |
-| Maeil Business Newspaper | headline |
+| Maeil Business Newspaper | all news |
 | ETNews | today |
 | Donga | all news |
 | Hankyoreh | all RSS |
 | Kyunghyang | all news |
 | SBS | latest |
-| JTBC | latest |
+| JTBC | selected sections |
 | Korea.kr | policy |
 | BBC | world |
 
