@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 namespace PulseBrief;
 
 /// <summary>저장된 이슈 그룹을 기반으로 일간/주간 요약을 만들고 OpenAI 요약 결과를 캐싱합니다.</summary>
-public sealed class DailySummaryService(IArticleStore store, OpenAiDailySummaryClient openAiClient)
+public sealed class DailySummaryService(IArticleStore store, OpenAiDailySummaryClient openAiClient, IConfiguration configuration)
 {
     private static readonly TimeZoneInfo KoreaTimeZone = ResolveKoreaTimeZone();
     private static readonly Regex KeywordRegex = new("[a-z0-9가-힣]{2,}", RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -16,6 +16,8 @@ public sealed class DailySummaryService(IArticleStore store, OpenAiDailySummaryC
         "가운데", "그리고", "그러나", "하지만", "또는", "면서", "에서", "으로", "에게", "까지", "부터",
         "본문", "광고", "무단", "전재", "재배포", "금지", "copyright", "your", "browser", "support", "audio", "element"
     };
+
+    public bool IsGenerationEnabled => configuration.GetValue("Summary:EnableGeneration", true);
     private static readonly HashSet<string> RollupKeywordStopwords = new(KeywordStopwords, StringComparer.OrdinalIgnoreCase)
     {
         "속보", "단독", "종합", "등록", "수정", "서울", "뉴시스", "연합뉴스", "한겨레", "경향신문", "동아일보",

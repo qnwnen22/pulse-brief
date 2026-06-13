@@ -130,6 +130,13 @@ app.MapGet("/api/daily-summary", async (HttpContext context, string? date, bool?
             targetDate = parsed;
         }
 
+        if (force.GetValueOrDefault() && !dailySummaryService.IsGenerationEnabled)
+        {
+            return Results.Json(
+                new { error = "summary_generation_disabled", message = "Summary generation is disabled." },
+                statusCode: StatusCodes.Status409Conflict);
+        }
+
         var summary = force.GetValueOrDefault()
             ? await dailySummaryService.GetOrCreateSummaryAsync(targetDate, force: true, cancellationToken)
             : await dailySummaryService.GetStoredDailySummaryAsync(targetDate);
@@ -163,6 +170,13 @@ app.MapGet("/api/weekly-summary", async (HttpContext context, string? endDate, b
             }
 
             targetEndDate = parsed;
+        }
+
+        if (force.GetValueOrDefault() && !dailySummaryService.IsGenerationEnabled)
+        {
+            return Results.Json(
+                new { error = "summary_generation_disabled", message = "Summary generation is disabled." },
+                statusCode: StatusCodes.Status409Conflict);
         }
 
         var summary = force.GetValueOrDefault()
