@@ -516,6 +516,13 @@ function getIssuesForDateRange(range, sourceItems = issues) {
   });
 }
 
+function getSummaryProviderLabel(summary) {
+  if (!summary) return "로컬 요약";
+  if (summary.provider === "openai") return `AI 요약 · ${summary.model || "OpenAI"}`;
+  if (summary.provider === "manual") return `수동 요약${summary.model ? ` · ${summary.model}` : ""}`;
+  return "로컬 요약";
+}
+
 function getCategoryIssues(category) {
   return category === "전체" ? issues : issues.filter((issue) => issue.category === category);
 }
@@ -533,7 +540,7 @@ function renderCategorySummary() {
   const selectedIssues = selectedCategory === "전체"
     ? dailyItems
     : dailyItems.filter((issue) => issue.category === selectedCategory);
-  const providerLabel = dailyBrief?.provider === "openai" ? `AI 요약 · ${dailyBrief.model || "OpenAI"}` : "로컬 요약";
+  const providerLabel = getSummaryProviderLabel(dailyBrief);
   const matchedCategory = (dailyBrief?.categories || []).find((category) => category.category === selectedCategory);
   const categoryIssues = (dailyBrief?.topIssues || []).filter((issue) => issue.category === selectedCategory).slice(0, 4);
   const title = `${selectedCategory} 전날 이슈 요약`;
@@ -616,7 +623,7 @@ function renderWeeklySummary() {
   const weeklyCategorySummary = (weeklyBrief?.categories || []).find((category) => category.category === activeWeeklyCategory);
   const aiWeeklyIssues = (weeklyBrief?.topIssues || []).filter((issue) => issue.category === activeWeeklyCategory).slice(0, 4);
   const weeklyIssueItems = aiWeeklyIssues.length ? aiWeeklyIssues : topIssues;
-  const weeklyProvider = weeklyBrief?.provider === "openai" ? `AI 요약 · ${weeklyBrief.model || "OpenAI"}` : "로컬 요약";
+  const weeklyProvider = getSummaryProviderLabel(weeklyBrief);
   const weeklyText = weeklyCategorySummary?.summary || buildWeeklyCategorySummary(activeWeeklyCategory, targetItems, weeklyLabel);
 
   if (!targetItems.length) {

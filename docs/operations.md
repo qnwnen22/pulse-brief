@@ -494,6 +494,25 @@ curl -fsS \
 
 응답의 `saved` 값이 `false`이면 비교용으로만 생성된 결과다.
 
+### 수동 전날 요약 배포
+
+OpenAI 요약 생성을 중단한 기간에는 `manual-summaries/YYYY-MM-DD.json` 파일을 작성한 뒤 운영 MongoDB `summaries` 컬렉션에 import한다.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\cloud\import-daily-summary.ps1 `
+  -HostName <서버_IP> `
+  -KeyPath C:\Users\User\.ssh\pulse-brief-lightsail.pem `
+  -SummaryPath .\manual-summaries\YYYY-MM-DD.json
+```
+
+확인:
+
+```powershell
+curl.exe -fsS https://news.pulse-brief.co.kr/api/daily-summary
+```
+
+수동 요약은 화면에서 `수동 요약 · Codex`로 표시된다.
+
 ### 디스크 용량 부족
 
 ```bash

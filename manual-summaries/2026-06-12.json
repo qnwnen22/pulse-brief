@@ -1,0 +1,274 @@
+{
+  "Date": "2026-06-12",
+  "GeneratedAt": "2026-06-13T02:05:00Z",
+  "Provider": "manual",
+  "Model": "Codex",
+  "Headline": "투표용지 부족 사태 후폭풍과 증시 급등, 주요 정치·국제 이슈가 함께 부각",
+  "Summary": "2026년 6월 12일 뉴스 흐름은 투표용지 부족 사태의 수사·정치권 후폭풍, 증시 급등과 금융권 리스크 관리, 윤석열 전 대통령 평양 무인기 사건 1심 선고, 미국·이란 종전 합의 논란, 스페이스X IPO와 오픈AI 관련 이슈가 중심이었습니다.",
+  "IssueCount": 3798,
+  "ArticleCount": 4298,
+  "SourceCount": 13,
+  "Categories": [
+    {
+      "Category": "경제/산업",
+      "IssueCount": 819,
+      "ArticleCount": 915,
+      "Summary": "코스피 급등으로 매수 사이드카가 발동됐고, 은행권은 증시 호조에 따른 빚투 확대를 막기 위해 신용대출 한도 축소와 접수 제한을 내놨습니다. 스페이스X IPO와 글로벌 시장 이슈도 함께 다뤄졌습니다."
+    },
+    {
+      "Category": "정치/정책",
+      "IssueCount": 701,
+      "ArticleCount": 820,
+      "Summary": "투표용지 부족 사태가 합수본 수사, 노태악 전 선관위원장 출국금지, 선거무효소청, 국정조사·특검 요구로 이어지며 정치권의 핵심 쟁점으로 확산됐습니다."
+    },
+    {
+      "Category": "사회",
+      "IssueCount": 540,
+      "ArticleCount": 647,
+      "Summary": "윤석열 전 대통령의 평양 무인기 투입 사건 1심 선고와 투표용지 부족 사태 관련 시위·수사 이슈가 사회면에서 크게 다뤄졌습니다."
+    },
+    {
+      "Category": "지역",
+      "IssueCount": 392,
+      "ArticleCount": 473,
+      "Summary": "지역별 선거 관리 논란, 농어촌기본소득 시범사업 확대, 지역 현안과 날씨·생활 정보가 주요 지역 이슈로 집계됐습니다."
+    },
+    {
+      "Category": "IT/과학",
+      "IssueCount": 385,
+      "ArticleCount": 446,
+      "Summary": "샘 올트먼 오픈AI CEO의 방한 일정 연기와 국내 협력 유지, AI·ICT 산업 거점 조성 이슈가 IT/과학 분야에서 주목받았습니다."
+    },
+    {
+      "Category": "국제",
+      "IssueCount": 230,
+      "ArticleCount": 296,
+      "Summary": "미국·이란 종전 MOU 논란, 미국 글로벌 관세 유지, 우크라이나 추가 지원 요청 등 국제정치와 통상 이슈가 이어졌습니다."
+    },
+    {
+      "Category": "스포츠",
+      "IssueCount": 288,
+      "ArticleCount": 344,
+      "Summary": "한국 축구대표팀의 월드컵 첫 경기 승리와 KBO 경기 결과, 구단 운영 이슈가 스포츠 주요 흐름을 형성했습니다."
+    }
+  ],
+  "TopIssues": [
+    {
+      "Title": "투표용지 부족 사태, 수사·정치권 후폭풍으로 확대",
+      "Category": "정치/정책",
+      "Summary": "합수본이 노태악 전 선관위원장 출국금지에 나섰고, 선관위 압수수색·증거보전·선거무효소청·국정조사·특검 요구가 이어졌습니다. 잠실 개표소 시위와 체육단체 업무 차질, 핸드볼 대표팀 관련 수사도 함께 확산됐습니다.",
+      "ArticleCount": 12,
+      "ArticleIds": [
+        "3ed3d7d8aa75f6713acc47ab5eb77579c0fc3ff0980fe14ca2d79cc5c5d7cb17",
+        "f3f25f9e057cbcc88add9b57d91569387f8b8439c0aed1fb2279aedec89f5d7b",
+        "51ca1432ed560eeb27d5535fc67bc93f65bf6895030da4b171b4eb325ba0bad7",
+        "dd511b6ed10b3a82d3a0d3a954a14dfa065b82c2eb440b2ae843ba2643799375",
+        "ebd936c3bac3c46ff8f5aaeb70eebd7fb62fcf4fe6cdac8395593f297a0a6262",
+        "c021762747ac9fc9e3b284723fc7b264448a49acfb7d255367c33ae989aa1556",
+        "01b2647189ba48e9c30cb334ceb9268269e7ac72f394b89371ff548672044301",
+        "e9d8a4024a8e181d0328a1b1adfdc9d553b0b36800193f693cf3b42b53bfdb85",
+        "60f6ec9e45c92f482e56a1eea85d1669da7313044ef4f990af2c97052e58dd2f",
+        "6fc4d2f6b3219dff3aea73707453d02141e891e8a143802b89942ae76a7ed538",
+        "64db41d6137677359668be63b5db9d90acea2e807390dc8b7100a8d0a7d93dfa",
+        "cfafaf0274e91d28e7df0d3c1e2c0fe5c83f3d0fac2909b62157bc87888c1e4c"
+      ],
+      "Score": 92,
+      "Sources": [
+        "연합뉴스TV",
+        "SBS 뉴스",
+        "연합뉴스",
+        "동아일보",
+        "매일경제",
+        "JTBC"
+      ],
+      "Keywords": [
+        "투표용지",
+        "선관위",
+        "합수본",
+        "출국금지",
+        "국정조사"
+      ]
+    },
+    {
+      "Title": "코스피 장초반 급등에 '매수 사이드카' 발동",
+      "Category": "경제/산업",
+      "Summary": "코스피가 장 초반 급등하면서 프로그램 매수호가 일시 정지가 발동됐습니다. 여러 언론사가 동시에 다뤘고, 전날 저장 데이터 기준 단일 금융 이슈 중 가장 높은 점수를 기록했습니다.",
+      "ArticleCount": 7,
+      "ArticleIds": [
+        "7577b98983fb9d71a6e67a00409c36fa7916489534bf33475729692d22613351",
+        "8b10d0da4125f6e2f09de8a021efb037cda28b94d949c1a0f8867adfa746e565",
+        "c761c7c781c67b192e97c04c292e6ce46aa788a66ceff8e5bc79aabb731bba71",
+        "f0a8b530bbbcc24a82da84bb1dcf69f59b76635466da739ec7d4487cc6ca6081",
+        "1c32198061ee8271437b47c89eafa8ea9fd50053ab53cfb7b97b5031a17e5c23",
+        "3de818f49f9564862c86db6fe8584e4c6ebd76195777d520c9a61f0ae47e9523",
+        "7648ca46eb6d1dc474a340bb2e5ba1593a42a390c954893c8e0d92fe0460c952"
+      ],
+      "Score": 73,
+      "Sources": [
+        "SBS 뉴스",
+        "동아일보",
+        "매일경제",
+        "JTBC",
+        "연합뉴스"
+      ],
+      "Keywords": [
+        "코스피",
+        "사이드카",
+        "증시",
+        "프로그램매수"
+      ]
+    },
+    {
+      "Title": "'평양 무인기 투입' 윤석열 징역 30년…\"정치적 이익 위해 도발 유도\"",
+      "Category": "사회",
+      "Summary": "12·3 비상계엄 명분 조성과 관련된 평양 무인기 투입 혐의에 대해 윤석열 전 대통령에게 1심 징역 30년이 선고됐습니다. 전직 대통령 사건이라는 점에서 정치·사회적 파장이 큰 이슈로 집계됐습니다.",
+      "ArticleCount": 5,
+      "ArticleIds": [
+        "eeb855ba4db57f5f8b841b5861a381c586821678c0f72ad1dd5dface97131b85",
+        "c9190751b90d8100e58732931548161dcc9b2dd72d46851e45126d3bc10af508",
+        "14c3ef0278bc66521b84411228e400bc1ffd1b03095156b4b10e3e0f0d995c5b",
+        "d9dac4c8b284e60dac39643191a66295e3b46841efc76004fd5b6a1256085e96",
+        "dc21713ba1636e9d73a7e0720b966fd424c5b680e39dec04c9c5b8a6949c9b0e"
+      ],
+      "Score": 65,
+      "Sources": [
+        "SBS 뉴스",
+        "매일경제",
+        "JTBC",
+        "동아일보",
+        "연합뉴스"
+      ],
+      "Keywords": [
+        "윤석열",
+        "평양무인기",
+        "1심",
+        "징역30년"
+      ]
+    },
+    {
+      "Title": "은행권 '빚투' 차단 총력전…신용대출 한도 축소·접수 제한",
+      "Category": "경제/산업",
+      "Summary": "증시 호조와 개인 투자 확대 우려 속에서 은행권이 신용대출 한도 축소, 비대면 접수 제한, 마이너스통장 한도 감액 등 관리 방안을 내놨습니다.",
+      "ArticleCount": 6,
+      "ArticleIds": [
+        "3ca035292e9cab9e8d3c029a0f7b1d10c8ddfa56348b0ac94943870a378ac9f4",
+        "4fff98c69eeaaaf25885b1a53105f46e55f5b87b80e5af0c0011861c723358f0",
+        "6679336d363853284d2ea8b2c4d80705c8e6a4edb5ec47b33f68cb717863f881",
+        "920e1d14fdd946b0a475f4515567003cc3cb68911c89d101dd09a7e1ac65263b",
+        "cdd903023666467eb58801c5c37354712401852bb177856e4ad988da89b26f0b",
+        "733ccaa5074a21ec6ded073ef3c59d3ffff0024b6af55f1326d5f396737aaa16"
+      ],
+      "Score": 60,
+      "Sources": [
+        "SBS 뉴스",
+        "연합뉴스"
+      ],
+      "Keywords": [
+        "빚투",
+        "신용대출",
+        "은행권",
+        "가계대출"
+      ]
+    },
+    {
+      "Title": "미국 '10% 글로벌 관세' 다음달까지 효력 유지",
+      "Category": "국제",
+      "Summary": "미국 항소법원이 글로벌 10% 관세 효력을 당분간 유지하는 결정을 내리면서 통상 정책 불확실성이 이어졌습니다. 관세 공백을 메우기 위한 후속 통상 조치도 주목받았습니다.",
+      "ArticleCount": 5,
+      "ArticleIds": [
+        "5b3ae019c9f436eeed5c60c3dd0ae1d90c3aa8c16cd76815dd7460068d7e275f",
+        "93c8e82ef909b3ed8f318ab6f3686dd07ac69d39cd9596946710ff73281a9d07",
+        "4512f8d20f002092f37d6ee9be53a662a5302d4038b268a743ad6cabde18524c",
+        "06d9f5b765e706d6b3d446532fec2a23e33c68ab5fd032957eab5283fa5eaa89",
+        "93eb0943e579f46b6e0fa68c35c771febbf6d92f35588811d18b01de1c6c4022"
+      ],
+      "Score": 62,
+      "Sources": [
+        "매일경제",
+        "경향신문",
+        "SBS 뉴스",
+        "연합뉴스"
+      ],
+      "Keywords": [
+        "미국",
+        "관세",
+        "통상",
+        "항소법원"
+      ]
+    },
+    {
+      "Title": "미국·이란 종전 MOU 논란",
+      "Category": "국제",
+      "Summary": "트럼프 대통령은 미국과 이란의 종전 합의가 임박했다고 밝혔지만, 이란 측은 최종 결정과 서명 일정 보도를 부인했습니다. 네타냐후 총리가 관련 내용을 사전에 통보받지 못했다는 보도도 이어졌습니다.",
+      "ArticleCount": 5,
+      "ArticleIds": [],
+      "Score": 56,
+      "Sources": [
+        "SBS 뉴스",
+        "연합뉴스",
+        "연합뉴스TV",
+        "매일경제",
+        "뉴시스"
+      ],
+      "Keywords": [
+        "미국",
+        "이란",
+        "종전",
+        "MOU",
+        "트럼프"
+      ]
+    },
+    {
+      "Title": "스페이스X, 공모가 135달러 확정…역대 최대 규모 IPO",
+      "Category": "경제/산업",
+      "Summary": "스페이스X가 공모가를 주당 135달러로 확정하며 역대 최대 규모 IPO 이슈로 부각됐습니다. 시장가치와 일론 머스크의 지배권 전망도 함께 다뤄졌습니다.",
+      "ArticleCount": 5,
+      "ArticleIds": [
+        "8a27a003b436aa38095bf95a428b288a1d20f2eb50909be89b27635aa07c876b",
+        "690213e577e865e0e03aca75466e8d5f4796cd6eb717d93147fc75414d9cb673",
+        "a1e588cf1ac76f288127f5acd4c6501ee7526ac19337575f0564576b2312a582",
+        "012fa1cfb4b8a2672483f4e77dee7754f5e9ac1abcdc277c499d5d49bd49c9b0",
+        "837c8dcdfc9fa7ba69746e7f1f2937037e976b06eb8da2860d32478c5264f82d"
+      ],
+      "Score": 62,
+      "Sources": [
+        "경향신문",
+        "SBS 뉴스",
+        "전자신문",
+        "연합뉴스"
+      ],
+      "Keywords": [
+        "스페이스X",
+        "IPO",
+        "나스닥",
+        "일론머스크"
+      ]
+    },
+    {
+      "Title": "샘 올트먼 오픈AI CEO, 방한 일정 연기…한국 협력은 유지",
+      "Category": "IT/과학",
+      "Summary": "샘 올트먼 오픈AI CEO가 14~15일 예정했던 방한 일정을 개인 사정으로 연기했습니다. 다만 한국을 포함한 아시아 협력 계획은 유지된다는 내용이 함께 전해졌습니다.",
+      "ArticleCount": 5,
+      "ArticleIds": [
+        "1206db5b1d07c54060fdab02cb67e28030d65f64744a610605a63a3a9ffc85d2",
+        "cfbef94ed05f9d249a8ae04dc1bad251dfcad7c01e5da19b37f3b1c549d98383",
+        "62151d9545325aa1c64cd52ae8cc46dbac7054648a780afcfb105c0c6583daca",
+        "c25dfec1665cb874bb4e91c51cda9509d055ba82f692492541e7cc6d84642ca2",
+        "2a2fd5b3a532d241b7fa4672370a7eba2599d987b0a21f0576eed0bf1f7649c4"
+      ],
+      "Score": 62,
+      "Sources": [
+        "SBS 뉴스",
+        "동아일보",
+        "매일경제",
+        "연합뉴스"
+      ],
+      "Keywords": [
+        "오픈AI",
+        "샘올트먼",
+        "방한",
+        "AI협력"
+      ]
+    }
+  ]
+}
