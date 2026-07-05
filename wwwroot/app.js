@@ -373,12 +373,13 @@ function matchesDateFilter(issue) {
   const value = dateFilter?.value || "all";
   if (value === "all") return true;
 
-  const issueDay = startOfDay(getIssueDate(issue)).getTime();
-  const today = startOfDay(new Date()).getTime();
+  const issueDay = getKoreaDateKey(getIssueDate(issue));
+  const today = getKoreaDateKey(new Date());
+  const yesterday = getKoreaDateKey(new Date(Date.now() - 24 * 60 * 60 * 1000));
   const oneDay = 24 * 60 * 60 * 1000;
 
   if (value === "today") return issueDay === today;
-  if (value === "yesterday") return issueDay === today - oneDay;
+  if (value === "yesterday") return issueDay === yesterday;
   if (value === "week") return getIssueDate(issue).getTime() >= Date.now() - 7 * oneDay;
   return true;
 }
@@ -811,11 +812,11 @@ function renderPublisherFilter() {
 function renderTodayKeywords() {
   if (!todayKeywords) return;
 
-  const todayKey = startOfDay(new Date()).getTime();
+  const todayKey = getKoreaDateKey(new Date());
   const keywordStats = new Map();
   const countedIssueKeys = new Set();
   issues
-    .filter((issue) => getIssueDate(issue).toDateString() === new Date(todayKey).toDateString())
+    .filter((issue) => getKoreaDateKey(getIssueDate(issue)) === todayKey)
     .forEach((issue) => {
       const issueKey = `${issue.source || ""}|${normalizeTitle(issue.title)}`;
       if (countedIssueKeys.has(issueKey)) return;
@@ -865,8 +866,8 @@ function renderTodayKeywords() {
 
 function renderMetrics() {
   const categoryItems = getCategoryIssues(activeFilter);
-  const todayKey = new Date().toDateString();
-  const todayItems = categoryItems.filter((issue) => getIssueDate(issue).toDateString() === todayKey);
+  const todayKey = getKoreaDateKey(new Date());
+  const todayItems = categoryItems.filter((issue) => getKoreaDateKey(getIssueDate(issue)) === todayKey);
   const totalImpact = todayItems.reduce((sum, issue) => sum + issue.impact, 0);
   const average = todayItems.length ? totalImpact / todayItems.length : 0;
   const now = new Date();
