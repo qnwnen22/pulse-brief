@@ -87,9 +87,15 @@ app.MapGet("/api/groups", async (HttpContext context, IArticleStore store, Admin
     return Results.Ok(await store.ReadGroupsAsync());
 });
 
-app.MapGet("/api/briefs", async (IArticleStore store, AppPaths paths) =>
+app.MapGet("/api/briefs", async (IArticleStore store, AppPaths paths, IConfiguration configuration) =>
 {
-    var articles = await store.ReadArticlesAsync();
+    var maxBriefs = Math.Clamp(configuration.GetValue("PublicBriefs:MaxGroups", 600), 100, 2000);
+    var groups = await store.ReadRecentGroupsAsync(maxBriefs * 2);
+    var articleIds = groups
+        .SelectMany(group => group.ArticleIds)
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+    var articles = await store.ReadArticlesByIdsAsync(articleIds);
     var feedUrls = await paths.ReadFeedUrlsAsync();
     var activeFeeds = feedUrls.ToHashSet(StringComparer.OrdinalIgnoreCase);
     var activePublishers = feedUrls
@@ -106,8 +112,7 @@ app.MapGet("/api/briefs", async (IArticleStore store, AppPaths paths) =>
             .ToList();
     }
 
-    var groups = await store.ReadGroupsAsync();
-    return Results.Ok(ApiMapper.ToBriefs(groups, articles));
+    return Results.Ok(ApiMapper.ToBriefs(groups, articles).Take(maxBriefs).ToArray());
 });
 
 app.MapGet("/api/daily-summary", async (HttpContext context, string? date, bool? force, DailySummaryService dailySummaryService, AdminAuthService adminAuth, CancellationToken cancellationToken) =>

@@ -958,7 +958,7 @@ async function loadServerBriefs() {
   if (location.protocol === "file:") return false;
 
   try {
-    const response = await fetch("/api/briefs");
+    const response = await fetchWithTimeout("/api/briefs", {}, 20000);
     if (!response.ok) throw new Error(`briefs ${response.status}`);
     const serverIssues = await response.json();
     if (!Array.isArray(serverIssues) || !serverIssues.length) return false;
@@ -967,6 +967,20 @@ async function loadServerBriefs() {
   } catch (error) {
     console.warn(`[briefs] ${error.message}`);
     return false;
+  }
+}
+
+async function fetchWithTimeout(resource, options = {}, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(resource, {
+      ...options,
+      signal: controller.signal
+    });
+  } finally {
+    window.clearTimeout(timeoutId);
   }
 }
 

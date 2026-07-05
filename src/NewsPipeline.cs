@@ -11,9 +11,11 @@ public sealed class NewsPipeline(
     BriefGenerator briefGenerator,
     DailySummaryService dailySummaryService,
     PipelineRunTracker pipelineRunTracker,
-    OperationalLogService operationalLog)
+    OperationalLogService operationalLog,
+    IConfiguration configuration)
 {
     private readonly SemaphoreSlim _lock = new(1, 1);
+    private readonly int _processingArticleLimit = Math.Clamp(configuration.GetValue("Pipeline:ProcessingArticleLimit", 5000), 500, 20000);
 
     /// <summary>뉴스 수집 파이프라인을 한 번 실행하고 수집/저장/그룹화 결과를 반환합니다.</summary>
     public async Task<PipelineResult> RunAsync(CancellationToken cancellationToken = default)
@@ -25,7 +27,8 @@ public sealed class NewsPipeline(
         {
             var feeds = await paths.ReadFeedUrlsAsync();
             var fetched = await rssCollector.FetchAsync(feeds, cancellationToken);
-            var articles = await store.UpsertArticlesAsync(fetched);
+            await store.UpsertArticlesAsync(fetched);
+            var articles = await store.ReadRecentArticlesAsync(_processingArticleLimit);
 
             await articleContentFetcher.EnrichMissingContentAsync(articles, cancellationToken);
             await embeddingService.EnsureEmbeddingsAsync(articles);

@@ -38,12 +38,50 @@ public sealed class MongoArticleStore : IArticleStore
             .ToListAsync();
     }
 
+    public async Task<List<Article>> ReadRecentArticlesAsync(int limit)
+    {
+        await EnsureInitializedAsync();
+        return await _articles.Find(Builders<Article>.Filter.Empty)
+            .SortByDescending(article => article.PublishedAt)
+            .ThenByDescending(article => article.FirstSeenAt)
+            .Limit(Math.Max(1, limit))
+            .ToListAsync();
+    }
+
     /// <summary>MongoDB에 저장된 전체 이슈 그룹 목록을 최신 발행 순으로 조회합니다.</summary>
     public async Task<List<ArticleGroup>> ReadGroupsAsync()
     {
         await EnsureInitializedAsync();
         return await _groups.Find(Builders<ArticleGroup>.Filter.Empty)
             .SortByDescending(group => group.LatestPublishedAt)
+            .ToListAsync();
+    }
+
+    public async Task<List<ArticleGroup>> ReadRecentGroupsAsync(int limit)
+    {
+        await EnsureInitializedAsync();
+        return await _groups.Find(Builders<ArticleGroup>.Filter.Empty)
+            .SortByDescending(group => group.LatestPublishedAt)
+            .Limit(Math.Max(1, limit))
+            .ToListAsync();
+    }
+
+    public async Task<List<Article>> ReadArticlesByIdsAsync(IReadOnlyCollection<string> ids)
+    {
+        await EnsureInitializedAsync();
+        var normalizedIds = ids
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (normalizedIds.Length == 0) return [];
+
+        var filter = Builders<Article>.Filter.In(article => article.Id, normalizedIds);
+        var projection = Builders<Article>.Projection
+            .Exclude(article => article.Content)
+            .Exclude(article => article.Embedding);
+
+        return await _articles.Find(filter)
+            .Project<Article>(projection)
             .ToListAsync();
     }
 
@@ -121,7 +159,7 @@ public sealed class MongoArticleStore : IArticleStore
                 new ReplaceOptions { IsUpsert = true });
         }
 
-        return await ReadArticlesAsync();
+        return incoming.ToList();
     }
 
     /// <summary>MongoDB 컬렉션에 필요한 조회/정렬용 인덱스를 최초 1회 생성합니다.</summary>
@@ -135,6 +173,7 @@ public sealed class MongoArticleStore : IArticleStore
             if (_initialized) return;
 
             await _articles.Indexes.CreateManyAsync([
+                new CreateIndexModel<Article>(Builders<Article>.IndexKeys.Ascending(article => article.Id)),
                 new CreateIndexModel<Article>(Builders<Article>.IndexKeys.Ascending(article => article.Url)),
                 new CreateIndexModel<Article>(Builders<Article>.IndexKeys.Descending(article => article.PublishedAt)),
                 new CreateIndexModel<Article>(Builders<Article>.IndexKeys.Ascending(article => article.Source)),
