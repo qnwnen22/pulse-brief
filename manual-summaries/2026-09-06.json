@@ -1,0 +1,276 @@
+{
+  "Date": "2026-09-06",
+  "GeneratedAt": "2026-09-07T11:20:00Z",
+  "Provider": "manual",
+  "Model": "Codex",
+  "Headline": "호르무즈·네팔 수색과 장관 후보 검증, 부동산 세제·반도체 흐름이 맞물린 하루",
+  "Summary": "2026년 9월 6일 뉴스 흐름은 호르무즈·이란 긴장과 한국 외교·해운 리스크, 네팔 홍수 실종 한국인 수색, 김승원·강신철 후보자 검증과 정치권 공방, 전월세난 대응과 부동산 세제 사각지대, 반도체·AI 투자 기대가 중심이었습니다. 경제/산업과 정치/정책 비중이 가장 컸고, 사회·지역 이슈에서는 수사·안전·재난 대응이 함께 부각됐습니다.",
+  "IssueCount": 944,
+  "ArticleCount": 1998,
+  "SourceCount": 21,
+  "Categories": [
+    {
+      "Category": "경제/산업",
+      "IssueCount": 242,
+      "ArticleCount": 251,
+      "Summary": "전월세난 대응을 위한 기업형 임대사업자 종부세 부담 완화 검토, 구축 빌라 취득세 사각지대, 반도체·AI 투자 기대와 스페이스X 기업가치 이슈가 경제/산업 흐름을 이끌었습니다."
+    },
+    {
+      "Category": "정치/정책",
+      "IssueCount": 217,
+      "ArticleCount": 234,
+      "Summary": "김승원 법무장관 후보자 검증과 한동훈 고발 공방, 강신철 국방장관 후보자의 위장전입·부정청약 의혹, 네팔 실종자 수색 지원을 둘러싼 정부 대응이 주요 정치 이슈였습니다."
+    },
+    {
+      "Category": "사회",
+      "IssueCount": 103,
+      "ArticleCount": 105,
+      "Summary": "경찰의 수사 유출·공문서 조작 징계 논란, 피신한 배우자 살해 사건 대응, 실종·수색과 안전관리 문제가 사회 분야에서 반복적으로 보도됐습니다."
+    },
+    {
+      "Category": "지역",
+      "IssueCount": 98,
+      "ArticleCount": 109,
+      "Summary": "초가을 강풍과 제주·동해안 비 예보, 대구 동아리 단체대화방 성희롱 논란, 지역 행사와 생활 현안이 지역 뉴스의 중심이었습니다."
+    },
+    {
+      "Category": "IT/과학",
+      "IssueCount": 89,
+      "ArticleCount": 94,
+      "Summary": "AI 데이터센터 모듈러 건설, GPT-6 기대와 반도체 투자 심리, 디지털 콘텐츠 플랫폼 성과가 IT/과학 분야에서 함께 다뤄졌습니다."
+    },
+    {
+      "Category": "국제",
+      "IssueCount": 63,
+      "ArticleCount": 70,
+      "Summary": "호르무즈 해협 긴장, 이란 해상봉쇄와 유조선 관련 보도, 우크라이나 종전 논의, 네팔 홍수 피해와 한국인 수색 상황이 국제면의 핵심 흐름이었습니다."
+    },
+    {
+      "Category": "문화/연예",
+      "IssueCount": 57,
+      "ArticleCount": 64,
+      "Summary": "영화 '오디세이'의 천만 관객 돌파, 뉴진스 '슈퍼 샤이' 스트리밍 기록, 강남역 케미스트릿 축제 등 문화·연예 이슈가 이어졌습니다."
+    },
+    {
+      "Category": "생활/건강",
+      "IssueCount": 42,
+      "ArticleCount": 46,
+      "Summary": "간헐적 단식과 건강관리 정보, 서울런 성과, 생활밀착형 제도·교육 이슈가 생활/건강 분야의 주요 흐름으로 집계됐습니다."
+    },
+    {
+      "Category": "스포츠",
+      "IssueCount": 33,
+      "ArticleCount": 34,
+      "Summary": "KLPGA 최예림 첫 우승, K리그 경기 결과, 국내외 스포츠 경기 소식이 스포츠 분야에서 다뤄졌습니다."
+    }
+  ],
+  "TopIssues": [
+    {
+      "Title": "김승원 법무장관 후보자 검증과 한동훈 고발 공방",
+      "Category": "정치/정책",
+      "Summary": "김승원 후보자 가족 취업 의혹과 한동훈 전 대표 측 녹취 공개를 둘러싼 공방이 이어졌고, 여권은 불법 유출 문제를 들어 공수처 고발까지 언급했습니다.",
+      "ArticleCount": 7,
+      "ArticleIds": [
+        "f5cf1c3557cc0317819d9dffa14b4bf489bb992bfa0343ec3db600cf37345a8f",
+        "02d6e3a5ff75239e76de554e83abe081aa03fc68156536d5b3e13a29d499fa6e",
+        "ccb23eb7fe9856a19aec1563d8d5cd3e612242f8da07438beb833cfe8bde5f0f",
+        "c44c8176a075410b2add38ed63c2fa314f0c9ddfb864470063c5ef08a162c424",
+        "6f0aa45d8ad8d1c9e765422c3190ff02fc3403b92d3636b6e49a01694366795d",
+        "6cccad554f83c770b18b62dc64756b081ee6f72a4a289fd88d4cd2188cc5ad22",
+        "8922db62ac97154a90075d638fbedabd5804375036322ca02f53945e99e2a21c"
+      ],
+      "Score": 92,
+      "Sources": [
+        "연합뉴스",
+        "연합뉴스TV",
+        "한국경제"
+      ],
+      "Keywords": [
+        "김승원",
+        "한동훈",
+        "법무장관",
+        "녹취",
+        "공수처"
+      ]
+    },
+    {
+      "Title": "네팔 홍수 실종 한국인 수색과 긴급구호대 대응",
+      "Category": "국제",
+      "Summary": "네팔 홍수 현장에서 한국인 실종자 수색이 이어졌고, 긴급구호대와 신속대응팀, 외교당국의 현지 협조 요청이 함께 보도됐습니다.",
+      "ArticleCount": 8,
+      "ArticleIds": [
+        "1d7c38ee445b033576971d10bc1379f01c51e862ea68f5502793e1bfb3bb9d8e",
+        "263f9b7321a086acf1bd0e1dcfd96fc324947a8b236b2eb4143853c8320dccbc",
+        "520c4c9611947a3e90aa91b080a92d53677f6ac32074dd796fbb031a39555296",
+        "ce2aad06e1e453b8892387ca7bd27a593f26f2aa8c919de6efae1d7e85779887",
+        "3c454fed7c267b2ce9bae1256163de869e2b9386d26b612daf06393d9a641e4d",
+        "0097e025ed78d7a8da371f9a755a89b992c1c7a5b6d29312b145947eac878ed7",
+        "490f7d74f015a65cfd6e715c60b53de0e0987a3aafb8671e5f18f4fe404f6666",
+        "f5aef842ccda31a4208ac4e8aacea882b92d133ffdcb3998d61cdb6b252c652a"
+      ],
+      "Score": 90,
+      "Sources": [
+        "연합뉴스TV",
+        "매일경제",
+        "SBS 뉴스",
+        "연합뉴스"
+      ],
+      "Keywords": [
+        "네팔",
+        "홍수",
+        "실종",
+        "긴급구호대",
+        "수색"
+      ]
+    },
+    {
+      "Title": "호르무즈·이란 긴장 속 한국 외교·해운 리스크 확대",
+      "Category": "국제",
+      "Summary": "호르무즈 해협과 이란 해상봉쇄 가능성이 부각되며 한국의 외교적 선택지와 해운 안전 문제가 함께 다뤄졌습니다.",
+      "ArticleCount": 6,
+      "ArticleIds": [
+        "941510aae780951aff608081aa8682dc38323a117aebcb872cfbaa3c20089912",
+        "d86faf9b57e0d8de5940809be2abbbfff6549e3fd1a4bef4355668c4cfae853d",
+        "107566774a5412fb5871c21825594a66ce10c46a927473998b296334c26e3b91",
+        "102bf32c2a074504af28367a61f8a4dd67b5885f3c3f8db8eb269037e75d59a8",
+        "df1846cec8b3581bc6154fb185a674669c79b45d4f30735e6b72dfeacf611405",
+        "36b0bacdd34165e0d57df4d5116deb5f46cdc00fa9eaaa2c12688360822e5f42"
+      ],
+      "Score": 88,
+      "Sources": [
+        "한국경제",
+        "연합뉴스",
+        "동아일보",
+        "매일경제"
+      ],
+      "Keywords": [
+        "호르무즈",
+        "이란",
+        "해상봉쇄",
+        "유조선",
+        "트럼프"
+      ]
+    },
+    {
+      "Title": "강신철 국방장관 후보자 위장전입·부정청약 의혹",
+      "Category": "정치/정책",
+      "Summary": "강신철 국방장관 후보자를 둘러싼 위장전입과 아파트 부정청약 의혹이 제기됐고, 후보자 측은 사실이 아니라는 입장을 냈습니다.",
+      "ArticleCount": 2,
+      "ArticleIds": [
+        "5b09cba4b576b7cba80b57b400d6f80cacc2856194527423245ef18f73732ca7",
+        "c6f8defec4f9f3bc77a53813d00425b0f89af8ba609a1cd36b143d70563519d3"
+      ],
+      "Score": 82,
+      "Sources": [
+        "연합뉴스",
+        "연합뉴스TV"
+      ],
+      "Keywords": [
+        "강신철",
+        "국방장관",
+        "위장전입",
+        "부정청약"
+      ]
+    },
+    {
+      "Title": "전월세난 대응과 부동산 세제 사각지대 논의",
+      "Category": "경제/산업",
+      "Summary": "정부가 기업형 임대사업자 종부세 부담 완화를 검토하는 가운데, 장기간 거래가 없던 빌라의 취득세 산정 사각지대도 함께 조명됐습니다.",
+      "ArticleCount": 4,
+      "ArticleIds": [
+        "dcd3088724115117f7140c34caaab73653ce8ad7fd5807a0888bfdf3ef2e919e",
+        "e8a5d86a4d7cd0c0caef2589bf9ebd3a268da73ed0bdc559ffcb934398b516ce",
+        "fadad3aae6a075788f2dc2ccc4cc0fb6bc048bf0d30002eee301ccb221d89c97",
+        "0bb60e12a1dd7d62e2c497b10d83af1d997469d667a66a7bdc90d4c017e2b9bf"
+      ],
+      "Score": 80,
+      "Sources": [
+        "매일경제"
+      ],
+      "Keywords": [
+        "전월세난",
+        "종부세",
+        "취득세",
+        "임대사업자",
+        "부동산"
+      ]
+    },
+    {
+      "Title": "AI 데이터센터·반도체 투자 기대와 스페이스X 이슈",
+      "Category": "IT/과학",
+      "Summary": "GPT-6 기대와 미국 반도체주 흐름, 모듈러 AI 데이터센터 건설, 스페이스X 기업가치 재평가가 기술·산업 투자 이슈로 묶였습니다.",
+      "ArticleCount": 6,
+      "ArticleIds": [
+        "592c61e841381edfaab17a7de861382e466a97dd152df01b0abd3065d3f0a373",
+        "6f9ecf166eb6913786bc5194d25c21e4604eb7574c89e088196f4e3d8b1aa9a3",
+        "a4a61b218989007b8eacc4c3b768b0a0c7a8a1141a891943271100befdb47c9d",
+        "92e4d62aa46fd78cd5036e4143168119bf16da0f67db043db2214b5d3eca267f",
+        "65828731b1b307ef7a5d605266c08ddf3feb09e367f6a8502863cbaa5be286d5",
+        "9c874e2ccb05887b36ec8ea2c940e1678d416f0b1c75df5db1d950f63d436d57"
+      ],
+      "Score": 78,
+      "Sources": [
+        "매일경제",
+        "경향신문"
+      ],
+      "Keywords": [
+        "AI",
+        "반도체",
+        "데이터센터",
+        "GPT-6",
+        "스페이스X"
+      ]
+    },
+    {
+      "Title": "경찰 수사 유출·공문서 조작 징계 논란",
+      "Category": "사회",
+      "Summary": "수사 정보 유출과 공문서 조작으로 적발된 경찰관들에 대한 처분이 솜방망이라는 지적이 나오며 경찰 내부 감찰과 징계 기준 문제가 제기됐습니다.",
+      "ArticleCount": 2,
+      "ArticleIds": [
+        "17e0056985a4a311cf56f1d7929b2fc50da7bb41495e97826002bf78c71c2c03",
+        "ca20d4e72acfd8b522952e65dbad511af967f82c6b30d5536f17ea12ba819472"
+      ],
+      "Score": 74,
+      "Sources": [
+        "매일경제"
+      ],
+      "Keywords": [
+        "경찰",
+        "수사유출",
+        "공문서",
+        "징계"
+      ]
+    },
+    {
+      "Title": "영화 '오디세이' 천만 관객과 K팝 스트리밍 성과",
+      "Category": "문화/연예",
+      "Summary": "영화 '오디세이'가 개봉 33일 만에 천만 관객을 돌파했고, 뉴진스 '슈퍼 샤이'의 스포티파이 9억 스트리밍 기록도 함께 보도됐습니다.",
+      "ArticleCount": 10,
+      "ArticleIds": [
+        "160b7bc160eda0625b56946e4a5668dad3ef93dcc3d3c72dde3c1193be8dcb28",
+        "15b4d39f90f845d3ec856b12eee06f374ae71ce54f897a55308cd18ab66e0373",
+        "16d2e7d8ab7c85816305fb9f9ed4140d15a7d3d1a79a04258fac43613c0edcdf",
+        "92777924995668fd152fd0eaf7bf22ecc4a55b16926ebec7e74d76ae0a6fca45",
+        "fb164b1067c33903a30dba1997652a41d02e749586337abfa5d26285109a119f",
+        "f65ec12a831d8b2ac94463c1a1b0e79f112f2c0cdbc5737b2de735fb1c621fdd",
+        "f123e40aceac16013023d1dcb314d04e1e23be01d0db42eb4eb306121601f70f",
+        "e3cd35e22fef0faaea3c70b9880b4e0b35ffab5bbb347b28d4fcdc366ffa5bb2",
+        "68572f2024c28e45042914ebb99488795f99b6166669fd154608285ce27f1e40",
+        "27e97a46e945454f18a522a8018ceda8dd8fa7a4088433fdd06e6f83b26345fa"
+      ],
+      "Score": 72,
+      "Sources": [
+        "경향신문",
+        "연합뉴스",
+        "SBS 뉴스",
+        "동아일보"
+      ],
+      "Keywords": [
+        "오디세이",
+        "천만",
+        "뉴진스",
+        "스포티파이"
+      ]
+    }
+  ]
+}

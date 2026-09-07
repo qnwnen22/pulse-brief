@@ -1,0 +1,371 @@
+{
+  "Date": "weekly:2026-08-31:2026-09-06",
+  "GeneratedAt": "2026-09-07T11:20:00Z",
+  "Provider": "manual",
+  "Model": "Codex",
+  "Headline": "공공·사법 개편과 재난 수색, 부동산 세제·반도체 수출, 이란·우크라이나 이슈가 한 주를 주도",
+  "Summary": "2026년 8월 31일부터 9월 6일까지는 공공기관 구조개혁과 경찰 인사·실종수사 체계 개편, 선관위 특검보·중수청장 후보 등 사법·행정 개편 이슈가 반복적으로 보도됐습니다. 경제에서는 반도체 수출·용인 반도체 산단, 종부세 세부담 상한 유지와 주거 세제 이슈가 컸고, 사회·국제에서는 예인선 전복사고, 네팔 홍수 한국인 수색, 이란·호르무즈 긴장, 우크라이나 종전 논의가 이어졌습니다.",
+  "IssueCount": 120,
+  "ArticleCount": 25682,
+  "SourceCount": 21,
+  "Categories": [
+    {
+      "Category": "경제/산업",
+      "IssueCount": 33,
+      "ArticleCount": 6962,
+      "Summary": "반도체 8월 수출 역대 최대, 용인 반도체 국가산단 착공, 종부세 세부담 상한 유지, 전월세·취득세 이슈가 경제/산업 분야의 중심 흐름이었습니다."
+    },
+    {
+      "Category": "사회",
+      "IssueCount": 24,
+      "ArticleCount": 5200,
+      "Summary": "예인선 전복사고 수색, 제주 실종사건 허위종결 논란, 강북 모텔 연쇄살인 항소, 경찰 수사 유출·공문서 조작 문제가 사회 분야에서 반복 보도됐습니다."
+    },
+    {
+      "Category": "정치/정책",
+      "IssueCount": 20,
+      "ArticleCount": 4237,
+      "Summary": "공공기관 구조개혁, 발전5사·항만공사 통합, 경찰 고위직 인사, 선관위 특검보와 중수청장 후보 압축 등 제도·인사 이슈가 이어졌습니다."
+    },
+    {
+      "Category": "지역",
+      "IssueCount": 15,
+      "ArticleCount": 3308,
+      "Summary": "서울불꽃축제 인파와 여의나루역 무정차 통과, 지역 공공기관 이전, 지역 행사와 생활 안전 이슈가 지역 뉴스에서 다뤄졌습니다."
+    },
+    {
+      "Category": "국제",
+      "IssueCount": 11,
+      "ArticleCount": 2276,
+      "Summary": "이란·호르무즈 해협 긴장, 우크라이나 종전 논의, 네팔 홍수 수색 지원, 예멘 정부군·후티 충돌이 국제 뉴스의 주요 축이었습니다."
+    },
+    {
+      "Category": "IT/과학",
+      "IssueCount": 8,
+      "ArticleCount": 1744,
+      "Summary": "AI 활용 광고 실증 의무, AI 데이터센터와 반도체 투자, 기후변화와 남극 빙하 수은 방출 연구가 IT/과학 분야에서 주목받았습니다."
+    },
+    {
+      "Category": "생활/건강",
+      "IssueCount": 4,
+      "ArticleCount": 894,
+      "Summary": "병사 단체 상해보험과 전역 후 실손보험 지원, 식당 바가지요금 제재 강화, 사교육 경쟁과 출산 영향 분석이 생활 정책 이슈로 다뤄졌습니다."
+    },
+    {
+      "Category": "문화/연예",
+      "IssueCount": 3,
+      "ArticleCount": 656,
+      "Summary": "배우 하영 차기작 하차 논란, 영화·방송·음악 콘텐츠 소식이 문화/연예 분야에서 반복 보도됐습니다."
+    },
+    {
+      "Category": "스포츠",
+      "IssueCount": 2,
+      "ArticleCount": 405,
+      "Summary": "손흥민의 LAFC 경기 활약과 국내 프로스포츠 경기 결과, KLPGA 주요 성과가 스포츠 뉴스로 집계됐습니다."
+    }
+  ],
+  "TopIssues": [
+    {
+      "Title": "공공기관 구조개혁과 발전5사·항만공사 통합 논의",
+      "Category": "정치/정책",
+      "Summary": "정부는 구조개혁·일원화·통합을 통해 공공기관을 줄이고, 발전5사와 지역별 항만공사 통합을 추진하는 방향을 제시했습니다.",
+      "ArticleCount": 9,
+      "ArticleIds": [
+        "38a62167bc9e504be9da3fead7faa8b882dec9bb22e21c160ff018c7ae15a2a2",
+        "42fb8990b32ebaf0f13ca36521e383fe2857354fc4f8f28f6e681da851192844",
+        "bc1e0e9c97b4cb54838d30889163e51ffef1cedb89938ef9476ff6738729a3a7",
+        "85f6213209129dd42dc89d0014a9c1068bdf23ea8cb043a94bc532226b54e308",
+        "c220761935596a65e77f31e93ef079b51568c8f943b4001ba23ea39e978c8976",
+        "1f87393b9a9c063697f75c0643172bdd1f036bb98f36657ec323a09f3562146d",
+        "92205d0bbc17745f0863cd4c90b086bdab3fd59ec42e7ed9ce7eef0675c57750",
+        "79345fdf55cb9521e0d2e81664b0c22f6be4a41964e310790f65df0a4896f284",
+        "606c799b4673f69e6e037690cc4f2eb1a69b5b46b2658a0045a400c15b17e500"
+      ],
+      "Score": 94,
+      "Sources": [
+        "연합뉴스",
+        "연합뉴스TV",
+        "한국경제"
+      ],
+      "Keywords": [
+        "공공기관",
+        "구조개혁",
+        "발전5사",
+        "항만공사",
+        "통합"
+      ]
+    },
+    {
+      "Title": "경찰 고위직 인사와 실종수사 감독 체계 개편",
+      "Category": "사회",
+      "Summary": "경찰청 차장·서울청장 등 고위직 인사와 전국 시도경찰청장 교체가 보도됐고, 실종수사 감독 전담조직 설치 논의가 함께 이어졌습니다.",
+      "ArticleCount": 13,
+      "ArticleIds": [
+        "26ae71b468b2d0b3653c085625587299e1ef24652b42bb210153a800f9b8c43f",
+        "c6526ec9eac5348ef8eb4ece0d99d4c9ecb557e0a1b7fbeb56773692076746fe",
+        "bfeba097fd188033497cdaa821907b0aa3c20c2ab6ba37d947d18d3504993ae7",
+        "95d88ef78e108bfcf03ba34d331afa8bf1a5ca9d7f3f9e95ff1b9617d418a5e4",
+        "123de66c72bdf378cf4b960054ae9ff464ea0695b08a90b69438367b26bfb1e4",
+        "5179e8daeebf6323189d46ed3fea5d6141b8f35c95f5509bf585f4caff440468",
+        "df593eb1ee14ecbd6088ec0d8e164c85bbdf663cd49fb89374ba7d01652d23e2",
+        "a378290fe17a42929c4c13babed4c71103917c9b6036e34547dd5c9cc30f04b9",
+        "29f7a79db4c47a614d656deea8e2308157beeb200b0754d53fd0660902b0f1fb",
+        "16c9c93cbb886995e093ea9b756e15d0143225d974faba24555b13fb8c7257ce",
+        "c3e21805131e2fd70bb8da70b23ffeeebd00fce6f952ed081e61546b023d5308",
+        "531741927f37011baecc60930361d400f243d37c2908f717591c9d05ed0e486b",
+        "941eb9d594c62fb1660a235a3fc384c0ef081d4302d706e74beb2d6c7594ec7b"
+      ],
+      "Score": 92,
+      "Sources": [
+        "연합뉴스",
+        "연합뉴스TV",
+        "한국경제",
+        "매일경제"
+      ],
+      "Keywords": [
+        "경찰",
+        "인사",
+        "실종수사",
+        "감독조직",
+        "제주경찰"
+      ]
+    },
+    {
+      "Title": "선관위 특검보와 초대 중수청장 후보 압축",
+      "Category": "정치/정책",
+      "Summary": "선관위 관련 특검보 인선과 초대 중수청장 후보군 압축 보도가 이어지며 수사·사법 체계 개편 흐름이 부각됐습니다.",
+      "ArticleCount": 6,
+      "ArticleIds": [
+        "9536a9e963d19f0ea403acaca6af2a42c5fced31bb5d27092c08421898b1f676",
+        "4f16c24315c620b8184772716bbed22a02f7333a7afb6dc0f613f4d1fc54be8d",
+        "b06abe3fe02bdf3ae22e92e9a30a630dbcd73249c9d480f81a1e0e0001b21ad7",
+        "594efa7a221332d0527cbf332fb5241835cb46fa06c9b6e0e2f712e2a125dd95",
+        "5cae6be88bcc23d1cef7fa249543271abc5c7e4b7d1c1bcff067370edd4ee96b",
+        "02399d18d521dbc654cb59e68bafb3c2cc11f62a401aeb9e8bbebf96227a086c"
+      ],
+      "Score": 88,
+      "Sources": [
+        "연합뉴스TV",
+        "한국경제",
+        "연합뉴스",
+        "SBS 뉴스"
+      ],
+      "Keywords": [
+        "선관위",
+        "특검보",
+        "중수청장",
+        "수사체계"
+      ]
+    },
+    {
+      "Title": "예인선 전복사고와 수색·구조 상황",
+      "Category": "사회",
+      "Summary": "예인선 전복사고 이후 추가 구조 선원의 상태와 남은 실종자 수색, 희생자 유족 반응이 주요 사회·안전 이슈로 다뤄졌습니다.",
+      "ArticleCount": 6,
+      "ArticleIds": [
+        "67f68ae65fc5ddffc20ee95e6349c0e517faf25bbd697fc3ddc5d073c2d1677f",
+        "db603cf04d85fdd633e25477cc461911b393f9f68ee7375c4f3bfa9a0882af64",
+        "2064873adea6fba294a022e8cfd5ef17f4e4a383fe9e6d7a36a4619ef287e198",
+        "4a56ad8d0e38a59855ad99e576dd2cf4a1a27c6afbd5449797e61c79b0752773",
+        "f40585d7867e6bb7d0f742a5acc055d9b08f7fc1be002b0d2dd587a9a3846b03",
+        "cebf3cffdffd3ddfeb4d12f066481d6b2a143c7ade3ae6f837e758b7a8c99504"
+      ],
+      "Score": 86,
+      "Sources": [
+        "한국경제",
+        "매일경제",
+        "연합뉴스TV",
+        "연합뉴스",
+        "SBS 뉴스"
+      ],
+      "Keywords": [
+        "예인선",
+        "전복사고",
+        "구조",
+        "수색"
+      ]
+    },
+    {
+      "Title": "반도체 수출 호조와 용인 국가산단 착공",
+      "Category": "경제/산업",
+      "Summary": "반도체 8월 수출이 역대 최대 흐름으로 보도됐고, LH의 용인 반도체 국가산단 부지 조성공사 착공 계획과 반도체 성과급의 내수 파급 효과가 함께 다뤄졌습니다.",
+      "ArticleCount": 11,
+      "ArticleIds": [
+        "0c89c80edf254ce8e2b54c1cdc9865f46f7288619f1463bbab8277a62a7eb5bc",
+        "b02f1115f130b236f57c08c6171f0be65ce198cc54353001b0bc03f7f03a4dd3",
+        "22c7e9cd7e4c9fd2e6131362c12a5021b0bf7f2cb38d6ca49ba8392ac1f9b4d1",
+        "21d1a06a3a93b5073dc065cb0cbc0b2263c11f1048c56b076d1174d93c71a0bf",
+        "1b665f50fd8acab9918922816bd855e8e792f8592fdf54fc8a0055b90ef0aabc",
+        "ad6079d2859113658b83b2d303d1ddbc7af5ec4a8c4f2385562bafb9909cc118",
+        "6abc56be083cec440e1ce84d0896207366245797592c6138fdca790f41eeffa9",
+        "db8ae6e6fcd1493d7a3cf724d4eeefcf3558d2d9f437881e3bd1b4588f70486d",
+        "c1de6057ebbcf521ae5da15967633dfba7c5cf892044fac40a9f941458537cad",
+        "daa358ac758532e123225df935762486fb8909449d6fbd6ca6244b76a391234a",
+        "858991c323f89d176268c8f61a069e7d4d28ddd3dc9a730f57eec02cf27b1366"
+      ],
+      "Score": 84,
+      "Sources": [
+        "연합뉴스",
+        "연합뉴스TV",
+        "SBS 뉴스",
+        "매일경제"
+      ],
+      "Keywords": [
+        "반도체",
+        "수출",
+        "용인",
+        "국가산단",
+        "내수"
+      ]
+    },
+    {
+      "Title": "종부세 세부담 상한 유지와 주거 세제 이슈",
+      "Category": "경제/산업",
+      "Summary": "정부가 종부세 세부담 상한선을 150%로 유지하기로 하면서 보유세 부담 논의가 이어졌고, 전월세난 대응과 부동산 세제 사각지대가 함께 부각됐습니다.",
+      "ArticleCount": 4,
+      "ArticleIds": [
+        "a5e473769610ad2c5909648140bf6f23e6ef2b58852de84bdbb31c72967184c3",
+        "557f0a82531ba0126a668a45391d1b1446d5e0582899020170b3dcab4da979b2",
+        "f65c687ca570516cce12181ebb997e2ec07483bdafaa140d2aa3ccf951633cf6",
+        "06d6af5be806e62b869a947aa02d311aca6a53311bf3a5c94665396de197971d"
+      ],
+      "Score": 82,
+      "Sources": [
+        "한국경제",
+        "매일경제",
+        "연합뉴스TV",
+        "연합뉴스"
+      ],
+      "Keywords": [
+        "종부세",
+        "세부담",
+        "전월세",
+        "부동산",
+        "세제"
+      ]
+    },
+    {
+      "Title": "이란·호르무즈 긴장과 한국 선박 관련 보도",
+      "Category": "국제",
+      "Summary": "호르무즈 해협에서 한국 해운사 소유 유조선 피격 보도와 이란 주변 군사 긴장이 이어졌고, 한국의 호르무즈 기여·파병 검토 문제도 함께 거론됐습니다.",
+      "ArticleCount": 12,
+      "ArticleIds": [
+        "189cd5e26e515de880605801c29fd7abbc0c1566da7ba37611683b48022a4766",
+        "ad7ab091666e782812b3f2195d06885f6d2a94223e9f6e2d772eaa63c4a72bca",
+        "e4f4120b9b26945bbe1c0858a776a4b8e6e8bc33d6509ee26addcb5a3cbb238b",
+        "f6ca07d8f20d2eeea4ae165ef27be7a453e706a1032db81c0c60b58fbb04e0c7",
+        "1eab0b2eff52f34c9f45575aa194f1402863d0677948e6802623db392385b472",
+        "686b609896253517062530d690d30cbd1b0af2d7cc48175e8e567c22e8619f0a",
+        "38ab5eeea7c8960bb03dc83f6629a69293753a9dd6103a990b7fc99d25aaa952",
+        "60b3cb6f6da35b413cbbe4ca89d19328585ad7dd8abfdafc52910b1279e6a120",
+        "219a0fbd7e2df77e2ed464275acf910d420ae61e989ca4a5a45201f3f05b65e1",
+        "5e6252b5b7e607e2ee1e778f7da35a72b2484dfa244fa00528b34db75da067ed",
+        "660229e70144d3c9bec477ae508ee50eb9944595378c236082aeafa79072e7c6",
+        "d483f47322c305a22f312d82b9b00eeeefde2d9aa3827ec7c3c856f4051ddac9"
+      ],
+      "Score": 82,
+      "Sources": [
+        "연합뉴스TV",
+        "SBS 뉴스",
+        "연합뉴스",
+        "한국경제"
+      ],
+      "Keywords": [
+        "호르무즈",
+        "이란",
+        "유조선",
+        "해상봉쇄",
+        "파병"
+      ]
+    },
+    {
+      "Title": "우크라이나 종전 논의와 푸틴·트럼프 특사 접촉",
+      "Category": "국제",
+      "Summary": "트럼프 대통령 특사의 우크라이나 방문과 젤렌스키 면담, 푸틴과의 접촉 보도가 이어지며 러시아·우크라이나 종전 논의가 국제 뉴스의 한 축을 형성했습니다.",
+      "ArticleCount": 8,
+      "ArticleIds": [
+        "173e515b48e07b8774bf375dbe86094236880e80d64a173bd9ee2d4796611f28",
+        "3ecd62a51cdba07dbc50a02c065c3fbeee24fdf5a3381ef434486416ef331f33",
+        "db806b53471b290377a0d5d62dbfa26cca8beae001973821aa4fb169eb43fec1",
+        "2f6af9931926ee4949525dbdae8eb7f4ec6fd937df3d8be8d87e7d4bf5e234e9",
+        "7797740a0becccd4d0ee18ef0b32b0c3c4dafdde14669b2f3a50677b21b10804",
+        "c36a547b651de4a4de40411057412d067ef317f88a2e58f8fcd6e785c7925472",
+        "0fa5c5c5193ab812bb0feff02b401b585b6028ff6fbcc71fc79526c5ce7cc938",
+        "b4a1446e95ab896188374c5ac74e85de59e02fc3cc59f9d65a7bddb67e580875"
+      ],
+      "Score": 78,
+      "Sources": [
+        "SBS 뉴스",
+        "연합뉴스TV",
+        "연합뉴스"
+      ],
+      "Keywords": [
+        "우크라이나",
+        "러시아",
+        "푸틴",
+        "트럼프",
+        "종전"
+      ]
+    },
+    {
+      "Title": "네팔 홍수 실종자 수색과 한국 긴급구호대 파견",
+      "Category": "국제",
+      "Summary": "한국 긴급구호대가 네팔에 도착했고, 헬기와 육로 수색 시도, 신속대응팀의 현지 활동이 한 주 동안 이어졌습니다.",
+      "ArticleCount": 11,
+      "ArticleIds": [
+        "9be016123d75daae34afc120013fe9b33c1d98f666f8c493f0356a66e82d5c2b",
+        "d502d06086bf54aefb59b5e4d1e1ec3d3d9f2ed814b3918c7cd162105db595e0",
+        "e0a856154f555efa1b9472be7b491acecadce5c246f936607ec78631f5883897",
+        "ee1a4a89c1b316e959141835e4aeb02768590752d266605324a9d5562ea23975",
+        "419a44b6a9cc6ed1ba1826bc0ef56e4c24c7b43f9fd684b38342240e091d3c43",
+        "0a94cc68bb67daeef74a78631d5a44e0b48e3f1ea650d2830e9533b313e1ebca",
+        "33893da3764efad9d2277b08a3f28ad3b77506880d801ca0392de49287ac01fe",
+        "515b742ba6f0d84d16ebd7d2ab543c401b94d3bc3d8d5c7a66106c7eac18e370",
+        "14d6261e7a15d62f94ad5c711aa557d58a920e9abe906428f60c0e5691769417",
+        "53491c0cdcfd2eb329c0c51ae630548edb0f9816a638a3930beabdf80c75b220",
+        "020e93f195130cce584df734ce91f12a83a436f3954914ab1bf91c55bee73ce0"
+      ],
+      "Score": 76,
+      "Sources": [
+        "연합뉴스",
+        "연합뉴스TV",
+        "한국경제",
+        "SBS 뉴스"
+      ],
+      "Keywords": [
+        "네팔",
+        "홍수",
+        "긴급구호대",
+        "수색",
+        "헬기"
+      ]
+    },
+    {
+      "Title": "병사 보험 지원과 식당 바가지요금 제재 강화",
+      "Category": "생활/건강",
+      "Summary": "의무복무 병사 전원 단체 상해보험과 전역 후 실손보험 지원 방안, 식당 바가지요금 1차 위반 영업정지 강화가 생활 정책 뉴스로 보도됐습니다.",
+      "ArticleCount": 6,
+      "ArticleIds": [
+        "62e0aa1e58254bce92420528fc04306bd0753672fc54242f164e01e184e71a7f",
+        "76c7806a86fe67f4b5dec7986cd94767af26edd7aea4d9a639f7ac3688887115",
+        "23aef2a75ad80b5f6b56636be4332bc5f682673ccc33959f47c75706273809bd",
+        "b4aea88827608411979e7dfa3bfb4358fae97c6574ae58e47671041ae7faa6b9",
+        "6062d935e9705221ac5b967b6b3e06d40db1682fa4e5c925d46365fae2433e6e",
+        "60494c577706d6a18b3ee103e1f7239f931ae36c78d09e2da849ba9215f7948b"
+      ],
+      "Score": 72,
+      "Sources": [
+        "연합뉴스",
+        "연합뉴스TV",
+        "SBS 뉴스"
+      ],
+      "Keywords": [
+        "병사",
+        "상해보험",
+        "실손보험",
+        "바가지요금",
+        "영업정지"
+      ]
+    }
+  ]
+}
