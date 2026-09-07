@@ -195,6 +195,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\restore-mongodb.ps1 
 
 - `GET /api/health`: 서버 상태와 배포 버전
 - `GET /api/briefs`: 프론트엔드 이슈 피드 데이터
+- `GET /api/news-stats`: 수집기가 캐시한 한국 시간 기준 금일 기사 수
 - `GET /api/daily-summary`: 저장된 전날 요약
 - `GET /api/weekly-summary`: 저장된 주간 요약
 

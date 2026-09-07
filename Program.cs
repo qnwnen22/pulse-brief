@@ -75,6 +75,12 @@ app.MapGet("/api/health", async (HttpContext context, AppPaths paths, IConfigura
     });
 });
 
+app.MapGet("/api/news-stats", async (IArticleStore store) =>
+{
+    var stats = await store.ReadNewsStatsAsync();
+    return Results.Ok(stats ?? NewsStats.WaitingFor(KoreaDate.Today()));
+});
+
 app.MapGet("/api/articles", async (HttpContext context, IArticleStore store, AdminAuthService adminAuth) =>
 {
     if (!adminAuth.IsAuthenticated(context)) return AdminAuthService.AdminRequired();

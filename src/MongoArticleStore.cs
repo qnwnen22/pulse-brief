@@ -8,6 +8,7 @@ public sealed class MongoArticleStore : IArticleStore
     private readonly IMongoCollection<Article> _articles;
     private readonly IMongoCollection<ArticleGroup> _groups;
     private readonly IMongoCollection<DailyIssueSummary> _summaries;
+    private readonly IMongoCollection<NewsStats> _newsStats;
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private bool _initialized;
 
@@ -26,6 +27,7 @@ public sealed class MongoArticleStore : IArticleStore
         _articles = database.GetCollection<Article>("articles");
         _groups = database.GetCollection<ArticleGroup>("articleGroups");
         _summaries = database.GetCollection<DailyIssueSummary>("summaries");
+        _newsStats = database.GetCollection<NewsStats>("newsStats");
     }
 
     /// <summary>MongoDB에 저장된 전체 기사 목록을 최신 발행 순으로 조회합니다.</summary>
@@ -83,6 +85,42 @@ public sealed class MongoArticleStore : IArticleStore
         return await _articles.Find(filter)
             .Project<Article>(projection)
             .ToListAsync();
+    }
+
+    public async Task<NewsStats?> ReadNewsStatsAsync(CancellationToken cancellationToken = default)
+    {
+        await EnsureInitializedAsync();
+        return await _newsStats.Find(stats => stats.Id == NewsStats.PublicId)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<NewsStats> RefreshNewsStatsAsync(CancellationToken cancellationToken = default)
+    {
+        await EnsureInitializedAsync();
+
+        var today = KoreaDate.Today();
+        var start = KoreaDate.StartOfDay(today);
+        var end = start.AddDays(1);
+        var publishedAtDateTime = new StringFieldDefinition<Article, DateTime>("PublishedAt.DateTime");
+        var filter = Builders<Article>.Filter.Gte(publishedAtDateTime, start.UtcDateTime)
+            & Builders<Article>.Filter.Lt(publishedAtDateTime, end.UtcDateTime);
+        var count = await _articles.CountDocumentsAsync(
+            filter,
+            new CountOptions { MaxTime = TimeSpan.FromSeconds(10) },
+            cancellationToken);
+        var stats = new NewsStats
+        {
+            TodayDate = KoreaDate.Key(today),
+            TodayArticleCount = count > int.MaxValue ? int.MaxValue : (int)count,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+
+        await _newsStats.ReplaceOneAsync(
+            item => item.Id == NewsStats.PublicId,
+            stats,
+            new ReplaceOptions { IsUpsert = true },
+            cancellationToken);
+        return stats;
     }
 
     /// <summary>날짜 또는 주간 키와 일치하는 요약 문서를 조회합니다.</summary>
@@ -176,6 +214,7 @@ public sealed class MongoArticleStore : IArticleStore
                 new CreateIndexModel<Article>(Builders<Article>.IndexKeys.Ascending(article => article.Id)),
                 new CreateIndexModel<Article>(Builders<Article>.IndexKeys.Ascending(article => article.Url)),
                 new CreateIndexModel<Article>(Builders<Article>.IndexKeys.Descending(article => article.PublishedAt)),
+                new CreateIndexModel<Article>(Builders<Article>.IndexKeys.Descending("PublishedAt.DateTime"), new CreateIndexOptions { Name = "PublishedAt_DateTime_-1" }),
                 new CreateIndexModel<Article>(Builders<Article>.IndexKeys.Ascending(article => article.Source)),
                 new CreateIndexModel<Article>(Builders<Article>.IndexKeys.Ascending(article => article.ContentFetchStatus))
             ]);

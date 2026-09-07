@@ -64,6 +64,7 @@ const sampleIssues = [
 let issues = [...sampleIssues];
 let dailyBrief = null;
 let weeklyBrief = null;
+let newsStats = null;
 let activeFilter = "전체";
 let currentPage = 1;
 let activeWeeklyCategory = "전체";
@@ -77,7 +78,6 @@ const articleCountFilter = document.querySelector("#articleCountFilter");
 const sortSelect = document.querySelector("#sortSelect");
 const resetFiltersButton = document.querySelector("#resetFiltersButton");
 const todayKeywords = document.querySelector("#todayKeywords");
-const topicCount = document.querySelector("#topicCount");
 const todayCount = document.querySelector("#todayCount");
 const impactScore = document.querySelector("#impactScore");
 const updateTime = document.querySelector("#updateTime");
@@ -868,14 +868,20 @@ function renderMetrics() {
   const categoryItems = getCategoryIssues(activeFilter);
   const todayKey = getKoreaDateKey(new Date());
   const todayItems = categoryItems.filter((issue) => getKoreaDateKey(getIssueDate(issue)) === todayKey);
+  const statsCount = Number(newsStats?.todayArticleCount);
+  const hasCurrentStats = newsStats?.isReady !== false
+    && newsStats?.todayDate === todayKey
+    && Number.isFinite(statsCount);
   const totalImpact = todayItems.reduce((sum, issue) => sum + issue.impact, 0);
   const average = todayItems.length ? totalImpact / todayItems.length : 0;
-  const now = new Date();
+  const statsUpdatedAt = newsStats?.updatedAt ? new Date(newsStats.updatedAt) : null;
+  const updatedAt = statsUpdatedAt && !Number.isNaN(statsUpdatedAt.getTime()) ? statsUpdatedAt : new Date();
 
-  topicCount.textContent = categoryItems.length.toLocaleString("ko-KR");
-  todayCount.textContent = todayItems.length.toLocaleString("ko-KR");
+  todayCount.textContent = hasCurrentStats
+    ? statsCount.toLocaleString("ko-KR")
+    : (location.protocol === "file:" ? todayItems.length.toLocaleString("ko-KR") : "-");
   impactScore.textContent = average.toFixed(1);
-  updateTime.textContent = now.toLocaleTimeString("ko-KR", {
+  updateTime.textContent = updatedAt.toLocaleTimeString("ko-KR", {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -971,6 +977,21 @@ async function loadServerBriefs() {
   }
 }
 
+async function loadNewsStats() {
+  if (location.protocol === "file:") return false;
+
+  try {
+    const response = await fetchWithTimeout("/api/news-stats", { cache: "no-store" }, 5000);
+    if (!response.ok) throw new Error(`news-stats ${response.status}`);
+    newsStats = await response.json();
+    return true;
+  } catch (error) {
+    console.warn(`[news-stats] ${error.message}`);
+    newsStats = null;
+    return false;
+  }
+}
+
 async function fetchWithTimeout(resource, options = {}, timeoutMs = 15000) {
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
@@ -1044,7 +1065,7 @@ async function refreshFromServer() {
   setRefreshButtonBusy(true);
   try {
     if (location.protocol !== "file:") {
-      const loaded = await loadServerBriefs();
+      const [loaded] = await Promise.all([loadServerBriefs(), loadNewsStats()]);
       if (!loaded) console.warn("[refresh] failed to reload briefs");
       await Promise.all([loadDailySummary(), loadWeeklySummary()]);
     } else {
@@ -1107,7 +1128,7 @@ async function initializeApp() {
   document.body.classList.add("loading-active");
 
   try {
-    await loadServerBriefs();
+    await Promise.all([loadServerBriefs(), loadNewsStats()]);
     showView("briefing");
     renderPublisherFilter();
     renderCategoryFilters();

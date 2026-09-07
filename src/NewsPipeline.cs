@@ -37,6 +37,20 @@ public sealed class NewsPipeline(
             var groups = clusterer.GroupSimilarArticles(articles);
             var enriched = await briefGenerator.EnrichGroupsAsync(groups, articles);
             await store.SaveGroupsAsync(enriched);
+            NewsStats? newsStats = null;
+            try
+            {
+                newsStats = await store.RefreshNewsStatsAsync(cancellationToken);
+            }
+            catch (Exception error) when (error is not OperationCanceledException)
+            {
+                await operationalLog.RecordAsync("warning", "news_stats_refresh_failed", "News stats refresh failed.", new
+                {
+                    errorType = error.GetType().Name,
+                    error.Message
+                }, CancellationToken.None);
+            }
+
             if (dailySummaryService.IsGenerationEnabled)
             {
                 await dailySummaryService.EnsureScheduledSummariesAsync(cancellationToken);
@@ -53,6 +67,8 @@ public sealed class NewsPipeline(
                 result.FetchedCount,
                 result.ArticleCount,
                 result.GroupCount,
+                todayArticleCount = newsStats?.TodayArticleCount,
+                todayDate = newsStats?.TodayDate,
                 result.UpdatedAt
             }, CancellationToken.None);
             return result;

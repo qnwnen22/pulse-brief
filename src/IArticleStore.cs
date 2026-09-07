@@ -15,6 +15,12 @@ public interface IArticleStore
 
     Task<List<Article>> ReadArticlesByIdsAsync(IReadOnlyCollection<string> ids);
 
+    /// <summary>공개 화면에 표시할 캐시된 뉴스 통계를 조회합니다.</summary>
+    Task<NewsStats?> ReadNewsStatsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>수집 파이프라인 완료 후 공개 화면용 뉴스 통계를 다시 계산해 저장합니다.</summary>
+    Task<NewsStats> RefreshNewsStatsAsync(CancellationToken cancellationToken = default);
+
     /// <summary>날짜 또는 주간 키에 해당하는 저장된 요약을 조회합니다.</summary>
     Task<DailyIssueSummary?> ReadDailySummaryAsync(string date);
 
