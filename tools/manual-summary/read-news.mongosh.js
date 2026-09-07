@@ -2,8 +2,8 @@
 const target = request.date;
 if (!/^\d{4}-\d{2}-\d{2}$/.test(target)) throw new Error("Invalid date");
 if (!["check", "export"].includes(request.mode)) throw new Error("Invalid mode");
-const summaryIndex = db.summaries.getIndexes().find(index => Object.keys(index.key)[0] === "Date");
-if (!summaryIndex) throw new Error("Summary Date index missing; refusing a collection scan");
+const summaryIndex = db.summaries.getIndexes().find(index => index.unique === true && Object.keys(index.key).length === 1 && index.key.Date === 1 && !index.partialFilterExpression);
+if (!summaryIndex) throw new Error("Unique summary Date index missing; refusing unsafe publication or a collection scan");
 const existing = db.summaries.find({ Date: target }, { _id: 0, Date: 1, Provider: 1, Model: 1 })
   .hint(summaryIndex.name).limit(1).maxTimeMS(3000).toArray()[0];
 if (existing) {

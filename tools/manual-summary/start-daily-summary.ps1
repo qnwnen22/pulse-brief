@@ -22,7 +22,7 @@ try {
     if ($parsed -ge [DateTime]::UtcNow.AddHours(9).Date) { throw '오늘 또는 미래 날짜는 요약할 수 없습니다.' }
 
     Write-Host "Pulse Brief 전날 뉴스 요약 | 대상: $Date" -ForegroundColor Cyan
-    Write-Host '기존 요약을 먼저 확인합니다. 이 도구는 사이트에 배포하지 않습니다.'
+    Write-Host '기존 요약을 먼저 확인하고, 새 요약은 완료 즉시 사이트에 자동 반영합니다.'
     $mutex = New-Object Threading.Mutex($false, "Local\PulseBrief.DailySummary.$Date")
     try { $locked = $mutex.WaitOne(0) }
     catch [Threading.AbandonedMutexException] { $locked = $true }
@@ -36,20 +36,20 @@ try {
         $arguments = @((Join-Path $PSScriptRoot 'run.cjs'), $Date)
         if ($CheckOnly) { $arguments += '--check-only' }
         & $config.NodePath @arguments
-        if ($LASTEXITCODE -ne 0) { throw '요약 작업을 완료하지 못했습니다. 위 오류를 확인해 주세요. 기존 요약은 변경하지 않았습니다.' }
+        if ($LASTEXITCODE -ne 0) { throw '작업 완료를 확인하지 못했습니다. 위 오류를 확인해 주세요. DB 저장 후 확인만 실패했을 수도 있습니다. 재실행 시 서버 상태와 복구 기록을 먼저 확인합니다.' }
 
         $resultPath = Join-Path $repoRoot "data/manual-summary-runs/$Date/result.json"
         $result = Get-Content -LiteralPath $resultPath -Raw -Encoding UTF8 | ConvertFrom-Json
         switch ($result.status) {
-            'existing-local' { Write-Host "이미 작성한 요약이 있습니다. 재생성하지 않습니다: $($result.path)" -ForegroundColor Yellow }
-            'existing-server' { Write-Host "$Date 요약이 운영 DB에 이미 있습니다. 새 초안을 저장하거나 기존 요약을 덮어쓰지 않습니다." -ForegroundColor Yellow }
+            'existing-server' { Write-Host "$Date 요약이 운영 DB에 이미 있습니다. 재생성하거나 덮어쓰지 않습니다." -ForegroundColor Yellow }
             'no-articles' { Write-Host '해당 날짜의 기사가 없습니다. 빈 요약을 생성하지 않습니다.' -ForegroundColor Yellow }
-            'created' { Write-Host "검토용 초안 생성 완료: $($result.path)" -ForegroundColor Green }
+            'published' {
+                Write-Host "$Date 요약 배포 완료 | 기사 $($result.articleCount)건" -ForegroundColor Green
+                if ($result.website.status -eq 'verified') { Write-Host "사이트 반영 확인: $($result.website.url)" }
+                else { Write-Host $result.website.reason -ForegroundColor Yellow }
+            }
             'checked' { Write-Host "확인 완료 | 로컬 요약: $($result.localExists) | 서버 요약: $($result.serverExists)" }
             default { throw '실행 결과를 확인할 수 없습니다.' }
-        }
-        if (-not $NoOpen -and -not $CheckOnly -and $result.PSObject.Properties.Name -contains 'review') {
-            Start-Process -FilePath $result.review
         }
     }
 } catch {

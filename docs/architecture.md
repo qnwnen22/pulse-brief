@@ -66,7 +66,7 @@ PulseBrief.sln
 4. `SummaryLinkService.cs`: 기록된 기사 ID로 관련 원문 링크 조회.
 5. `wwwroot/js/summaries.js`: 저장 요약의 카테고리와 본문 표시.
 
-공개 화면 접속은 요약 생성 작업을 실행하지 않습니다. `Summary:EnableGeneration=false`를 유지하며, 현재 수동 요약은 사용자 검토 후 `tools/cloud/import-daily-summary.ps1`로 배포합니다. 생성 알고리즘 코드는 추후 재개를 위해 남아 있습니다.
+공개 화면 접속은 요약 생성 작업을 실행하지 않습니다. `Summary:EnableGeneration=false`를 유지합니다. 전날 요약은 `tools/manual-summary/start-daily-summary.ps1`을 PC에서 실행하면 생성·검증 후 운영 DB에 자동 삽입하며 기존 날짜는 덮어쓰지 않습니다. 기존 `tools/cloud/import-daily-summary.ps1`은 별도 수동 교체 작업에 사용합니다. 서버의 생성 알고리즘 코드는 추후 재개를 위해 남아 있습니다.
 
 `DailySummaryService`는 하나의 클래스를 `partial`로 분할했습니다. 기본 파일은 공개 메서드, `.Daily`는 일간 초안, `.Candidates`는 이슈 묶기, `.Scoring`은 후보 점수·근거 추출, `.Weekly`는 일간 요약 합산, `.Helpers`는 공통 보조 처리를 담습니다.
 

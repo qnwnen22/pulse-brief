@@ -46,7 +46,7 @@ $shortcut.TargetPath = $powershell
 $shortcut.Arguments = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`" -Interactive"
 $shortcut.WorkingDirectory = $repoRoot
 $shortcut.IconLocation = "$powershell,0"
-$shortcut.Description = '전날 뉴스 요약 초안 생성. 중복 생성 방지, 배포는 별도 승인.'
+$shortcut.Description = '전날 뉴스 요약 생성 후 사이트에 자동 반영. 기존 날짜 재생성 및 덮어쓰기 방지.'
 $shortcut.WindowStyle = 1
 $shortcut.Save()
 Write-Host "바탕화면 바로가기 생성: $shortcutPath"

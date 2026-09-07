@@ -124,17 +124,4 @@ function buildDraft(date, articles, topics, reductions, now = new Date()) {
     SourceCount: new Set(articles.map(article => clean(article.Source).toLowerCase()).filter(Boolean)).size,
     Categories: categoryRows, TopIssues: topIssues };
 }
-function escapeHtml(value) { return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char])); }
-function safeUrl(value) { try { const url = new URL(value); return ["https:", "http:"].includes(url.protocol) ? url.href : ""; } catch { return ""; } }
-function reviewHtml(draft, articles = [], logo = "", status = "미배포 검토본") {
-  const byId = new Map(articles.map(article => [article.Id, article]));
-  function issueHtml(issue) {
-    const evidence = issue.ArticleIds.map(id => byId.get(id)).filter(Boolean);
-    const links = evidence.map(article => `<li>${safeUrl(article.Url) ? `<a href="${escapeHtml(safeUrl(article.Url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(article.Title)}</a>` : escapeHtml(article.Title)} <small>${escapeHtml(article.Source)}</small></li>`).join("");
-    const related = links ? `<details><summary>관련 기사 ${issue.ArticleCount}건</summary><ul>${links}</ul></details>` : `<p class="counts">관련 기사 ${issue.ArticleCount}건 · ${escapeHtml((issue.Sources || []).join(", "))}</p>`;
-    return `<article><h3>${escapeHtml(issue.Title)}</h3><p>${escapeHtml(issue.Summary)}</p>${related}</article>`;
-  }
-  const sections = draft.Categories.map(category => `<section><h2>${escapeHtml(category.Category)}</h2><p class="counts">기사 ${category.ArticleCount}건 · 이슈 ${category.IssueCount}건</p><p>${escapeHtml(category.Summary)}</p>${draft.TopIssues.filter(issue => issue.Category === category.Category).map(issueHtml).join("")}</section>`).join("");
-  return `<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(draft.Date)} 전날 뉴스 요약 초안</title><style>body{margin:0;color:#20272a;background:#f5f7f8;font:16px/1.7 "Malgun Gothic",sans-serif;letter-spacing:0}header,main,footer{max-width:960px;margin:auto;padding:24px}header{border-bottom:2px solid #15856b}header img{width:112px;height:80px;object-fit:cover;float:right;margin:0 0 16px 16px}h1{font-size:28px;line-height:1.35;clear:both}h2{font-size:22px}h3{font-size:18px}section{padding:20px 0;border-bottom:1px solid #cbd5d7}article{padding:12px 0}p,li,h1,h2,h3{word-break:keep-all;overflow-wrap:anywhere}a{color:#165caa}small,.counts,footer{color:#526267}.status{color:#076951;font-weight:700}summary{cursor:pointer;color:#165caa}li{margin:8px 0}footer{font-size:14px}@media(max-width:600px){header,main,footer{padding:18px}h1{font-size:24px}}</style><header>${logo ? `<img src="${escapeHtml(logo)}" alt="Pulse Brief">` : ""}<p class="status">${escapeHtml(status)}</p><h1>${escapeHtml(draft.Date)} 전날 뉴스 요약</h1><p>기사 ${draft.ArticleCount}건 · 이슈 ${draft.IssueCount}건 · 출처 ${draft.SourceCount}곳</p></header><main>${sections}</main><footer>제목·RSS 요약·저장된 본문 발췌 기반. 기사와 관련 링크를 확인한 뒤 배포를 승인해 주세요. 이 실행 도구는 사이트에 쓰지 않습니다.</footer></html>`;
-}
-module.exports = { categories, policyVersion, requireThat, hash, yesterday, validateDate, readJson, writeJson, prepareArticles, makeBatches, mapSchema, reduceSchema, validateMap, validateReduction, buildDraft, reviewHtml };
+module.exports = { categories, policyVersion, requireThat, hash, yesterday, validateDate, readJson, writeJson, prepareArticles, makeBatches, mapSchema, reduceSchema, validateMap, validateReduction, buildDraft };

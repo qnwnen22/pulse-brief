@@ -1,8 +1,8 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { spawn, spawnSync } = require("node:child_process");
-const { pathToFileURL } = require("node:url");
 const core = require("./summary-core.cjs");
+const publication = require("./publication.cjs");
 const root = path.resolve(__dirname, "../..");
 const { requireThat, hash, readJson, writeJson } = core;
 
@@ -16,6 +16,7 @@ function loadConfig(file) {
   for (const key of ["SshPath", "CodexPath"]) requireThat(path.isAbsolute(config[key]) && fs.existsSync(config[key]), `${key} 실행 파일을 찾을 수 없습니다. 설치 도구를 다시 실행해 주세요.`);
   config.MaxArticles ??= 10000;
   requireThat(Number.isInteger(config.MaxArticles) && config.MaxArticles > 0 && config.MaxArticles <= 50000, "기사 상한 설정 오류");
+  publication.siteUrl(config);
   return config;
 }
 function processRun(executable, args, { input = "", timeout = 180000, onLine, env = process.env, cwd = root, logPath } = {}) {
@@ -72,6 +73,16 @@ async function checkRemote(config, date) {
   await readRemote(config, { date, mode: "check" }, record => records.push(record));
   requireThat(records.length === 1 && records[0].date === date && ["existing", "missing"].includes(records[0].type), "서버의 중복 확인 응답이 올바르지 않습니다. 생성을 중단합니다.");
   return records[0].type === "existing";
+}
+async function publishSummary(config, summary) {
+  const source = `const request = ${JSON.stringify({ date: summary.Date, summary })};\n` + fs.readFileSync(path.join(__dirname, "publish-summary.mongosh.js"), "utf8");
+  const records = [];
+  // stdin avoids command-length limits and shared temporary files on the server.
+  await processRun(config.SshPath, ["-i", config.KeyPath, "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=10", "-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=2", `${config.UserName}@${config.HostName}`, `mongosh --quiet --norc '${config.DatabaseName}' --file /dev/stdin`], {
+    input: source, onLine: line => records.push(JSON.parse(line)), timeout: 30000
+  });
+  requireThat(records.length === 1 && records[0].date === summary.Date && ["published", "existing"].includes(records[0].type) && typeof records[0].matches === "boolean", "요약 배포 응답을 확인하지 못했습니다. 다음 실행에서 DB 상태부터 확인합니다.");
+  return records[0];
 }
 async function exportArticles(config, date, directory, log) {
   const file = path.join(directory, "articles.jsonl"), manifestFile = path.join(directory, "export.json");
@@ -155,21 +166,39 @@ function reducePrompt(date, category, topics) {
 async function run({ date, directory, config, canonicalFile, checkOnly = false, log = console.log, dependencies = {} }) {
   core.validateDate(date);
   fs.mkdirSync(directory, { recursive: true });
-  const draftFile = path.join(directory, "draft.json"), reviewFile = path.join(directory, "review.html");
-  const logo = pathToFileURL(path.join(root, "wwwroot/assets/pulse-brief-wordmark.png")).href;
-  const api = { checkRemote, exportArticles, checkLogin, askCodex, ...dependencies };
-  const localFile = [canonicalFile, draftFile].find(file => file && fs.existsSync(file));
+  const receiptFile = path.join(directory, "publication.json");
+  const api = { checkRemote, exportArticles, checkLogin, askCodex, publishSummary, verifyWebsite: publication.verifyWebsite, ...dependencies };
+  const localFile = [receiptFile, canonicalFile, path.join(directory, "draft.json")].find(file => file && fs.existsSync(file));
   if (checkOnly) return { status: "checked", date, localExists: Boolean(localFile), serverExists: await api.checkRemote(config, date) };
-  if (localFile) {
-    const draft = readJson(localFile);
-    requireThat(draft.Date === date && draft.Categories?.length && draft.TopIssues?.length, "기존 요약 파일을 발견했으나 형식 검증에 실패했습니다. 덮어쓰지 않습니다.");
-    const articleFile = path.join(directory, "articles.jsonl");
-    const savedArticles = fs.existsSync(articleFile) ? fs.readFileSync(articleFile, "utf8").trim().split("\n").filter(Boolean).map(JSON.parse) : [];
-    fs.writeFileSync(reviewFile, core.reviewHtml(draft, savedArticles, logo, "저장된 요약 · 재생성 생략"), "utf8");
-    return { status: "existing-local", date, path: localFile, review: reviewFile };
-  }
   log("운영 DB에서 해당 날짜의 요약 존재 여부를 확인합니다.");
-  if (await api.checkRemote(config, date)) return { status: "existing-server", date };
+  const exists = await api.checkRemote(config, date);
+  let receipt = fs.existsSync(receiptFile) ? readJson(receiptFile) : null;
+  if (exists && (!receipt || receipt.complete)) return { status: "existing-server", date };
+  async function deploy(value) {
+    const summary = publication.normalizeSummary(value, date);
+    const sha256 = publication.fingerprint(summary);
+    if (receipt) requireThat(receipt.date === date && receipt.sha256 === sha256, "배포 복구 기록 검증 실패. 덮어쓰지 않습니다.");
+    else {
+      receipt = { date, complete: false, sha256, summary, startedAt: new Date().toISOString() };
+      writeJson(receiptFile, receipt);
+    }
+    log("검증한 요약을 운영 DB에 반영합니다. 기존 날짜는 덮어쓰지 않습니다.");
+    const result = await api.publishSummary(config, summary);
+    if (result.type === "existing" && !result.matches) {
+      writeJson(receiptFile, { ...receipt, complete: true, outcome: "existing-server" });
+      return { status: "existing-server", date };
+    }
+    requireThat(result.matches === true, "운영 DB에 저장된 요약의 내용 검증 실패");
+    writeJson(receiptFile, { ...receipt, dbConfirmed: true });
+    log("운영 DB 반영 확인 완료. 사이트 응답을 확인합니다.");
+    const website = await api.verifyWebsite(config, date, summary);
+    writeJson(receiptFile, { ...receipt, dbConfirmed: true, complete: true, outcome: "published", website, completedAt: new Date().toISOString() });
+    return { status: "published", date, articleCount: summary.ArticleCount, website };
+  }
+  if (localFile) {
+    log("기존 요약 결과를 재사용하여 배포 단계부터 진행합니다.");
+    return deploy(receipt ? receipt.summary : readJson(localFile));
+  }
   api.checkLogin(config);
   const exported = await api.exportArticles(config, date, directory, log);
   if (exported.existing) return { status: "existing-server", date };
@@ -192,14 +221,7 @@ async function run({ date, directory, config, canonicalFile, checkOnly = false, 
     if (!ownTopics.length) continue;
     reductions[category] = await api.askCodex(config, directory, `${category} 요약`, reducePrompt(date, category, ownTopics), core.reduceSchema, value => core.validateReduction(value, ownTopics), log);
   }
-  const draft = core.buildDraft(date, articles, topics, reductions);
-  if (await api.checkRemote(config, date)) return { status: "existing-server", date };
-  requireThat(!fs.existsSync(canonicalFile) && !fs.existsSync(draftFile), "다른 작업에서 요약이 생성되었습니다. 덮어쓰지 않습니다.");
-  const html = core.reviewHtml(draft, articles, logo);
-  fs.writeFileSync(reviewFile, html, "utf8");
-  fs.writeFileSync(draftFile, JSON.stringify(draft, null, 2), { encoding: "utf8", flag: "wx" });
-  writeJson(path.join(directory, "manifest.json"), { date, complete: true, published: false, policyVersion: core.policyVersion, rawArticleCount: exported.articles.length, articleCount: articles.length, mapBatchCount: batches.length, sourceSnapshot: exported.manifest, generatedAt: draft.GeneratedAt });
-  return { status: "created", date, path: draftFile, review: reviewFile, articleCount: articles.length };
+  return deploy(core.buildDraft(date, articles, topics, reductions));
 }
 async function main(args) {
   const date = core.validateDate(args[0] || core.yesterday());
@@ -209,5 +231,5 @@ async function main(args) {
   writeJson(path.join(directory, "result.json"), result);
   console.log(JSON.stringify(result));
 }
-module.exports = { root, loadConfig, processRun, readRemote, checkRemote, exportArticles, codexArgs, askCodex, run, mapPrompt, reducePrompt };
+module.exports = { root, loadConfig, processRun, readRemote, checkRemote, publishSummary, exportArticles, codexArgs, askCodex, run, mapPrompt, reducePrompt };
 if (require.main === module) main(process.argv.slice(2)).catch(error => { console.error(`중단: ${error.message}`); process.exitCode = 1; });

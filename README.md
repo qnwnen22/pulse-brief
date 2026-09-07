@@ -41,16 +41,16 @@ Pulse Brief는 RSS 뉴스와 원문 기사 본문을 수집해 유사 이슈로 
 
 ## 요약 생성 기준
 
-현재는 Codex가 작성한 요약을 사용자가 검토한 뒤 수동으로 배포합니다. `Summary:EnableGeneration=false`를 유지하며, 공개 API는 사이트 접속 시 MongoDB에 저장된 요약만 반환합니다.
+전날 요약은 Windows 바탕화면 도구를 실행하면 Codex로 생성·검증한 뒤 운영 DB에 자동 반영합니다. 별도 초안 검토나 배포 승인은 없습니다. `Summary:EnableGeneration=false`를 유지하며, 공개 API는 사이트 접속 시 MongoDB에 저장된 요약만 반환합니다.
 
 - 전날 요약 대상: 한국 시간 기준 전날 00시부터 당일 00시 직전까지의 기사.
 - 주간 요약 대상: 최근 완료된 월요일부터 일요일까지의 기사.
-- 수동 결과는 `manual-summaries`에 기록하고 import 도구로 운영 `summaries` 컬렉션에 반영합니다.
+- 바탕화면 도구는 `summaries`에 기존 날짜가 없을 때만 삽입하고 배포 상태를 확인합니다. 기존 수동 결과와 주간 요약은 `manual-summaries` 및 수동 import 도구로 관리할 수 있습니다.
 - 기존 OpenAI 일간 생성 및 일간 요약 합산 방식의 주간 생성 코드는 보존되어 있지만 현재 자동 실행하지 않습니다.
 
 뉴스 수집은 `pulsebrief-collector`가 담당하며 기본 실행 주기는 `AutoRefreshMinutes=10`입니다.
 
-전날 요약을 필요할 때 생성하는 Windows 바탕화면 도구는 [전날 뉴스 요약 실행 안내](docs/manual-summary-launcher.md)를 참고하세요. 이미 작성되거나 배포된 날짜는 재생성하지 않고, 새 초안의 배포는 별도 승인을 받습니다.
+전날 요약을 필요할 때 생성·배포하는 Windows 바탕화면 도구는 [전날 뉴스 요약 실행 안내](docs/manual-summary-launcher.md)를 참고하세요. 배포된 날짜는 건너뛰고, 저장된 미배포 결과는 재생성 없이 배포만 진행합니다.
 
 ## 로컬 실행
 
