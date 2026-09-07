@@ -6,6 +6,8 @@ Pulse Brief는 RSS 뉴스와 원문 기사 본문을 수집해 유사 이슈로 
 
 ## 현재 구조
 
+소스 코드의 역할과 읽는 순서는 [소스 코드 안내](docs/architecture.md)를 참고하세요. 웹의 `Controllers`가 요청을 받고 `Services`가 업무 처리를 담당하며, 웹과 수집기는 `PulseBrief.Core`의 공통 서비스·모델·저장소를 참조합니다.
+
 ```text
 사용자
 -> Cloudflare DNS / Tunnel
@@ -21,7 +23,7 @@ Pulse Brief는 RSS 뉴스와 원문 기사 본문을 수집해 유사 이슈로 
 주요 운영 서비스:
 
 - `pulsebrief-web`: ASP.NET Core 웹/API 서버
-- `pulsebrief-collector`: RSS 수집, 본문 수집, 그룹화, 요약 생성 작업자
+- `pulsebrief-collector`: RSS 수집, 본문 수집, 그룹화 작업자. 자동 요약 생성은 현재 중단 상태입니다.
 - `mongod`: 운영 MongoDB
 - `cloudflared`: Cloudflare Tunnel
 - `pulsebrief-mongodb-backup.timer`: MongoDB 일일 백업
@@ -39,14 +41,14 @@ Pulse Brief는 RSS 뉴스와 원문 기사 본문을 수집해 유사 이슈로 
 
 ## 요약 생성 기준
 
-공개 API는 사이트 접속 시 OpenAI 요약을 새로 생성하지 않고, MongoDB에 저장된 요약만 반환합니다.
+현재는 Codex가 작성한 요약을 사용자가 검토한 뒤 수동으로 배포합니다. `Summary:EnableGeneration=false`를 유지하며, 공개 API는 사이트 접속 시 MongoDB에 저장된 요약만 반환합니다.
 
-- 전날 요약: 한국 시간 기준 전날 기사 그룹을 기반으로 생성합니다.
-- 전날 요약은 제목, RSS 요약, 수집 본문 일부, 키워드 분포, 출처 수, 기사 수를 반영한 후보를 OpenAI에 전달합니다.
-- 주간 요약: 최근 완료 주간, 즉 월요일 00시 이후 직전 월요일부터 일요일까지의 일간 요약을 기반으로 로컬에서 생성합니다.
-- 주간 요약은 현재 OpenAI API를 호출하지 않습니다.
+- 전날 요약 대상: 한국 시간 기준 전날 00시부터 당일 00시 직전까지의 기사.
+- 주간 요약 대상: 최근 완료된 월요일부터 일요일까지의 기사.
+- 수동 결과는 `manual-summaries`에 기록하고 import 도구로 운영 `summaries` 컬렉션에 반영합니다.
+- 기존 OpenAI 일간 생성 및 일간 요약 합산 방식의 주간 생성 코드는 보존되어 있지만 현재 자동 실행하지 않습니다.
 
-수집 및 요약 생성은 기본적으로 `pulsebrief-collector`가 담당합니다. 기본 실행 주기는 `AutoRefreshMinutes=10`입니다.
+뉴스 수집은 `pulsebrief-collector`가 담당하며 기본 실행 주기는 `AutoRefreshMinutes=10`입니다.
 
 ## 로컬 실행
 
@@ -173,7 +175,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\restore-mongodb.ps1 
 - `CHANGELOG.md`
 - `/api/health`
 - 사이트 푸터 버전 표시
-- `wwwroot/index.html`의 `app.js?v=...` 캐시 버스터
+- 사용자·관리자 HTML의 `js/*.js?v=...` 캐시 버스터
 
 버전 갱신:
 

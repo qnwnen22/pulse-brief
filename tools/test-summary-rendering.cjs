@@ -4,8 +4,10 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
-const appPath = process.argv[2] || path.join(root, "wwwroot/app.js");
-const source = fs.readFileSync(appPath, "utf8");
+const scriptPaths = process.argv[2] ? [process.argv[2]] : [...fs.readFileSync(path.join(root, "wwwroot/index.html"), "utf8")
+  .matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)]
+  .map((match) => path.join(root, "wwwroot", match[1].split("?")[0]));
+const source = scriptPaths.map((file) => fs.readFileSync(file, "utf8")).join("\n");
 const daily = JSON.parse(fs.readFileSync(path.join(root, "manual-summaries/2026-09-06.json"), "utf8"));
 const weekly = JSON.parse(fs.readFileSync(path.join(root, "manual-summaries/weekly-2026-08-31_2026-09-06.json"), "utf8"));
 

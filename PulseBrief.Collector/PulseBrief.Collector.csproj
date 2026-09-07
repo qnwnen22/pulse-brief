@@ -6,11 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\src\*.cs" Exclude="..\src\Admin*.cs" Link="PulseBrief\%(Filename)%(Extension)" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="AngleSharp" Version="1.5.0" />
-    <PackageReference Include="MongoDB.Driver" Version="3.9.0" />
+    <ProjectReference Include="..\PulseBrief.Core\PulseBrief.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\appsettings.json">

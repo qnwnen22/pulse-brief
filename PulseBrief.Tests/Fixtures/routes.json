@@ -1,0 +1,114 @@
+[
+  {
+    "method": "GET",
+    "url": "/api/health"
+  },
+  {
+    "method": "GET",
+    "url": "/api/news-stats"
+  },
+  {
+    "method": "GET",
+    "url": "/api/articles"
+  },
+  {
+    "method": "GET",
+    "url": "/api/groups"
+  },
+  {
+    "method": "GET",
+    "url": "/api/briefs"
+  },
+  {
+    "method": "GET",
+    "url": "/api/daily-summary"
+  },
+  {
+    "method": "GET",
+    "url": "/api/weekly-summary"
+  },
+  {
+    "method": "POST",
+    "url": "/api/refresh"
+  },
+  {
+    "method": "POST",
+    "url": "/api/admin/fetch-missing-content"
+  },
+  {
+    "method": "POST",
+    "url": "/api/admin/fetch-missing-images"
+  },
+  {
+    "method": "GET",
+    "url": "/api/admin/diagnostics"
+  },
+  {
+    "method": "GET",
+    "url": "/admin"
+  },
+  {
+    "method": "POST",
+    "url": "/api/admin/login"
+  },
+  {
+    "method": "GET",
+    "url": "/api/admin/session"
+  },
+  {
+    "method": "POST",
+    "url": "/api/admin/logout"
+  },
+  {
+    "method": "GET",
+    "url": "/api/admin/dashboard"
+  },
+  {
+    "method": "GET",
+    "url": "/api/admin/articles"
+  },
+  {
+    "method": "GET",
+    "url": "/api/admin/articles/{id}"
+  },
+  {
+    "method": "PATCH",
+    "url": "/api/admin/articles/{id}"
+  },
+  {
+    "method": "PATCH",
+    "url": "/api/admin/groups/{id}"
+  },
+  {
+    "method": "GET",
+    "url": "/api/admin/rss-feeds"
+  },
+  {
+    "method": "POST",
+    "url": "/api/admin/rss-feeds"
+  },
+  {
+    "method": "PATCH",
+    "url": "/api/admin/rss-feeds"
+  },
+  {
+    "method": "POST",
+    "url": "/api/admin/rss-feeds/remove"
+  },
+  {
+    "method": "POST",
+    "url": "/api/admin/refresh"
+  },
+  {
+    "method": "POST",
+    "url": "/api/admin/summaries/daily/regenerate"
+  },
+  {
+    "method": "POST",
+    "url": "/api/admin/summaries/daily/preview"
+  },
+  {
+    "method": "POST",
+    "url": "/api/admin/summaries/weekly/regenerate"
+  }
+]

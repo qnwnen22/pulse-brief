@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "ContractTests": {
+      "commandName": "Project",
+      "launchBrowser": false
+    },
+    "FixturePreview": {
+      "commandName": "Project",
+      "commandLineArgs": "--serve",
+      "launchBrowser": false
+    }
+  }
+}

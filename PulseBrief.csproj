@@ -5,13 +5,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="AngleSharp" Version="1.5.0" />
-    <PackageReference Include="MongoDB.Driver" Version="3.9.0" />
+    <ProjectReference Include="PulseBrief.Core\PulseBrief.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Remove="PulseBrief.Collector\**\*.cs" />
-    <Content Remove="PulseBrief.Collector\**\*;publish\**\*" />
-    <None Remove="PulseBrief.Collector\**\*;publish\**\*" />
+    <Compile Remove="PulseBrief.Core\**\*;PulseBrief.Collector\**\*;PulseBrief.Tests\**\*;publish\**\*;backups\**\*" />
+    <Content Remove="PulseBrief.Core\**\*;PulseBrief.Collector\**\*;PulseBrief.Tests\**\*;publish\**\*;backups\**\*;manual-summaries\**\*" />
+    <None Remove="PulseBrief.Core\**\*;PulseBrief.Collector\**\*;PulseBrief.Tests\**\*;publish\**\*;backups\**\*" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="config\**\*">

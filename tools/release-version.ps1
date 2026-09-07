@@ -13,7 +13,10 @@ $projectPath = Split-Path -Parent $PSScriptRoot
 $versionPath = Join-Path $projectPath 'VERSION'
 $propsPath = Join-Path $projectPath 'Directory.Build.props'
 $changelogPath = Join-Path $projectPath 'CHANGELOG.md'
-$indexPath = Join-Path $projectPath 'wwwroot\index.html'
+$indexPaths = @(
+    (Join-Path $projectPath 'wwwroot\index.html'),
+    (Join-Path $projectPath 'wwwroot\admin\index.html')
+)
 
 function Set-ProjectTextFile {
     param(
@@ -47,10 +50,12 @@ $props = [regex]::Replace($props, '(<AssemblyVersion>).*?(</AssemblyVersion>)', 
 $props = [regex]::Replace($props, '(<FileVersion>).*?(</FileVersion>)', "`${1}$assemblyVersion`${2}")
 Set-ProjectTextFile -Path $propsPath -Value $props
 
-if (Test-Path -LiteralPath $indexPath) {
-    $index = Get-Content -LiteralPath $indexPath -Raw -Encoding UTF8
-    $index = [regex]::Replace($index, 'app\.js\?v=[^"''<>\s]+', "app.js?v=$Version")
-    Set-ProjectTextFile -Path $indexPath -Value $index
+foreach ($indexPath in $indexPaths) {
+    if (Test-Path -LiteralPath $indexPath) {
+        $index = Get-Content -LiteralPath $indexPath -Raw -Encoding UTF8
+        $index = [regex]::Replace($index, '(?<script><script\b[^>]*\bsrc=["''][^"'']+\.js)\?v=[^"''<>\s]+', "`${script}?v=$Version")
+        Set-ProjectTextFile -Path $indexPath -Value $index
+    }
 }
 
 $date = Get-Date -Format 'yyyy-MM-dd'
