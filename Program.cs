@@ -121,7 +121,7 @@ app.MapGet("/api/briefs", async (IArticleStore store, AppPaths paths, IConfigura
     return Results.Ok(ApiMapper.ToBriefs(groups, articles).Take(maxBriefs).ToArray());
 });
 
-app.MapGet("/api/daily-summary", async (HttpContext context, string? date, bool? force, DailySummaryService dailySummaryService, AdminAuthService adminAuth, CancellationToken cancellationToken) =>
+app.MapGet("/api/daily-summary", async (HttpContext context, string? date, bool? force, DailySummaryService dailySummaryService, IArticleStore store, AdminAuthService adminAuth, CancellationToken cancellationToken) =>
 {
     try
     {
@@ -154,7 +154,7 @@ app.MapGet("/api/daily-summary", async (HttpContext context, string? date, bool?
 
         return summary is null
             ? Results.NotFound(new { error = "daily_summary_not_ready" })
-            : Results.Ok(summary);
+            : Results.Ok(await AddSummaryLinksAsync(summary, store));
     }
     catch (Exception error) when (error is not OperationCanceledException)
     {
@@ -163,7 +163,7 @@ app.MapGet("/api/daily-summary", async (HttpContext context, string? date, bool?
     }
 });
 
-app.MapGet("/api/weekly-summary", async (HttpContext context, string? endDate, bool? force, DailySummaryService dailySummaryService, AdminAuthService adminAuth, CancellationToken cancellationToken) =>
+app.MapGet("/api/weekly-summary", async (HttpContext context, string? endDate, bool? force, DailySummaryService dailySummaryService, IArticleStore store, AdminAuthService adminAuth, CancellationToken cancellationToken) =>
 {
     try
     {
@@ -196,7 +196,7 @@ app.MapGet("/api/weekly-summary", async (HttpContext context, string? endDate, b
 
         return summary is null
             ? Results.NotFound(new { error = "weekly_summary_not_ready" })
-            : Results.Ok(summary);
+            : Results.Ok(await AddSummaryLinksAsync(summary, store));
     }
     catch (Exception error) when (error is not OperationCanceledException)
     {
@@ -287,6 +287,43 @@ app.MapAdminEndpoints(appStartedAt);
 app.MapFallbackToFile("index.html");
 
 app.Run();
+
+static async Task<DailyIssueSummary> AddSummaryLinksAsync(DailyIssueSummary summary, IArticleStore store)
+{
+    // Bound indexed lookups; ReadArticlesByIdsAsync excludes content and embeddings.
+    var articleIds = summary.TopIssues
+        .SelectMany(issue => issue.ArticleIds.Take(100))
+        .Where(id => !string.IsNullOrWhiteSpace(id))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .Take(1000)
+        .ToArray();
+    if (articleIds.Length == 0) return summary;
+
+    try
+    {
+        var articles = await store.ReadArticlesByIdsAsync(articleIds);
+        var byId = articles.ToDictionary(article => article.Id, StringComparer.OrdinalIgnoreCase);
+        foreach (var issue in summary.TopIssues)
+        {
+            issue.RelatedLinks = ArticleDedupe.EffectiveArticles(
+                issue.ArticleIds.Take(100).Select(id => byId.GetValueOrDefault(id)))
+                .Where(article => !string.IsNullOrWhiteSpace(article.Url))
+                .DistinctBy(article => article.Url)
+                .Select(article => new RelatedLinkDto
+                {
+                    Title = TextCleaner.Clean(article.Title),
+                    Source = TextCleaner.Clean(article.Source),
+                    Url = article.Url
+                }).ToArray();
+        }
+    }
+    catch (Exception error)
+    {
+        Console.WriteLine($"[summary-links] failed: {error.GetType().Name}");
+    }
+
+    return summary;
+}
 
 static object CreateLocalError(HttpContext context, Exception error)
 {

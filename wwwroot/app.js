@@ -315,7 +315,7 @@ function renderTrackedIssueList(items, targetItems, options = {}) {
 }
 
 function renderTrackedIssueItem(issue, targetItems, pickerClass, ariaLabel) {
-  const trackedIssue = findTrackedIssue(issue, targetItems);
+  const trackedIssue = issue.relatedLinks?.length ? issue : findTrackedIssue(issue, targetItems);
   const linkCount = trackedIssue?.relatedLinks?.length || 0;
   const articleCount = Number(issue.articleCount || trackedIssue?.articleCount || linkCount || 0);
 
@@ -548,7 +548,7 @@ function renderCategorySummary() {
   const summary = matchedCategory?.summary
     || buildLocalCategorySummary(selectedCategory, selectedIssues);
 
-  if (!selectedIssues.length && !matchedCategory) {
+  if (!selectedIssues.length && !matchedCategory && !categoryIssues.length) {
     categorySummary.innerHTML = '<div class="empty-state">선택한 카테고리의 요약 정보가 없습니다.</div>';
     return;
   }
@@ -587,8 +587,18 @@ function renderWeeklySummary() {
   const summaryRangeItems = weeklyRange ? getIssuesForDateRange(weeklyRange) : [];
   const recentItems = issues.filter((issue) => getIssueDate(issue).getTime() >= weekAgo);
   const baseItems = weeklyRange ? summaryRangeItems : (recentItems.length ? recentItems : issues);
-  const categories = preferredCategories.filter((category) => baseItems.some((issue) => issue.category === category));
-  const extraCategories = [...new Set(baseItems.map((issue) => issue.category))]
+  const dailyItems = dailyBrief?.date ? getIssuesForDateKey(dailyBrief.date) : [];
+  // Saved summaries can outlive the bounded recent-news feed.
+  const availableCategories = new Set([
+    ...(dailyBrief?.categories || []),
+    ...(dailyBrief?.topIssues || []),
+    ...(weeklyBrief?.categories || []),
+    ...(weeklyBrief?.topIssues || []),
+    ...dailyItems,
+    ...baseItems,
+  ].map((item) => item.category).filter(Boolean));
+  const categories = preferredCategories.filter((category) => availableCategories.has(category));
+  const extraCategories = [...availableCategories]
     .filter((category) => !categories.includes(category))
     .sort((a, b) => a.localeCompare(b, "ko"));
   const allCategories = [...categories, ...extraCategories];
@@ -619,15 +629,17 @@ function renderWeeklySummary() {
       return getIssueDate(b) - getIssueDate(a);
     })
     .slice(0, 4);
-  const sourceCount = new Set(targetItems.flatMap((issue) => (issue.source || "").split(", ").filter(Boolean))).size;
   const weeklyLabel = weeklyRange ? `${weeklyRange.start}~${weeklyRange.end}` : (recentItems.length ? "최근 7일" : "저장 데이터 기준");
   const weeklyCategorySummary = (weeklyBrief?.categories || []).find((category) => category.category === activeWeeklyCategory);
-  const aiWeeklyIssues = (weeklyBrief?.topIssues || []).filter((issue) => issue.category === activeWeeklyCategory).slice(0, 4);
-  const weeklyIssueItems = aiWeeklyIssues.length ? aiWeeklyIssues : topIssues;
+  const savedWeeklyIssues = (weeklyBrief?.topIssues || []).filter((issue) => issue.category === activeWeeklyCategory);
+  const weeklyIssueItems = savedWeeklyIssues.length ? savedWeeklyIssues.slice(0, 4) : topIssues;
+  const sourceCount = new Set(savedWeeklyIssues.length
+    ? savedWeeklyIssues.flatMap((issue) => issue.sources || [])
+    : targetItems.flatMap(getSourceNames)).size;
   const weeklyProvider = getSummaryProviderLabel(weeklyBrief);
   const weeklyText = weeklyCategorySummary?.summary || buildWeeklyCategorySummary(activeWeeklyCategory, targetItems, weeklyLabel);
 
-  if (!targetItems.length) {
+  if (!targetItems.length && !weeklyCategorySummary && !savedWeeklyIssues.length) {
     weeklyStats.innerHTML = "";
     weeklySummary.innerHTML = '<div class="empty-state">선택한 카테고리의 주간 이슈가 없습니다.</div>';
     renderCategorySummary();
@@ -637,6 +649,7 @@ function renderWeeklySummary() {
   renderWeeklyStats(activeWeeklyCategory, targetItems, sourceCount, weeklyLabel, {
     categorySummary: weeklyCategorySummary,
     topIssue: weeklyIssueItems[0],
+    savedIssues: savedWeeklyIssues,
   });
   renderCategorySummary();
   weeklySummary.innerHTML = `
@@ -666,7 +679,8 @@ function renderWeeklyStats(category, targetItems, sourceCount, weeklyLabel, summ
   const countBasis = summaryIssueCount ? `${weeklyLabel} 요약 기준` : "선택 카테고리 기준";
   const averageImpact = targetItems.length
     ? targetItems.reduce((sum, issue) => sum + issue.impact, 0) / targetItems.length
-    : 0;
+    : null;
+  const hasSavedSources = summaryContext.savedIssues?.length > 0;
 
   weeklyStats.innerHTML = `
     ${renderMetricCard(
@@ -684,9 +698,9 @@ function renderWeeklyStats(category, targetItems, sourceCount, weeklyLabel, summ
     )}
     ${renderMetricCard(
       "확인 출처",
-      sourceCount.toLocaleString("ko-KR"),
-      "중복 출처 제외",
-      "선택 카테고리의 이슈를 구성하는 기사 출처를 중복 없이 계산한 값입니다."
+      hasSavedSources || targetItems.length ? sourceCount.toLocaleString("ko-KR") : "-",
+      hasSavedSources ? "대표 이슈 출처 기준" : "중복 출처 제외",
+      "저장된 대표 이슈의 출처를 중복 없이 표시합니다. 대표 이슈가 없으면 현재 조회된 같은 기간 기사 출처를 사용합니다."
     )}
     ${renderMetricCard(
       "관련 기사",
@@ -696,7 +710,7 @@ function renderWeeklyStats(category, targetItems, sourceCount, weeklyLabel, summ
     )}
     ${renderMetricCard(
       "중요도 평균",
-      averageImpact.toFixed(1),
+      averageImpact === null ? "-" : averageImpact.toFixed(1),
       "선택 카테고리 평균",
       "관련 기사 수와 출처 수를 반영해 계산한 중요도 점수의 평균입니다. 값이 높을수록 여러 기사에서 반복적으로 확인된 흐름에 가깝습니다."
     )}

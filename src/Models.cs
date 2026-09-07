@@ -257,6 +257,10 @@ public sealed class DailyCategorySummary
 /// <summary>요약 문서 안에서 중요도가 높은 대표 이슈를 표현합니다.</summary>
 public sealed class DailyTopIssue
 {
+    // Resolve public links at read time without changing stored summary documents.
+    [BsonIgnore]
+    public RelatedLinkDto[] RelatedLinks { get; set; } = [];
+
     /// <summary>대표 이슈 제목입니다.</summary>
     public string Title { get; set; } = "";
 
