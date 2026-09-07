@@ -50,6 +50,8 @@ Pulse Brief는 RSS 뉴스와 원문 기사 본문을 수집해 유사 이슈로 
 
 뉴스 수집은 `pulsebrief-collector`가 담당하며 기본 실행 주기는 `AutoRefreshMinutes=10`입니다.
 
+전날 요약을 필요할 때 생성하는 Windows 바탕화면 도구는 [전날 뉴스 요약 실행 안내](docs/manual-summary-launcher.md)를 참고하세요. 이미 작성되거나 배포된 날짜는 재생성하지 않고, 새 초안의 배포는 별도 승인을 받습니다.
+
 ## 로컬 실행
 
 필요 조건:

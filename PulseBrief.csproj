@@ -8,9 +8,9 @@
     <ProjectReference Include="PulseBrief.Core\PulseBrief.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Remove="PulseBrief.Core\**\*;PulseBrief.Collector\**\*;PulseBrief.Tests\**\*;publish\**\*;backups\**\*" />
-    <Content Remove="PulseBrief.Core\**\*;PulseBrief.Collector\**\*;PulseBrief.Tests\**\*;publish\**\*;backups\**\*;manual-summaries\**\*" />
-    <None Remove="PulseBrief.Core\**\*;PulseBrief.Collector\**\*;PulseBrief.Tests\**\*;publish\**\*;backups\**\*" />
+    <Compile Remove="PulseBrief.Core\**\*;PulseBrief.Collector\**\*;PulseBrief.Tests\**\*;publish\**\*;backups\**\*;data\**\*" />
+    <Content Remove="PulseBrief.Core\**\*;PulseBrief.Collector\**\*;PulseBrief.Tests\**\*;publish\**\*;backups\**\*;manual-summaries\**\*;data\**\*" />
+    <None Remove="PulseBrief.Core\**\*;PulseBrief.Collector\**\*;PulseBrief.Tests\**\*;publish\**\*;backups\**\*;data\**\*" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="config\**\*">
