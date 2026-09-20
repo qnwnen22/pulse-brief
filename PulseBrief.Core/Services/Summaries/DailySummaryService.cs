@@ -5,6 +5,7 @@ namespace PulseBrief;
 /// <summary>저장된 이슈 그룹을 기반으로 일간/주간 요약을 만들고 OpenAI 요약 결과를 캐싱합니다.</summary>
 public sealed partial class DailySummaryService(IArticleStore store, OpenAiDailySummaryClient openAiClient, IConfiguration configuration)
 {
+    private const int PublicSummaryHistoryLimit = 730;
     private static readonly TimeZoneInfo KoreaTimeZone = ResolveKoreaTimeZone();
     private static readonly Regex KeywordRegex = new("[a-z0-9가-힣]{2,}", RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private static readonly Regex DateLikeKeywordRegex = new(@"^\d+(년|월|일|시|분|초|명|건|개|곳|차|위|호|회|명)$", RegexOptions.Compiled);
@@ -39,6 +40,9 @@ public sealed partial class DailySummaryService(IArticleStore store, OpenAiDaily
         var targetDate = date ?? GetYesterdayInKorea();
         return await store.ReadDailySummaryAsync(targetDate.ToString("yyyy-MM-dd"));
     }
+
+    public Task<List<string>> GetStoredDailySummaryDatesAsync(CancellationToken cancellationToken = default) =>
+        store.ReadDailySummaryDatesAsync(PublicSummaryHistoryLimit, cancellationToken);
 
     /// <summary>지정한 날짜의 일간 요약을 조회하거나 새로 생성합니다. 기본값은 한국 시간 기준 전날입니다.</summary>
     public async Task<DailyIssueSummary> GetOrCreateSummaryAsync(DateOnly? date = null, bool force = false, CancellationToken cancellationToken = default)

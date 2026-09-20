@@ -85,6 +85,14 @@ try
         Check(summary!["provider"]!.GetValue<string>() == "manual", "Saved summary provider changed.");
         Check(summary["topIssues"]![0]!["relatedLinks"]!.AsArray().Count == 1, "Archived article link missing.");
     }
+    var dailySummaryDates = await Request(client, "GET", "/api/daily-summary/dates", 200);
+    Check(dailySummaryDates!.AsArray().Count == 2, "Daily summary history must include daily dates and exclude weekly summary keys.");
+    var storedDailyDate = dailySummaryDates[0]!.GetValue<string>();
+    Check(DateOnly.TryParseExact(storedDailyDate, "yyyy-MM-dd", out _), "Daily summary history returned an invalid date key.");
+    Check(string.CompareOrdinal(storedDailyDate, dailySummaryDates[1]!.GetValue<string>()) > 0, "Daily summary history is not sorted newest first.");
+    await Request(client, "GET", $"/api/daily-summary?date={storedDailyDate}", 200);
+    await Request(client, "GET", "/api/daily-summary?date=invalid", 400);
+    await Request(client, "GET", "/api/daily-summary?date=2000-01-01", 404);
     Check(store.FullReads == 0 && store.SummaryWrites == 0, "Public reads must not scan all data or generate summaries.");
     var pipelineConstructor = typeof(NewsPipeline).GetConstructors().Single();
     Check(!pipelineConstructor.GetParameters().Any(parameter => parameter.ParameterType == typeof(DailySummaryService)), "News collection pipeline must not depend on summary generation.");
@@ -110,11 +118,9 @@ try
     await Request(client, "PATCH", "/api/admin/rss-feeds", 401, new { });
     Check(store.FullReads == 0, "Unauthorized requests reached the repository.");
 
-    await Request(admin, "GET", "/api/daily-summary?date=invalid", 400);
     await Request(admin, "GET", "/api/weekly-summary?endDate=invalid", 400);
     await Request(admin, "GET", "/api/daily-summary?force=true", 409);
     await Request(admin, "GET", "/api/weekly-summary?force=true", 409);
-    await Request(admin, "GET", "/api/daily-summary?date=2000-01-01", 404);
     foreach (var url in new[] { "/api/admin/summaries/daily/regenerate", "/api/admin/summaries/daily/preview", "/api/admin/summaries/weekly/regenerate", "/api/refresh", "/api/admin/refresh" })
         await Request(admin, "POST", url, 409, new { });
     Check(store.SummaryWrites == 0, "Disabled summary generation wrote data.");

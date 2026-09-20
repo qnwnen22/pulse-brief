@@ -24,6 +24,9 @@ public interface IArticleStore
     /// <summary>날짜 또는 주간 키에 해당하는 저장된 요약을 조회합니다.</summary>
     Task<DailyIssueSummary?> ReadDailySummaryAsync(string date);
 
+    /// <summary>저장된 일간 요약 날짜만 최신순으로 제한 조회합니다.</summary>
+    Task<List<string>> ReadDailySummaryDatesAsync(int limit, CancellationToken cancellationToken = default);
+
     /// <summary>저장된 모든 일간/주간 요약 문서를 조회합니다.</summary>
     Task<List<DailyIssueSummary>> ReadDailySummariesAsync();
 

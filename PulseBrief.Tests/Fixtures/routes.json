@@ -25,6 +25,10 @@
   },
   {
     "method": "GET",
+    "url": "/api/daily-summary/dates"
+  },
+  {
+    "method": "GET",
     "url": "/api/weekly-summary"
   },
   {

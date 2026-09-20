@@ -1,3 +1,4 @@
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace PulseBrief;
@@ -128,6 +129,23 @@ public sealed class MongoArticleStore : IArticleStore
     {
         await EnsureInitializedAsync();
         return await _summaries.Find(summary => summary.Date == date).FirstOrDefaultAsync();
+    }
+
+    /// <summary>일간 날짜 키만 투영해 요약 본문을 읽지 않고 최신순으로 반환합니다.</summary>
+    public async Task<List<string>> ReadDailySummaryDatesAsync(int limit, CancellationToken cancellationToken = default)
+    {
+        await EnsureInitializedAsync();
+        var dailyDate = Builders<DailyIssueSummary>.Filter.Regex(
+            summary => summary.Date,
+            new BsonRegularExpression(@"^\d{4}-\d{2}-\d{2}$"));
+
+        var dates = await _summaries.Find(dailyDate)
+            .SortByDescending(summary => summary.Date)
+            .Limit(Math.Clamp(limit, 1, 1000))
+            .Project(summary => summary.Date)
+            .ToListAsync(cancellationToken);
+
+        return dates.Distinct(StringComparer.Ordinal).ToList();
     }
 
     /// <summary>저장된 일간/주간 요약 문서를 생성 시각 역순으로 조회합니다.</summary>

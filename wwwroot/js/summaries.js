@@ -30,6 +30,53 @@ function getIssuesForDateRange(range, sourceItems = issues) {
   });
 }
 
+function isDailySummaryDateKey(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value || "");
+}
+
+function formatDailySummaryDate(value) {
+  if (!isDailySummaryDateKey(value)) return value || "";
+  const [year, month, day] = value.split("-").map(Number);
+  return `${year}년 ${month}월 ${day}일`;
+}
+
+function renderDailySummaryDateOptions() {
+  if (!dailySummaryDateSelect) return;
+
+  if (!dailySummaryDates.length) {
+    const label = dailySummaryDatesStatus === "loading"
+      ? "날짜 불러오는 중"
+      : dailySummaryDatesStatus === "error"
+        ? "날짜 목록 조회 실패"
+        : "저장된 요약 없음";
+    dailySummaryDateSelect.innerHTML = `<option value="">${label}</option>`;
+    dailySummaryDateSelect.disabled = true;
+    return;
+  }
+
+  dailySummaryDateSelect.innerHTML = dailySummaryDates
+    .map((date, index) => {
+      const suffix = index === 0 ? " (최신)" : "";
+      return `<option value="${date}">${formatDailySummaryDate(date)}${suffix}</option>`;
+    })
+    .join("");
+  dailySummaryDateSelect.value = selectedDailySummaryDate;
+  dailySummaryDateSelect.disabled = dailySummaryStatus === "loading";
+}
+
+function getRequestedDailySummaryDate() {
+  if (location.protocol === "file:") return "";
+  const value = new URLSearchParams(window.location.search).get("summaryDate") || "";
+  return isDailySummaryDateKey(value) ? value : "";
+}
+
+function updateDailySummaryAddress(date) {
+  if (location.protocol === "file:" || !isDailySummaryDateKey(date)) return;
+  const url = new URL(window.location.href);
+  url.searchParams.set("summaryDate", date);
+  window.history.replaceState({}, "", url);
+}
+
 function getSummaryProviderLabel(summary) {
   if (!summary) return "로컬 요약";
   if (summary.provider === "openai") return `AI 요약 · ${summary.model || "OpenAI"}`;
@@ -44,6 +91,22 @@ function getCategoryIssues(category) {
 function renderCategorySummary() {
   if (!categorySummary) return;
 
+  if (dailySummaryStatus === "loading") {
+    categorySummary.innerHTML = '<div class="empty-state">선택한 날짜의 일간 요약을 불러오는 중입니다.</div>';
+    return;
+  }
+
+  if (dailySummaryStatus === "missing") {
+    const dateLabel = selectedDailySummaryDate ? `${formatDailySummaryDate(selectedDailySummaryDate)}에` : "선택한 날짜에";
+    categorySummary.innerHTML = `<div class="empty-state">${dateLabel} 저장된 일간 요약이 없습니다.</div>`;
+    return;
+  }
+
+  if (dailySummaryStatus === "error") {
+    categorySummary.innerHTML = '<div class="empty-state">일간 이슈 요약을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</div>';
+    return;
+  }
+
   const selectedCategory = activeWeeklyCategory;
   if (!selectedCategory) {
     categorySummary.innerHTML = '<div class="empty-state">요약을 확인할 카테고리를 선택해 주세요.</div>';
@@ -57,7 +120,7 @@ function renderCategorySummary() {
   const providerLabel = getSummaryProviderLabel(dailyBrief);
   const matchedCategory = (dailyBrief?.categories || []).find((category) => category.category === selectedCategory);
   const categoryIssues = (dailyBrief?.topIssues || []).filter((issue) => issue.category === selectedCategory).slice(0, 4);
-  const title = `${selectedCategory} 전날 이슈 요약`;
+  const title = `${selectedCategory} 일간 이슈 요약`;
   const summary = matchedCategory?.summary
     || buildLocalCategorySummary(selectedCategory, selectedIssues);
 
@@ -89,7 +152,7 @@ function renderDailyIssueList(topIssues, targetItems) {
   return renderTrackedIssueList(topIssues, targetItems, {
     listClass: "daily-issue-list tracked-issue-list",
     pickerClass: "daily-source-picker weekly-source-picker",
-    ariaLabel: "전날 주요 이슈 관련 기사 보기",
+    ariaLabel: "일간 주요 이슈 관련 기사 보기",
   });
 }
 
@@ -200,7 +263,7 @@ function renderWeeklyStats(category, targetItems, sourceCount, weeklyLabel, summ
       "선택 카테고리",
       category,
       "요약 기준",
-      "전날 이슈 요약과 주간 이슈 요약을 계산할 때 사용 중인 카테고리입니다.",
+      "선택한 날짜의 일간 이슈 요약과 최신 주간 이슈 요약에 적용 중인 카테고리입니다.",
       "compact-value"
     )}
     ${renderMetricCard(

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace PulseBrief.Controllers;
@@ -16,7 +17,7 @@ public sealed class SummariesController(
     {
         try
         {
-            if ((force.GetValueOrDefault() || !string.IsNullOrWhiteSpace(date)) && !adminAuth.IsAuthenticated(HttpContext))
+            if (force.GetValueOrDefault() && !adminAuth.IsAuthenticated(HttpContext))
             {
                 return AdminAuthService.AdminRequired();
             }
@@ -24,7 +25,7 @@ public sealed class SummariesController(
             DateOnly? targetDate = null;
             if (!string.IsNullOrWhiteSpace(date))
             {
-                if (!DateOnly.TryParse(date, out var parsed))
+                if (!DateOnly.TryParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
                 {
                     return Results.BadRequest(new { error = "date must be yyyy-MM-dd" });
                 }
@@ -50,6 +51,20 @@ public sealed class SummariesController(
         catch (Exception error) when (error is not OperationCanceledException)
         {
             Console.WriteLine($"[daily-summary] failed: {error}");
+            return Results.Json(CreateLocalError(HttpContext, error), statusCode: StatusCodes.Status500InternalServerError);
+        }
+    }
+
+    [HttpGet("/api/daily-summary/dates")]
+    public async Task<IResult> DailyDates(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Results.Ok(await dailySummaryService.GetStoredDailySummaryDatesAsync(cancellationToken));
+        }
+        catch (Exception error) when (error is not OperationCanceledException)
+        {
+            Console.WriteLine($"[daily-summary-dates] failed: {error}");
             return Results.Json(CreateLocalError(HttpContext, error), statusCode: StatusCodes.Status500InternalServerError);
         }
     }

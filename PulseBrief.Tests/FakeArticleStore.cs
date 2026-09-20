@@ -27,7 +27,12 @@ public sealed class FakeArticleStore : IArticleStore
         var today = KoreaDate.Today();
         var daysSinceMonday = ((int)today.DayOfWeek + 6) % 7;
         var end = today.AddDays(-daysSinceMonday - 1);
-        foreach (var key in new[] { today.AddDays(-1).ToString("yyyy-MM-dd"), $"weekly:{end.AddDays(-6):yyyy-MM-dd}:{end:yyyy-MM-dd}" })
+        foreach (var key in new[]
+        {
+            today.AddDays(-1).ToString("yyyy-MM-dd"),
+            today.AddDays(-2).ToString("yyyy-MM-dd"),
+            $"weekly:{end.AddDays(-6):yyyy-MM-dd}:{end:yyyy-MM-dd}"
+        })
         {
             Summaries[key] = new DailyIssueSummary
             {
@@ -52,6 +57,11 @@ public sealed class FakeArticleStore : IArticleStore
     public Task<NewsStats?> ReadNewsStatsAsync(CancellationToken cancellationToken = default) => Task.FromResult<NewsStats?>(new NewsStats { TodayDate = KoreaDate.Key(KoreaDate.Today()), TodayArticleCount = Articles.Count });
     public async Task<NewsStats> RefreshNewsStatsAsync(CancellationToken cancellationToken = default) => (await ReadNewsStatsAsync(cancellationToken))!;
     public Task<DailyIssueSummary?> ReadDailySummaryAsync(string date) => Task.FromResult(Summaries.GetValueOrDefault(date));
+    public Task<List<string>> ReadDailySummaryDatesAsync(int limit, CancellationToken cancellationToken = default) => Task.FromResult(Summaries.Keys
+        .Where(key => DateOnly.TryParseExact(key, "yyyy-MM-dd", out _))
+        .OrderDescending()
+        .Take(limit)
+        .ToList());
     public Task<List<DailyIssueSummary>> ReadDailySummariesAsync() => Task.FromResult(Summaries.Values.ToList());
     public Task SaveDailySummaryAsync(DailyIssueSummary summary) { SummaryWrites++; Summaries[summary.Date] = summary; return Task.CompletedTask; }
     public Task SaveArticlesAsync(IReadOnlyCollection<Article> articles) => Task.CompletedTask;

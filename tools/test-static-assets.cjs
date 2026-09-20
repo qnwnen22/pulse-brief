@@ -10,9 +10,18 @@ let count = 0;
 
 const publicState = fs.readFileSync(path.join(webRoot, "js/state.js"), "utf8");
 const publicApi = fs.readFileSync(path.join(webRoot, "js/api.js"), "utf8");
+const publicEvents = fs.readFileSync(path.join(webRoot, "js/events.js"), "utf8");
+const publicHtml = fs.readFileSync(path.join(webRoot, "index.html"), "utf8");
 assert.match(publicState, /location\.protocol === "file:" \? \[\.\.\.sampleIssues\] : \[\]/, "production must not start with sample news");
 assert.doesNotMatch(publicApi, /!serverIssues\.length/, "an empty server response must not preserve sample news");
-count += 2;
+assert.match(publicHtml, /id="dailySummaryDateSelect"/, "daily summary history selector is missing");
+assert.match(publicApi, /\/api\/daily-summary\/dates/, "daily summary history API is not loaded");
+assert.match(publicApi, /\/api\/daily-summary\$\{query\}/, "selected daily summary date is not requested");
+assert.match(publicEvents, /dailySummaryDateSelect\?\.addEventListener\("change"/, "daily summary selector has no change handler");
+const publicStylesheet = publicHtml.match(/<link\b[^>]*\brel="stylesheet"[^>]*\bhref="([^"]+)"/)?.[1];
+assert.ok(publicStylesheet, "public stylesheet link is missing");
+assert.equal(new URL(publicStylesheet, "http://localhost/").searchParams.get("v"), version, "public stylesheet cache version is stale");
+count += 7;
 
 for (const [file, routes, prefix] of [
   ["index.html", ["/"], "/js/"],

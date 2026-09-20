@@ -23,6 +23,14 @@ function camelCaseKeys(value) {
 
 function render(feed, dailySummary, weeklySummary, category = "") {
   const elements = new Map();
+  const location = { protocol: "https:", search: "", href: "https://example.com/" };
+  const window = {
+    location,
+    history: { replaceState() {} },
+    setTimeout,
+    clearTimeout,
+    scrollTo() {},
+  };
   const document = {
     querySelector(selector) {
       if (!elements.has(selector)) elements.set(selector, {
@@ -33,7 +41,7 @@ function render(feed, dailySummary, weeklySummary, category = "") {
     querySelectorAll: () => [],
     addEventListener() {},
   };
-  const context = vm.createContext({ document, console, URL, Intl });
+  const context = vm.createContext({ document, console, URL, URLSearchParams, Intl, location, window });
   assert.match(source, /initializeApp\(\);\s*$/);
   vm.runInContext(source.replace(/initializeApp\(\);\s*$/, ""), context);
   Object.assign(context, {
@@ -86,6 +94,12 @@ assert.ok(weeklyOnly.html("#categorySummary").includes("선택한 카테고리�
 const empty = render([], null, null);
 assert.ok(empty.html("#categorySummary").includes("요약할 이슈 데이터가 없습니다."));
 assert.equal(empty.html("#weeklyCategoryTabs"), "");
+
+const loading = render([], daily, weekly, "정치/정책");
+vm.runInContext('dailySummaryStatus = "loading"; renderCategorySummary();', loading.context);
+assert.ok(loading.html("#categorySummary").includes("불러오는 중입니다."));
+vm.runInContext('dailySummaryStatus = "missing"; selectedDailySummaryDate = "2026-09-05"; renderCategorySummary();', loading.context);
+assert.ok(loading.html("#categorySummary").includes("2026년 9월 5일에 저장된 일간 요약이 없습니다."));
 
 // A later weekly response must not hide a daily-only category.
 const union = render([], { categories: [{ category: "Daily only", summary: "Daily text" }] }, weekly, "Daily only");

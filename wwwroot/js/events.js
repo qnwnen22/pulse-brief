@@ -40,6 +40,14 @@ weeklyCategoryTabs.addEventListener("click", (event) => {
   renderWeeklySummary();
 });
 
+dailySummaryDateSelect?.addEventListener("change", () => {
+  const date = dailySummaryDateSelect.value;
+  if (!isDailySummaryDateKey(date)) return;
+  selectedDailySummaryDate = date;
+  updateDailySummaryAddress(date);
+  loadDailySummary(date);
+});
+
 refreshButton?.addEventListener("click", () => {
   refreshFromServer();
 });

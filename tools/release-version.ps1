@@ -27,7 +27,7 @@ function Set-ProjectTextFile {
         [string]$Value
     )
 
-    $normalized = [regex]::Replace($Value, '(\r?\n)*$', "`r`n")
+    $normalized = [regex]::Replace($Value, '[\r\n]*\z', "`r`n")
     $utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
     [IO.File]::WriteAllText($Path, $normalized, $utf8WithoutBom)
 }
@@ -55,6 +55,7 @@ foreach ($indexPath in $indexPaths) {
     if (Test-Path -LiteralPath $indexPath) {
         $index = Get-Content -LiteralPath $indexPath -Raw -Encoding UTF8
         $index = [regex]::Replace($index, '(?<script><script\b[^>]*\bsrc=["''][^"'']+\.js)\?v=[^"''<>\s]+', "`${script}?v=$Version")
+        $index = [regex]::Replace($index, '(?<style><link\b[^>]*\bhref=["''][^"'']+\.css)\?v=[^"''<>\s]+', "`${style}?v=$Version")
         Set-ProjectTextFile -Path $indexPath -Value $index
     }
 }

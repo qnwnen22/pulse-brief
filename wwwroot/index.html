@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Pulse Brief</title>
     <link rel="icon" type="image/svg+xml" href="assets/pulse-brief-favicon.svg" />
-    <link rel="stylesheet" href="styles.css?v=20260610-search-filters" />
+    <link rel="stylesheet" href="styles.css?v=0.3.0" />
   </head>
   <body>
     <div id="appLoading" class="app-loading" role="status" aria-live="polite" aria-label="사이트 로딩 중">
@@ -112,9 +112,15 @@
             <section class="daily-box" aria-labelledby="daily-summary-title">
               <div class="section-head compact">
                 <div>
-                  <p class="eyebrow">Yesterday Brief</p>
-                  <h2 id="daily-summary-title">전날 이슈 요약</h2>
+                  <p class="eyebrow">Daily Brief</p>
+                  <h2 id="daily-summary-title">일간 이슈 요약</h2>
                 </div>
+                <label class="summary-history-control" for="dailySummaryDateSelect">
+                  <span>요약 날짜</span>
+                  <select id="dailySummaryDateSelect" aria-label="저장된 일간 요약 날짜" disabled>
+                    <option value="">날짜 불러오는 중</option>
+                  </select>
+                </label>
               </div>
               <div id="categorySummary" class="daily-summary category-summary" aria-live="polite"></div>
             </section>
@@ -260,16 +266,16 @@
       </main>
     </div>
 
-  <script defer src="js/state.js?v=0.2.2"></script>
-  <script defer src="js/format.js?v=0.2.2"></script>
-  <script defer src="js/related-articles.js?v=0.2.2"></script>
-  <script defer src="js/news-feed.js?v=0.2.2"></script>
-  <script defer src="js/summaries.js?v=0.2.2"></script>
-  <script defer src="js/news-controls.js?v=0.2.2"></script>
-  <script defer src="js/navigation.js?v=0.2.2"></script>
-  <script defer src="js/api.js?v=0.2.2"></script>
-  <script defer src="js/events.js?v=0.2.2"></script>
-  <script defer src="js/main.js?v=0.2.2"></script>
+  <script defer src="js/state.js?v=0.3.0"></script>
+  <script defer src="js/format.js?v=0.3.0"></script>
+  <script defer src="js/related-articles.js?v=0.3.0"></script>
+  <script defer src="js/news-feed.js?v=0.3.0"></script>
+  <script defer src="js/summaries.js?v=0.3.0"></script>
+  <script defer src="js/news-controls.js?v=0.3.0"></script>
+  <script defer src="js/navigation.js?v=0.3.0"></script>
+  <script defer src="js/api.js?v=0.3.0"></script>
+  <script defer src="js/events.js?v=0.3.0"></script>
+  <script defer src="js/main.js?v=0.3.0"></script>
   </body>
 </html>
 

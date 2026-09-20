@@ -60,13 +60,14 @@ PulseBrief.sln
 
 ### 이슈 요약 조회
 
-1. `wwwroot/js/api.js`: 전날·주간 요약 API 요청.
-2. `Controllers/SummariesController.cs`: 날짜·권한 확인.
-3. `PulseBrief.Core/Services/Summaries/DailySummaryService.cs`: 저장된 요약 조회.
-4. `SummaryLinkService.cs`: 기록된 기사 ID로 관련 원문 링크 조회.
-5. `wwwroot/js/summaries.js`: 저장 요약의 카테고리와 본문 표시.
+1. `wwwroot/js/api.js`: 저장된 일간 날짜 목록과 선택 날짜의 일간·최신 주간 요약 API 요청.
+2. `Controllers/SummariesController.cs`: 날짜 형식과 강제 생성 권한 확인.
+3. `PulseBrief.Core/Services/Summaries/DailySummaryService.cs`: 저장된 요약과 공개 날짜 목록 조회.
+4. `MongoArticleStore.cs`: 일간 날짜 목록은 본문 없이 `Date` 필드만 최신순 최대 730개 투영.
+5. `SummaryLinkService.cs`: 기록된 기사 ID로 관련 원문 링크 조회.
+6. `wwwroot/js/summaries.js`: 저장 날짜 선택기와 요약의 카테고리·본문 표시.
 
-공개 화면 접속과 뉴스 수집 파이프라인은 요약 생성 작업을 실행하지 않습니다. 전날 요약은 `tools/manual-summary/start-daily-summary.ps1`을 PC에서 실행하면 생성·검증 후 운영 DB에 자동 삽입하며 기존 날짜는 덮어쓰지 않습니다. 기존 `tools/cloud/import-daily-summary.ps1`은 별도 수동 교체 작업에 사용합니다. 서버의 생성 알고리즘과 비활성 관리자 API는 호환을 위해 남아 있지만 예약 호출 경로는 제거했습니다.
+공개 화면 접속과 뉴스 수집 파이프라인은 요약 생성 작업을 실행하지 않습니다. 전날 요약은 `tools/manual-summary/start-daily-summary.ps1`을 PC에서 실행하면 생성·검증 후 운영 DB에 자동 삽입하며 기존 날짜는 덮어쓰지 않습니다. 기존 `tools/cloud/import-daily-summary.ps1`은 별도 수동 교체 작업에 사용합니다. 서버의 생성 알고리즘과 비활성 관리자 API는 호환을 위해 남아 있지만 예약 호출 경로는 제거했습니다. 공개 `date` 조회는 이미 저장된 문서만 읽으며 누락 날짜를 자동 생성하지 않습니다.
 
 `DailySummaryService`는 하나의 클래스를 `partial`로 분할했습니다. 기본 파일은 공개 메서드, `.Daily`는 일간 초안, `.Candidates`는 이슈 묶기, `.Scoring`은 후보 점수·근거 추출, `.Weekly`는 일간 요약 합산, `.Helpers`는 공통 보조 처리를 담습니다.
 
@@ -103,7 +104,7 @@ node tools/test-summary-rendering.cjs
 node tools/test-static-assets.cjs
 ```
 
-API 테스트는 임시 설정 폴더와 메모리 저장소를 사용합니다. 운영 MongoDB나 OpenAI API를 호출하지 않고, 기존 28개 라우트, 요청 바인딩, 인증·CSRF, 요약 비활성화, 관련 링크와 BSON 호환성을 검증합니다.
+API 테스트는 임시 설정 폴더와 메모리 저장소를 사용합니다. 운영 MongoDB나 OpenAI API를 호출하지 않고, 공개 과거 요약 조회와 날짜 정렬을 포함한 라우트, 요청 바인딩, 인증·CSRF, 요약 비활성화, 관련 링크와 BSON 호환성을 검증합니다.
 
 DB 없이 화면을 살펴보는 개발용 서버:
 
