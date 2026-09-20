@@ -85,6 +85,9 @@ try
         Check(summary["topIssues"]![0]!["relatedLinks"]!.AsArray().Count == 1, "Archived article link missing.");
     }
     Check(store.FullReads == 0 && store.SummaryWrites == 0, "Public reads must not scan all data or generate summaries.");
+    var pipelineConstructor = typeof(NewsPipeline).GetConstructors().Single();
+    Check(!pipelineConstructor.GetParameters().Any(parameter => parameter.ParameterType == typeof(DailySummaryService)), "News collection pipeline must not depend on summary generation.");
+    Check(typeof(DailySummaryService).GetMethod("EnsureScheduledSummariesAsync") is null, "Scheduled local summary generation must not be available.");
 
     foreach (var url in new[] { "/api/articles", "/api/groups", "/api/admin/dashboard", "/api/admin/diagnostics", "/api/admin/articles", "/api/admin/articles/test-article", "/api/admin/rss-feeds", "/api/daily-summary?force=true", "/api/weekly-summary?endDate=2026-09-06" })
         await Request(client, "GET", url, 401);

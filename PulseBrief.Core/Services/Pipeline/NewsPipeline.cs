@@ -1,6 +1,6 @@
 namespace PulseBrief;
 
-/// <summary>RSS 수집, 기사 본문 보강, 임베딩, 그룹화, 요약 갱신을 순서대로 실행하는 뉴스 처리 파이프라인입니다.</summary>
+/// <summary>RSS 수집, 기사 본문 보강, 임베딩, 그룹화를 순서대로 실행하는 뉴스 처리 파이프라인입니다.</summary>
 public sealed class NewsPipeline(
     AppPaths paths,
     RssCollector rssCollector,
@@ -9,7 +9,6 @@ public sealed class NewsPipeline(
     EmbeddingService embeddingService,
     ArticleClusterer clusterer,
     BriefGenerator briefGenerator,
-    DailySummaryService dailySummaryService,
     PipelineRunTracker pipelineRunTracker,
     OperationalLogService operationalLog,
     IConfiguration configuration)
@@ -49,15 +48,6 @@ public sealed class NewsPipeline(
                     errorType = error.GetType().Name,
                     error.Message
                 }, CancellationToken.None);
-            }
-
-            if (dailySummaryService.IsGenerationEnabled)
-            {
-                await dailySummaryService.EnsureScheduledSummariesAsync(cancellationToken);
-            }
-            else
-            {
-                await operationalLog.RecordAsync("info", "summary_generation_skipped", "Summary generation is disabled by configuration.", cancellationToken: cancellationToken);
             }
 
             var result = new PipelineResult(fetched.Count, articles.Count, enriched.Count, DateTimeOffset.UtcNow);

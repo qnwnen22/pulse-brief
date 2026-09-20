@@ -75,13 +75,6 @@ public sealed partial class DailySummaryService(IArticleStore store, OpenAiDaily
         return aiSummary ?? summary;
     }
 
-    /// <summary>한국 시간 기준 전날 요약을 강제로 다시 생성합니다.</summary>
-    public async Task EnsureScheduledSummariesAsync(CancellationToken cancellationToken = default)
-    {
-        await GetOrCreateSummaryAsync(GetYesterdayInKorea(), force: false, cancellationToken);
-        await GetOrCreateWeeklySummaryAsync(GetLatestCompletedWeekEndInKorea(), force: false, cancellationToken);
-    }
-
     public async Task<DailyIssueSummary?> GetStoredWeeklySummaryAsync(DateOnly? endDate = null)
     {
         var targetEndDate = endDate ?? GetLatestCompletedWeekEndInKorea();
