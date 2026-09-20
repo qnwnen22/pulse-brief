@@ -29,9 +29,9 @@ public sealed class BriefGenerator
         if (article is null) return null;
         if (!string.IsNullOrWhiteSpace(article.Content))
         {
-            return article.Content.Length > 900 ? article.Content[..900] : article.Content;
+            return TextCleaner.Truncate(article.Content, 900);
         }
 
-        return article.Summary;
+        return TextCleaner.Truncate(article.Summary, 900);
     }
 }

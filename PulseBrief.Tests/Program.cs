@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -88,6 +89,17 @@ try
     var pipelineConstructor = typeof(NewsPipeline).GetConstructors().Single();
     Check(!pipelineConstructor.GetParameters().Any(parameter => parameter.ParameterType == typeof(DailySummaryService)), "News collection pipeline must not depend on summary generation.");
     Check(typeof(DailySummaryService).GetMethod("EnsureScheduledSummariesAsync") is null, "Scheduled local summary generation must not be available.");
+    var boundaryText = new string('가', 699) + "😀끝";
+    var safelyTruncated = TextCleaner.Truncate(boundaryText, 700);
+    var strictUtf8 = new UTF8Encoding(false, true);
+    Check(safelyTruncated.Length == 699, "Unicode truncation split a surrogate pair.");
+    Check(strictUtf8.GetString(strictUtf8.GetBytes(safelyTruncated)) == safelyTruncated, "Truncated text is not valid UTF-8.");
+    Check(TextCleaner.Clean("정상\uD83D문자") == "정상\uFFFD문자", "Malformed Unicode was not normalized.");
+    var unicodeGroup = app.Services.GetRequiredService<ArticleClusterer>().GroupSimilarArticles([
+        new Article { Id = "unicode-boundary", Title = "유니코드 경계 테스트", Source = "테스트", Content = boundaryText, Embedding = [1d] }
+    ]).Single();
+    Check(unicodeGroup.SeedSummary == safelyTruncated, "Article grouping did not use safe Unicode truncation.");
+    Check(unicodeGroup.ToBson().Length > 0, "Unicode-safe article group could not be serialized to BSON.");
 
     foreach (var url in new[] { "/api/articles", "/api/groups", "/api/admin/dashboard", "/api/admin/diagnostics", "/api/admin/articles", "/api/admin/articles/test-article", "/api/admin/rss-feeds", "/api/daily-summary?force=true", "/api/weekly-summary?endDate=2026-09-06" })
         await Request(client, "GET", url, 401);

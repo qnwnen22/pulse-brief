@@ -193,7 +193,7 @@ public sealed partial class ArticleContentFetcher(HttpClient httpClient, IConfig
             .OrderByDescending(text => text.Length)
             .FirstOrDefault() ?? "";
 
-        return best.Length > 12000 ? best[..12000] : best;
+        return TextCleaner.Truncate(best, 12000);
     }
 
     /// <summary>기사 HTML에서 og:image, twitter:image, 주요 image_src 값을 대표 이미지 URL로 추출합니다.</summary>

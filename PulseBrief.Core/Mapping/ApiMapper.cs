@@ -86,7 +86,7 @@ public static class ApiMapper
 
         if (!string.IsNullOrWhiteSpace(rssSummary))
         {
-            return rssSummary.Length > 220 ? $"{rssSummary[..220].Trim()}..." : rssSummary;
+            return rssSummary.Length > 220 ? $"{TextCleaner.Truncate(rssSummary, 220).Trim()}..." : rssSummary;
         }
 
         var displayArticleCount = articleCount > 0 ? articleCount : group.ArticleCount;

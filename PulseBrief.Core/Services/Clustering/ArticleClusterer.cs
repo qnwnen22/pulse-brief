@@ -125,8 +125,8 @@ public sealed class ArticleClusterer(IConfiguration configuration)
     private static string BestSummary(Article? article)
     {
         if (article is null) return "";
-        if (!string.IsNullOrWhiteSpace(article.Content)) return article.Content.Length > 700 ? article.Content[..700] : article.Content;
-        return article.Summary;
+        if (!string.IsNullOrWhiteSpace(article.Content)) return TextCleaner.Truncate(article.Content, 700);
+        return TextCleaner.Truncate(article.Summary, 700);
     }
 
     /// <summary>두 임베딩 벡터의 코사인 유사도 점수를 계산합니다.</summary>

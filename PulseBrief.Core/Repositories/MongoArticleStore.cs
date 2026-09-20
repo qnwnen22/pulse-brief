@@ -163,12 +163,36 @@ public sealed class MongoArticleStore : IArticleStore
         }
     }
 
-    /// <summary>현재 이슈 그룹 컬렉션을 지우고 새 그룹 계산 결과로 교체합니다.</summary>
+    /// <summary>새 그룹 저장이 모두 성공한 뒤 이전 실행에서 남은 그룹만 제거합니다.</summary>
     public async Task SaveGroupsAsync(IReadOnlyCollection<ArticleGroup> groups)
     {
         await EnsureInitializedAsync();
-        await _groups.DeleteManyAsync(Builders<ArticleGroup>.Filter.Empty);
-        if (groups.Count > 0) await _groups.InsertManyAsync(groups);
+        if (groups.Count == 0)
+        {
+            throw new InvalidOperationException("Refusing to replace article groups with an empty result.");
+        }
+
+        var ids = groups
+            .Select(group => group.Id)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToArray();
+        if (ids.Length != groups.Count || ids.Distinct(StringComparer.OrdinalIgnoreCase).Count() != groups.Count)
+        {
+            throw new InvalidOperationException("Article group ids must be non-empty and unique.");
+        }
+
+        var writes = groups
+            .Select(group => new ReplaceOneModel<ArticleGroup>(
+                Builders<ArticleGroup>.Filter.Eq(item => item.Id, group.Id),
+                group)
+            {
+                IsUpsert = true
+            })
+            .Cast<WriteModel<ArticleGroup>>()
+            .ToArray();
+
+        await _groups.BulkWriteAsync(writes, new BulkWriteOptions { IsOrdered = true });
+        await _groups.DeleteManyAsync(Builders<ArticleGroup>.Filter.Nin(group => group.Id, ids));
     }
 
     /// <summary>새로 수집된 기사와 기존 MongoDB 기사 문서를 병합하고 전체 기사 목록을 반환합니다.</summary>

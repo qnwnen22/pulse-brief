@@ -8,6 +8,12 @@ const webRoot = path.join(root, "wwwroot");
 const version = fs.readFileSync(path.join(root, "VERSION"), "utf8").trim();
 let count = 0;
 
+const publicState = fs.readFileSync(path.join(webRoot, "js/state.js"), "utf8");
+const publicApi = fs.readFileSync(path.join(webRoot, "js/api.js"), "utf8");
+assert.match(publicState, /location\.protocol === "file:" \? \[\.\.\.sampleIssues\] : \[\]/, "production must not start with sample news");
+assert.doesNotMatch(publicApi, /!serverIssues\.length/, "an empty server response must not preserve sample news");
+count += 2;
+
 for (const [file, routes, prefix] of [
   ["index.html", ["/"], "/js/"],
   ["admin/index.html", ["/admin", "/admin/", "/admin/index.html"], "/admin/js/"],

@@ -2,7 +2,7 @@
 const sampleIssues = [
   {
     title: "반도체 공급망 투자 경쟁이 다시 가속",
-    category: "경제",
+    category: "경제/산업",
     source: "Market Daily",
     minutes: 8,
     impact: 92,
@@ -12,7 +12,7 @@ const sampleIssues = [
   },
   {
     title: "생성형 AI 검색 서비스, 뉴스 유통 구조 흔든다",
-    category: "기술",
+    category: "IT/과학",
     source: "Tech Signal",
     minutes: 13,
     impact: 88,
@@ -32,7 +32,7 @@ const sampleIssues = [
   },
   {
     title: "OTT 신작 공개 후 원작 IP 검색량 급등",
-    category: "문화",
+    category: "문화/연예",
     source: "Culture Beat",
     minutes: 28,
     impact: 69,
@@ -42,7 +42,7 @@ const sampleIssues = [
   },
   {
     title: "환율 변동성 확대에 수입 물가 우려",
-    category: "경제",
+    category: "경제/산업",
     source: "Finance Now",
     minutes: 36,
     impact: 81,
@@ -52,7 +52,7 @@ const sampleIssues = [
   },
   {
     title: "모바일 보안 업데이트 권고 확산",
-    category: "기술",
+    category: "IT/과학",
     source: "Security Desk",
     minutes: 47,
     impact: 73,
@@ -62,7 +62,7 @@ const sampleIssues = [
   },
 ];
 
-let issues = [...sampleIssues];
+let issues = location.protocol === "file:" ? [...sampleIssues] : [];
 let dailyBrief = null;
 let weeklyBrief = null;
 let newsStats = null;

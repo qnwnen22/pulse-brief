@@ -28,7 +28,8 @@ function Set-ProjectTextFile {
     )
 
     $normalized = [regex]::Replace($Value, '(\r?\n)*$', "`r`n")
-    Set-Content -LiteralPath $Path -Value $normalized -Encoding UTF8 -NoNewline
+    $utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
+    [IO.File]::WriteAllText($Path, $normalized, $utf8WithoutBom)
 }
 
 $versionMatch = [regex]::Match($Version, '^(\d+)\.(\d+)\.(\d+)(?:-[0-9A-Za-z.-]+)?$')

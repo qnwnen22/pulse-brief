@@ -70,6 +70,8 @@ PulseBrief.sln
 
 `DailySummaryService`는 하나의 클래스를 `partial`로 분할했습니다. 기본 파일은 공개 메서드, `.Daily`는 일간 초안, `.Candidates`는 이슈 묶기, `.Scoring`은 후보 점수·근거 추출, `.Weekly`는 일간 요약 합산, `.Helpers`는 공통 보조 처리를 담습니다.
 
+이슈 그룹 저장은 현재 결과를 먼저 ID 기준으로 upsert하고 성공한 뒤 이전 실행의 잔여 그룹을 삭제합니다. 본문과 요약은 유니코드 문자 경계를 보존하며 잘라 MongoDB 직렬화 오류가 발생하지 않도록 하고, 공개 API가 비어 있을 때 프론트엔드는 개발용 샘플 대신 빈 상태를 표시합니다.
+
 ### 뉴스 수집
 
 `PulseBrief.Collector/Program.cs` → `CollectorWorker.cs` → `PulseBrief.Core/Services/Pipeline/NewsPipeline.cs` 순서입니다. 파이프라인은 RSS 수집, 본문 보강, 로컬 임베딩, 유사 기사 그룹화, 저장, 금일 지표 갱신을 조정합니다.

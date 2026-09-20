@@ -5,7 +5,7 @@ async function loadServerBriefs() {
     const response = await fetchWithTimeout("/api/briefs", {}, 20000);
     if (!response.ok) throw new Error(`briefs ${response.status}`);
     const serverIssues = await response.json();
-    if (!Array.isArray(serverIssues) || !serverIssues.length) return false;
+    if (!Array.isArray(serverIssues)) return false;
     issues = serverIssues;
     return true;
   } catch (error) {
