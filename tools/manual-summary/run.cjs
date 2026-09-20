@@ -3,6 +3,7 @@ const path = require("node:path");
 const { spawn, spawnSync } = require("node:child_process");
 const core = require("./summary-core.cjs");
 const publication = require("./publication.cjs");
+const { validateSummaryKey } = require("./periods.cjs");
 const root = path.resolve(__dirname, "../..");
 const { requireThat, hash, readJson, writeJson } = core;
 
@@ -69,6 +70,7 @@ async function readRemote(config, request, onRecord) {
   });
 }
 async function checkRemote(config, date) {
+  validateSummaryKey(date);
   const records = [];
   await readRemote(config, { date, mode: "check" }, record => records.push(record));
   requireThat(records.length === 1 && records[0].date === date && ["existing", "missing"].includes(records[0].type), "서버의 중복 확인 응답이 올바르지 않습니다. 생성을 중단합니다.");
@@ -163,8 +165,8 @@ function reducePrompt(date, category, topics) {
   requireThat(JSON.stringify(data).length <= 240000, `${category}: 이슈 자료가 처리 상한을 초과했습니다. 일부를 버리고 요약하지 않습니다.`);
   return `${editorial}\nDate: ${date}, category: ${category}. Merge topics about the same specific event into issues. topicKeys must include EVERY supplied topic key exactly once, including minor stories; do not omit or invent keys. Set featured=true for the 1 to 3 most consequential issues and false for all others. Assign score 0..100 (editorial importance, not probability). Provide a concise category summary focused on those featured issues. Avoid double-counting related reports and prefer diverse publishers. Each issue needs a short factual summary and up to 5 keywords.\n<news_data>${JSON.stringify(data)}</news_data>`;
 }
-async function run({ date, directory, config, canonicalFile, checkOnly = false, log = console.log, dependencies = {} }) {
-  core.validateDate(date);
+async function run({ date, directory, config, canonicalFile, checkOnly = false, log = console.log, dependencies = {}, generateSummary }) {
+  validateSummaryKey(date);
   fs.mkdirSync(directory, { recursive: true });
   const receiptFile = path.join(directory, "publication.json");
   const api = { checkRemote, exportArticles, checkLogin, askCodex, publishSummary, verifyWebsite: publication.verifyWebsite, ...dependencies };
@@ -199,6 +201,8 @@ async function run({ date, directory, config, canonicalFile, checkOnly = false, 
     log("기존 요약 결과를 재사용하여 배포 단계부터 진행합니다.");
     return deploy(receipt ? receipt.summary : readJson(localFile));
   }
+  if (generateSummary) return deploy(await generateSummary());
+  requireThat(!date.startsWith("weekly:"), "주간 요약은 일간 요약 합산 도구로 실행해야 합니다.");
   api.checkLogin(config);
   const exported = await api.exportArticles(config, date, directory, log);
   if (exported.existing) return { status: "existing-server", date };

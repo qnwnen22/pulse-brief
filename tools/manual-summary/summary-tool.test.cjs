@@ -168,6 +168,16 @@ test("missing, fabricated or repeated article references fail validation", () =>
   assert.throws(() => core.validateMap({ topics: [{ ...topic, articleKeys: ["a1", "made-up"] }] }, batch), /알 수 없거나/);
   assert.throws(() => core.validateMap({ topics: [{ ...topic, articleKeys: ["a1", "a1", "a2"] }] }, batch), /중복/);
 });
+test("reduction normalizes empty boilerplate prose only for unfeatured issues", () => {
+  const topics = [{ key: "t1" }, { key: "t2" }];
+  const result = { summary: "분야 요약", issues: [
+    { title: "대표 이슈", summary: "확인된 사실", topicKeys: ["t1"], keywords: [], score: 80, featured: true },
+    { title: "저작권 안내", summary: "", topicKeys: ["t2"], keywords: [], score: 0, featured: false }
+  ] };
+  assert.equal(core.validateReduction(result, topics).issues[1].summary, "기사 본문에서 별도로 요약할 사실을 확인하지 못했습니다.");
+  result.issues[0].summary = "";
+  assert.throws(() => core.validateReduction(result, topics), /summary/);
+});
 test("model invocations disable shell, plugins, hooks and web search", () => {
   const args = launcher.codexArgs("schema.json", "response.json").join(" ");
   for (const flag of ["--sandbox read-only", "--ignore-user-config", "--ignore-rules", "--disable shell_tool", "--disable plugins", "--disable hooks", 'web_search="disabled"']) assert.ok(args.includes(flag));

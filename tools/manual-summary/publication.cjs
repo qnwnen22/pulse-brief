@@ -1,13 +1,15 @@
-const { requireThat, categories, yesterday, validateDate, hash } = require("./summary-core.cjs");
+const { requireThat, categories, yesterday, hash } = require("./summary-core.cjs");
+const { validateSummaryKey, latestWeek } = require("./periods.cjs");
 
 function normalizeSummary(value, date) {
-  validateDate(date);
+  validateSummaryKey(date);
+  const weekly = date.startsWith("weekly:");
   requireThat(value?.Date === date && value.Provider === "manual", "배포할 수동 요약의 날짜 또는 생성 방식이 올바르지 않습니다.");
   function text(value, name, max = 3000) {
     requireThat(typeof value === "string" && value.trim() && value.length <= max, `${name} 형식 오류`);
     return value.trim();
   }
-  function count(value, name, min = 1, max = 50000) {
+  function count(value, name, min = 1, max = weekly ? 350000 : 50000) {
     requireThat(Number.isInteger(value) && value >= min && value <= max, `${name} 범위 오류`);
     return value;
   }
@@ -32,7 +34,7 @@ function normalizeSummary(value, date) {
     const ids = strings(issue.ArticleIds, "기사 ID", 50000);
     requireThat(ids.length === issue.ArticleCount, "대표 이슈의 기사 수와 근거 ID 수가 다릅니다.");
     for (const id of ids) { requireThat(!allIds.has(id), "대표 이슈 사이에 기사 ID가 중복되었습니다."); allIds.add(id); }
-    return { Title: text(issue.Title, "이슈 제목", 300), Category: issue.Category, Summary: text(issue.Summary, "이슈 요약"),
+    return { Title: text(issue.Title, "이슈 제목", 300), Category: issue.Category, Summary: text(issue.Summary, "이슈 요약", weekly ? 3200 : 3000),
       ArticleCount: count(issue.ArticleCount, "관련 기사 수"), ArticleIds: ids, Score: count(issue.Score, "중요도", 0, 100),
       Sources: strings(issue.Sources, "언론사", 1000), Keywords: strings(issue.Keywords, "키워드", 15) };
   });
@@ -57,8 +59,10 @@ function siteUrl(config) {
 }
 function fingerprint(summary) { return hash(JSON.stringify(summary)); }
 async function verifyWebsite(config, date, expected, { fetchImpl = fetch, now = new Date() } = {}) {
-  if (date !== yesterday(now)) return { status: "db-only", reason: "공개 전날 API의 대상 날짜가 아니므로 DB 반영만 확인했습니다." };
-  const url = new URL("/api/daily-summary", siteUrl(config));
+  validateSummaryKey(date, now);
+  const weekly = date.startsWith("weekly:");
+  if (date !== (weekly ? latestWeek(now).key : yesterday(now))) return { status: "db-only", reason: "공개 요약 API의 대상 기간이 아니므로 DB 반영만 확인했습니다." };
+  const url = new URL(weekly ? "/api/weekly-summary" : "/api/daily-summary", siteUrl(config));
   const response = await fetchImpl(url, { headers: { "Cache-Control": "no-cache" }, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(15000) });
   requireThat(response.ok, `운영 DB 반영 후 사이트 확인 실패 (HTTP ${response.status}). 다시 실행하면 재생성 없이 배포 상태부터 확인합니다.`);
   const actual = await response.json();

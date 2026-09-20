@@ -71,10 +71,13 @@ const strictObject = properties => ({ type: "object", properties, required: Obje
 const topicSchema = strictObject({ title: stringSchema, category: { type: "string", enum: categories }, summary: stringSchema, articleKeys: stringArray, keywords: stringArray });
 const mapSchema = strictObject({ topics: { type: "array", items: topicSchema } });
 const reduceSchema = strictObject({ summary: stringSchema, issues: { type: "array", items: strictObject({ title: stringSchema, summary: stringSchema, topicKeys: stringArray, keywords: stringArray, score: { type: "integer" }, featured: { type: "boolean" } }) } });
-function coverage(items, keyName, allowed, label) {
+function coverage(items, keyName, allowed, label, { normalizeUnfeaturedEmptySummary = false } = {}) {
   const found = new Set();
   for (const item of items) {
     text(item.title, label + " title", 300);
+    if (normalizeUnfeaturedEmptySummary && item.featured === false && typeof item.summary === "string" && !item.summary.trim()) {
+      item.summary = "기사 본문에서 별도로 요약할 사실을 확인하지 못했습니다.";
+    }
     text(item.summary, label + " summary");
     requireThat(Array.isArray(item.keywords) && item.keywords.length <= 15 && item.keywords.every(word => typeof word === "string" && word.length <= 100), "키워드 형식 오류");
     requireThat(Array.isArray(item[keyName]) && item[keyName].length > 0, `${label}: 근거가 없습니다.`);
@@ -94,7 +97,7 @@ function validateMap(result, batch) {
 function validateReduction(result, topics) {
   text(result.summary, "카테고리 요약");
   requireThat(Array.isArray(result.issues), "카테고리 결과 형식 오류");
-  coverage(result.issues, "topicKeys", new Set(topics.map(topic => topic.key)), "이슈 통합");
+  coverage(result.issues, "topicKeys", new Set(topics.map(topic => topic.key)), "이슈 통합", { normalizeUnfeaturedEmptySummary: true });
   requireThat(result.issues.every(issue => Number.isInteger(issue.score) && issue.score >= 0 && issue.score <= 100 && typeof issue.featured === "boolean"), "중요도 또는 대표 이슈 형식 오류");
   const featured = result.issues.filter(issue => issue.featured).length;
   requireThat(featured >= 1 && featured <= 3, "카테고리별 대표 이슈는 1~3개여야 합니다.");

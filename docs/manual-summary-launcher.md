@@ -1,27 +1,41 @@
-# 바탕화면 전날 뉴스 요약 도구
+# 바탕화면 전날·주간 뉴스 요약 도구
 
 ## 사용 방법
 
-바탕화면의 **전날 뉴스 요약**을 더블클릭합니다. 실행 시점의 한국 시간을 기준으로 전날을 선택하며, **요약 생성과 검증이 끝나면 운영 DB에 자동 반영합니다.** 별도 배포 승인이나 검토 화면은 없습니다. 실행 중에는 PC와 인터넷 연결이 필요합니다.
+바탕화면의 **뉴스 요약 및 배포**를 더블클릭합니다. 한국 시간 기준 전날과 최근 완료된 주간을 선택하며, **요약 생성과 검증이 끝나면 운영 DB에 자동 반영합니다.** 별도 배포 승인이나 검토 화면은 없습니다. 실행 중에는 PC와 인터넷 연결이 필요합니다. 기존 **전날 뉴스 요약** 바로가기는 전날만 처리하도록 유지합니다.
 
-실행 순서는 `중복 확인 → 기사 조회 → Codex 요약 → 결과 검증 → 운영 DB 저장 → 공개 API 확인`입니다. 성공하면 실행 창에 배포 완료가 표시됩니다. 초안 JSON과 HTML 미리보기는 새로 만들거나 열지 않습니다.
+실행 순서는 `전날 중복 확인 → 필요한 경우 Codex 일간 요약·배포 → 주간 중복 확인 → 필요한 일간 요약 확보 → 로컬 주간 합산·검증 → 운영 DB 저장 → 공개 API 확인`입니다. 성공하면 실행 창에 배포 완료가 표시됩니다. 초안 JSON과 HTML 미리보기는 새로 만들거나 열지 않습니다.
 
-여기서 배포는 `summaries`에 요약 문서 한 건을 저장하는 작업입니다. 웹 코드를 다시 빌드하거나 서버를 재시작하지 않습니다. Git 커밋·푸시, 버전·태그 생성, 주간 요약, 예약 실행도 이 도구의 실행 범위가 아닙니다.
+여기서 배포는 `summaries`에 기간별 요약 문서를 저장하는 작업입니다. 웹 코드를 다시 빌드하거나 서버를 재시작하지 않습니다. Git 커밋·푸시, 버전·태그 생성, 예약 실행은 이 도구의 실행 범위가 아닙니다. **자정에 자동으로 켜지는 예약 작업이 아니라, 필요할 때 한 번 실행하면 나머지 절차가 자동으로 진행되는 도구입니다.**
+
+## 기간과 주간 생성 기준
+
+- 전날은 한국 시간 전날 00:00 이상, 오늘 00:00 미만 발행된 저장 기사입니다.
+- 주간은 최근 완료된 월요일 00:00 이상, 다음 월요일 00:00 미만입니다. 일요일에서 월요일로 넘어가는 00:00에 대상 주간이 바뀝니다. 실행하지 않은 월요일의 주간도 그 주중에 실행하면 처리합니다.
+- 예를 들어 2026-09-11에 실행하면 전날은 9월 10일, 완료 주간은 8월 31일~9월 6일입니다. 9월 14일 00:00부터는 9월 7일~13일이 주간 대상입니다.
+- 해당 주간이 이미 게시되었으면 일간 자료 조회나 누락 보충도 하지 않습니다. 기존 주간 결과를 새 방식으로 교체하지 않습니다.
+- 주간이 없으면 운영 DB에서 해당 날짜의 일간 요약을 최대 7건, 날짜 인덱스로 한 건씩 순차 조회합니다. 일간이 없으면 그 날짜만 기존 Codex 일간 도구로 생성·배포한 뒤 다시 읽습니다. 따라서 처음 사용하거나 며칠 건너뛴 경우 최대 7일의 누락 보충으로 실행 시간과 Codex 사용량이 늘 수 있습니다.
+- 7일 중 기사가 없거나 일간 생성·검증이 실패한 날이 있으면 주간 배포를 중단합니다. 빈 결과나 일부 날짜만으로 완성된 주간 요약을 게시하지 않습니다. 이미 정상 게시된 일간은 유지하고 다음 실행에서 재사용합니다.
+- 주간 합산 자체는 **Codex나 OpenAI API를 호출하지 않고 PC에서 처리**합니다. 일간 대표 이슈 중 같은 카테고리·같은 제목만 합치며, 단순 키워드 일치로 다른 사건을 합치지 않습니다. 제목이 다른 후속 보도는 별도 이슈로 남을 수 있습니다.
+- 반복 날짜 수를 중요도에 반영하고 최신 날짜의 문장을 기준 날짜와 함께 사용합니다. 9개 분야를 유지하며 자료가 있는 분야별 대표 이슈는 최대 3개입니다.
+- 주간 기사·이슈 수는 7개 일간 요약의 합계입니다. 주간 전체 기사를 새로 분류하거나 모든 중복을 제거한 개수가 아닙니다. 언론사 수는 일간 대표 이슈의 명시된 출처를 중복 제거한 수이며, 관련 기사 수는 실제 연결된 고유 ID 수입니다.
 
 특정 날짜를 지정하거나, 변경 없이 존재 여부만 확인할 수도 있습니다.
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\manual-summary\start-daily-summary.ps1 -Date 2026-09-06
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\manual-summary\start-daily-summary.ps1 -CheckOnly
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\manual-summary\start-daily-summary.ps1 -Mode all -CheckOnly
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\manual-summary\start-daily-summary.ps1 -Mode weekly
 ```
 
-`-CheckOnly`는 기사 조회·Codex 호출·배포를 수행하지 않습니다. 기존 명령 호환용 `-NoOpen` 옵션은 남아 있지만, 현재는 어떤 실행에서도 브라우저를 열지 않습니다.
+`-Mode all`은 전날·주간 통합 실행, `-Mode weekly`는 주간 및 필요한 누락 일간 보충만 수행합니다. 기본 모드는 기존 호환성을 위해 `daily`입니다. `-Date`는 일간 모드에서만 사용할 수 있습니다. `-CheckOnly`는 기사 조회·Codex 호출·배포를 수행하지 않습니다. 기존 명령 호환용 `-NoOpen` 옵션은 남아 있지만, 현재는 어떤 실행에서도 브라우저를 열지 않습니다.
 
 ## 중복 방지와 복구
 
 | 상황 | 처리 |
 |---|---|
-| 같은 Windows 로그인 세션에서 같은 날짜를 동시에 실행 | 이름 있는 Mutex로 두 번째 실행 차단 |
+| 같은 Windows 로그인 세션에서 전날·주간·통합 도구를 동시에 실행 | 공통 이름의 Mutex로 두 번째 실행 차단 |
 | 운영 `summaries`에 해당 날짜 요약이 이미 존재 | 재생성·기사 내보내기·덮어쓰기 생략 |
 | 서버에는 없고 기존 수동 요약 또는 예전 `draft.json`이 존재 | 기존 결과를 검증하여 배포만 진행. 기존 파일은 변경하지 않음 |
 | 생성 완료 후 배포 실패 | 내부 복구 기록을 유지하고 다음 실행에서 배포만 재시도 |
@@ -51,6 +65,7 @@ PC 간 요약 생성 자체의 동시 실행까지 잠그지는 않습니다. �
 - 기존 .NET 모델과 같은 `GeneratedAt` BSON 형식으로 저장하고, 저널 기록 승인을 요청한 뒤 날짜 인덱스로 내용을 다시 읽어 대조합니다.
 - 배포 스크립트와 결과는 SSH 표준입력으로 전달하여 공용 임시 파일이나 명령줄 길이 제한 문제를 피합니다.
 - 전날 배포 후에는 공개 `/api/daily-summary`를 한 번 호출하여 날짜와 요약 내용이 일치하는지 확인합니다. 이 API의 관련 기사 조회는 기존 서버 상한을 따릅니다.
+- 주간도 동일한 삽입·복구 검증을 사용하고 `/api/weekly-summary`의 전체 내용을 대조합니다. DB 키는 `weekly:시작일:종료일`로 기존 서비스와 호환됩니다. 주간 자료 조회에는 원문 기사·그룹·임베딩 조회가 없습니다. 단, 누락 일간을 보충할 때만 해당 하루 기사를 기존 상한으로 읽습니다.
 - 과거 날짜를 지정했거나 실행 중 자정을 넘어 대상 날짜가 바뀌면 공개 API로 해당 날짜를 조회할 수 없으므로 **DB 반영만 확인됨**을 표시합니다. 관리자 인증을 우회하지 않습니다.
 - 뉴스 기사, 그룹, 인덱스, 수집기 설정은 수정하지 않습니다. 웹/수집기 재시작과 OpenAI 자동 요약 재개도 하지 않습니다.
 
@@ -80,6 +95,11 @@ Codex에는 기사 텍스트만 전달하며, CLI의 셸·웹 검색·플러그�
 | `data/manual-summary-runs/YYYY-MM-DD/cache/` | 단계별 Codex 결과·실행 기록 |
 | `data/manual-summary-runs/YYYY-MM-DD/publication.json` | 최종 결과·해시·DB 확인·배포 완료 상태를 담은 복구 기록 |
 | `data/manual-summary-runs/YYYY-MM-DD/result.json` | 마지막으로 정상 종료한 실행 결과. 오류 발생 시 콘솔과 복구 기록 우선 확인 |
+| `data/manual-summary-runs/weekly-시작일_종료일/daily-input.json` | 검증 완료한 일간 요약 7건과 입력 해시 |
+| `data/manual-summary-runs/weekly-시작일_종료일/publication.json` | 주간 결과·해시·DB 확인·배포 완료 복구 기록 |
+| `data/summary-launcher/last-result.json` | 마지막으로 정상 종료한 통합/주간 실행 결과와 누락 보충 내역 |
+
+통합 모드에서 생성한 일간의 배포 상태는 날짜별 `publication.json`에 기록합니다. `result.json`은 단독 일간 도구의 마지막 결과이므로 통합 실행 상태는 `last-result.json`과 각 복구 기록을 확인합니다.
 
 예전 `draft.json`, `review.html` 파일은 자동 삭제하지 않습니다. 신규 실행에서는 만들지 않으며, 이전 초안은 서버에 요약이 없을 때만 검증 후 배포에 재사용합니다.
 
@@ -91,10 +111,12 @@ Windows, Node.js, OpenSSH, ChatGPT로 로그인한 Codex CLI가 필요합니다.
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\manual-summary\install-desktop-launcher.ps1 -HostName SERVER_IP -KeyPath C:\Users\YOUR_NAME\.ssh\pulse-brief-lightsail.pem
-node --test tools/manual-summary/summary-tool.test.cjs
+node --test tools/manual-summary/summary-tool.test.cjs tools/manual-summary/weekly-tool.test.cjs
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\manual-summary\test-windows-launcher.ps1
 ```
 
 SSH 호스트 키는 이미 신뢰된 키만 사용합니다. 인스턴스 교체로 키가 바뀌면 서버 신원을 확인한 뒤 SSH 설정을 갱신해야 합니다.
+
+코드는 `periods.cjs`가 한국 시간 기간 계산, `weekly.cjs`가 일간 자료 확보와 로컬 주간 합산, `workflow.cjs`가 실행 순서, 기존 `run.cjs`와 `publication.cjs`가 일간 생성 및 공통 중복·배포·복구를 담당합니다. 운영 서버의 자동 요약 중단 설정은 변경하지 않습니다.
 
 참고: [Codex 비대화형 실행 공식 문서](https://learn.chatgpt.com/docs/non-interactive-mode).

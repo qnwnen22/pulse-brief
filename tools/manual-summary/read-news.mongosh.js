@@ -1,14 +1,22 @@
 // The launcher supplies a validated request. This script never writes to MongoDB.
 const target = request.date;
-if (!/^\d{4}-\d{2}-\d{2}$/.test(target)) throw new Error("Invalid date");
-if (!["check", "export"].includes(request.mode)) throw new Error("Invalid mode");
+if (!/^(\d{4}-\d{2}-\d{2}|weekly:\d{4}-\d{2}-\d{2}:\d{4}-\d{2}-\d{2})$/.test(target)) throw new Error("Invalid date");
+if (!["check", "export", "read-summary"].includes(request.mode)) throw new Error("Invalid mode");
+if (target.startsWith("weekly:") && request.mode !== "check") throw new Error("Weekly keys are check-only");
 const summaryIndex = db.summaries.getIndexes().find(index => index.unique === true && Object.keys(index.key).length === 1 && index.key.Date === 1 && !index.partialFilterExpression);
 if (!summaryIndex) throw new Error("Unique summary Date index missing; refusing unsafe publication or a collection scan");
-const existing = db.summaries.find({ Date: target }, { _id: 0, Date: 1, Provider: 1, Model: 1 })
+const summaryProjection = request.mode === "read-summary"
+  ? { _id: 0, Date: 1, GeneratedAt: 1, Provider: 1, Model: 1, Headline: 1, Summary: 1, IssueCount: 1, ArticleCount: 1, SourceCount: 1, Categories: 1, TopIssues: 1 }
+  : { _id: 0, Date: 1, Provider: 1, Model: 1 };
+const existing = db.summaries.find({ Date: target }, summaryProjection)
   .hint(summaryIndex.name).limit(1).maxTimeMS(3000).toArray()[0];
 if (existing) {
+  if (request.mode === "read-summary") {
+    existing.GeneratedAt = new Date(existing.GeneratedAt?.DateTime || existing.GeneratedAt).toISOString();
+    if (JSON.stringify(existing).length > 2 * 1024 * 1024) throw new Error("Summary size limit exceeded");
+  }
   print(JSON.stringify({ type: "existing", date: target, summary: existing }));
-} else if (request.mode === "check") {
+} else if (request.mode === "check" || request.mode === "read-summary") {
   print(JSON.stringify({ type: "missing", date: target }));
 } else {
   const maxArticles = request.maxArticles;

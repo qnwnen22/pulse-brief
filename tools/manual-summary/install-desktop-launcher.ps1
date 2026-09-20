@@ -34,20 +34,25 @@ if (-not $config.Contains('MaxArticles')) { $config.MaxArticles = 10000 }
 
 $desktop = [Environment]::GetFolderPath('Desktop')
 if ([string]::IsNullOrWhiteSpace($desktop)) { throw '바탕화면 경로를 찾지 못했습니다.' }
-$shortcutPath = Join-Path $desktop '전날 뉴스 요약.lnk'
 $scriptPath = Join-Path $PSScriptRoot 'start-daily-summary.ps1'
 $powershell = Join-Path $env:SystemRoot 'System32/WindowsPowerShell/v1.0/powershell.exe'
 $shell = New-Object -ComObject WScript.Shell
-$shortcut = $shell.CreateShortcut($shortcutPath)
-if ((Test-Path -LiteralPath $shortcutPath) -and $shortcut.Arguments -notlike "*$scriptPath*") {
-    throw '같은 이름의 다른 바로가기가 있습니다. 기존 파일은 덮어쓰지 않습니다.'
+foreach ($entry in @(
+    @{ Name = '뉴스 요약 및 배포'; Mode = 'all'; Description = '전날 및 완료 주간 요약 생성·검증 후 자동 배포. 기존 기간은 건너뜁니다.' },
+    @{ Name = '전날 뉴스 요약'; Mode = 'daily'; Description = '전날 요약만 생성·검증 후 자동 배포. 기존 날짜는 건너뜁니다.' }
+)) {
+    $shortcutPath = Join-Path $desktop ($entry.Name + '.lnk')
+    $shortcut = $shell.CreateShortcut($shortcutPath)
+    if ((Test-Path -LiteralPath $shortcutPath) -and $shortcut.Arguments -notlike "*$scriptPath*") {
+        throw '같은 이름의 다른 바로가기가 있습니다. 기존 파일은 덮어쓰지 않습니다.'
+    }
+    $shortcut.TargetPath = $powershell
+    $shortcut.Arguments = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`" -Mode $($entry.Mode) -Interactive"
+    $shortcut.WorkingDirectory = $repoRoot
+    $shortcut.IconLocation = "$powershell,0"
+    $shortcut.Description = $entry.Description
+    $shortcut.WindowStyle = 1
+    $shortcut.Save()
+    Write-Host "바탕화면 바로가기 생성: $shortcutPath"
 }
-$shortcut.TargetPath = $powershell
-$shortcut.Arguments = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`" -Interactive"
-$shortcut.WorkingDirectory = $repoRoot
-$shortcut.IconLocation = "$powershell,0"
-$shortcut.Description = '전날 뉴스 요약 생성 후 사이트에 자동 반영. 기존 날짜 재생성 및 덮어쓰기 방지.'
-$shortcut.WindowStyle = 1
-$shortcut.Save()
-Write-Host "바탕화면 바로가기 생성: $shortcutPath"
 Write-Host '서버 주소와 키 경로는 Git에서 제외되는 로컬 설정에만 저장했습니다.'
