@@ -1538,7 +1538,63 @@ h2 {
   }
 
   .briefing-metrics {
-    grid-template-columns: 1fr;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(96px, 28vw);
+    grid-template-columns: none;
+    gap: 8px;
+    overflow-x: auto;
+    margin: 0 0 4px;
+    padding: 0 0 4px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+  }
+
+  .briefing-metrics .metric {
+    min-height: 90px;
+    padding: 10px;
+    scroll-snap-align: start;
+  }
+
+  .briefing-metrics .metric-label {
+    display: block;
+    padding-right: 16px;
+    font-size: 11px;
+    line-height: 1.25;
+  }
+
+  .briefing-metrics .metric-help {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 16px;
+    height: 16px;
+  }
+
+  .briefing-metrics .metric strong {
+    margin: 4px 0 2px;
+    font-size: 22px;
+    line-height: 1.15;
+  }
+
+  .briefing-metrics .metric strong.compact-value {
+    overflow: hidden;
+    font-size: 15px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .briefing-metrics .metric strong.long-value {
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .briefing-metrics .metric small {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 10px;
+    line-height: 1.2;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
   }
 
   .section-head {
