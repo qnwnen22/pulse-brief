@@ -1473,9 +1473,60 @@ h2 {
 }
 
 @media (max-width: 720px) {
-  .workspace,
+  .workspace {
+    padding: 14px;
+  }
+
   .sidebar {
-    padding: 18px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+  }
+
+  .brand-logo-mark {
+    width: 64px;
+    max-width: 64px;
+    border-radius: 8px;
+  }
+
+  .nav-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .nav-item {
+    justify-content: center;
+    gap: 4px;
+    min-height: 40px;
+    padding: 6px 3px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .nav-item > span {
+    display: none;
+  }
+
+  .topbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .topbar .eyebrow {
+    display: none;
+  }
+
+  h1 {
+    font-size: clamp(20px, 5.4vw, 26px);
+    line-height: 1.2;
+  }
+
+  .top-actions {
+    grid-template-columns: 40px;
   }
 
   .metric-grid {
