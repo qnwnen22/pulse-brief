@@ -1484,6 +1484,13 @@ h2 {
     min-width: 0;
     max-width: 100%;
     overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .briefing-metrics::-webkit-scrollbar,
+  .weekly-tabs::-webkit-scrollbar {
+    display: none;
   }
 
   .workspace {
@@ -1560,7 +1567,6 @@ h2 {
     margin: 0 0 4px;
     padding: 0 0 4px;
     scroll-snap-type: x proximity;
-    scrollbar-width: thin;
   }
 
   .briefing-metrics .metric {
@@ -1572,8 +1578,11 @@ h2 {
   .briefing-metrics .metric-label {
     display: block;
     padding-right: 16px;
-    font-size: 11px;
+    overflow: hidden;
+    font-size: 10px;
     line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .briefing-metrics .metric-help {
