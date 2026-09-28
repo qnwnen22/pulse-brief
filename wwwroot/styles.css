@@ -1473,6 +1473,19 @@ h2 {
 }
 
 @media (max-width: 720px) {
+  .content-grid,
+  .briefing-panel {
+    min-width: 0;
+  }
+
+  .briefing-metrics,
+  .weekly-tabs {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overscroll-behavior-x: contain;
+  }
+
   .workspace {
     padding: 14px;
   }
@@ -1543,6 +1556,7 @@ h2 {
     grid-template-columns: none;
     gap: 8px;
     overflow-x: auto;
+    overflow-y: hidden;
     margin: 0 0 4px;
     padding: 0 0 4px;
     scroll-snap-type: x proximity;
