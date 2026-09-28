@@ -1553,6 +1553,51 @@ h2 {
     grid-template-columns: 1fr;
   }
 
+  #newsMetricGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0 0 14px;
+  }
+
+  #newsMetricGrid .metric {
+    min-width: 0;
+    min-height: 84px;
+    padding: 9px;
+  }
+
+  #newsMetricGrid .metric-label {
+    display: block;
+    overflow: hidden;
+    padding-right: 14px;
+    font-size: 10px;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #newsMetricGrid .metric-help {
+    position: absolute;
+    top: 9px;
+    right: 9px;
+    width: 16px;
+    height: 16px;
+  }
+
+  #newsMetricGrid .metric strong {
+    margin: 4px 0 2px;
+    font-size: 21px;
+    line-height: 1.15;
+  }
+
+  #newsMetricGrid .metric small {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 9px;
+    line-height: 1.2;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+
   .notice-grid {
     grid-template-columns: 1fr;
   }
