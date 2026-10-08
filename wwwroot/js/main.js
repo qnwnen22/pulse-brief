@@ -4,10 +4,12 @@ async function initializeApp() {
 
   try {
     renderNavigation();
+    initializeStatistics();
     await Promise.all([loadServerBriefs(), loadNewsStats()]);
     renderPublisherFilter();
     renderCategoryFilters();
     renderNews();
+    loadCollectionStatistics();
     loadAppVersion().catch((error) => {
       console.warn(`[app-version] ${error.message}`);
     });

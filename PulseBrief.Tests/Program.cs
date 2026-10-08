@@ -37,6 +37,8 @@ await using var app = WebApplicationBootstrap.Build(new WebApplicationOptions
     });
     builder.Services.RemoveAll<IArticleStore>();
     builder.Services.AddSingleton<IArticleStore>(store);
+    builder.Services.RemoveAll<ICollectionStatisticsStore>();
+    builder.Services.AddSingleton<ICollectionStatisticsStore>(new FakeCollectionStatisticsStore());
 });
 app.Urls.Add(args.Contains("--serve") ? "http://127.0.0.1:4187" : "http://127.0.0.1:0");
 await app.StartAsync();
@@ -91,6 +93,20 @@ try
     Check(health!["ok"]!.GetValue<bool>() && health["hasOpenAiKey"] is null, "Public health fields changed.");
     var stats = await Request(client, "GET", "/api/news-stats", 200);
     Check(stats!["todayArticleCount"]!.GetValue<int>() == 1, "News stats contract changed.");
+    foreach (var period in new[] { "7", "30", "all" })
+    {
+        var collectionStats = await Request(client, "GET", $"/api/collection-statistics?period={period}", 200);
+        Check(collectionStats!["isReady"]!.GetValue<bool>(), "Completed statistics cache was not ready.");
+        Check(collectionStats["todayCount"]!.GetValue<int>() == 5, "Today's provisional collection count changed.");
+    }
+    await Request(client, "GET", "/api/collection-statistics?period=invalid", 400);
+    await Request(client, "GET", "/api/collection-statistics?period=999999", 400);
+    var collectionStore = (FakeCollectionStatisticsStore)app.Services.GetRequiredService<ICollectionStatisticsStore>();
+    collectionStore.FailReads = true;
+    var failedStats = await Request(client, "GET", "/api/collection-statistics", 503);
+    Check(failedStats!["message"]!.GetValue<string>() != "Fixture cache unavailable", "Statistics errors leaked internal exception details.");
+    collectionStore.FailReads = false;
+    await CollectionStatisticsTests.RunAsync(Check);
     var briefs = await Request(client, "GET", "/api/briefs", 200);
     Check(briefs!.AsArray().Count == 1 && briefs[0]!["relatedLinks"]!.AsArray().Count == 1, "Brief mapping changed.");
     foreach (var url in new[] { "/api/daily-summary", "/api/weekly-summary" })

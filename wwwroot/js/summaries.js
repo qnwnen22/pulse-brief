@@ -301,22 +301,6 @@ function renderWeeklyStats(category, targetItems, sourceCount, weeklyLabel, summ
   `;
 }
 
-function renderMetricCard(label, value, description, helpText, valueClass = "") {
-  const className = valueClass ? ` ${valueClass}` : "";
-  return `
-    <article class="metric">
-      <div class="metric-label">
-        <span>${escapeHtml(label)}</span>
-        <span class="metric-help" tabindex="0" aria-label="${escapeHtml(label)} 도움말">
-          <span class="metric-tooltip">${escapeHtml(helpText)}</span>
-        </span>
-      </div>
-      <strong class="${className.trim()}">${escapeHtml(value)}</strong>
-      <small>${escapeHtml(description)}</small>
-    </article>
-  `;
-}
-
 function buildWeeklyCategorySummary(category, items, weeklyLabel) {
   if (!items.length) return `${category} 카테고리의 주간 이슈가 없습니다.`;
   const topIssue = [...items].sort((a, b) => {

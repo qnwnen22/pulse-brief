@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Pulse Brief</title>
     <link rel="icon" type="image/svg+xml" href="assets/pulse-brief-favicon.svg" />
-    <link rel="stylesheet" href="styles.css?v=0.5.2" />
+    <link rel="stylesheet" href="styles.css?v=0.6.0" />
   </head>
   <body>
     <div id="appLoading" class="app-loading" role="status" aria-live="polite" aria-label="사이트 로딩 중">
@@ -186,8 +186,16 @@
           </section>
 
           <section class="statistics-panel view-panel" data-panel="statistics" aria-label="통계 콘텐츠">
-            <div id="statisticsContent" class="statistics-content">
-              <p class="statistics-empty">아직 등록된 통계 콘텐츠가 없습니다.</p>
+            <div class="statistics-toolbar">
+              <div id="statisticsPeriods" class="segmented" role="group" aria-label="통계 기간">
+                <button type="button" class="segment active" data-period="7" aria-pressed="true">최근 7일</button>
+                <button type="button" class="segment" data-period="30" aria-pressed="false">최근 30일</button>
+                <button type="button" class="segment" data-period="all" aria-pressed="false">전체</button>
+              </div>
+              <button id="statisticsRefresh" type="button" class="icon-button" aria-label="통계 다시 불러오기" title="통계 다시 불러오기">↻</button>
+            </div>
+            <div id="statisticsContent" class="statistics-content" aria-live="polite" aria-busy="true">
+              <p class="statistics-empty" role="status">통계를 불러오는 중입니다.</p>
             </div>
           </section>
 
@@ -262,17 +270,18 @@
       </main>
     </div>
 
-  <script defer src="js/state.js?v=0.5.2"></script>
-  <script defer src="js/views.js?v=0.5.2"></script>
-  <script defer src="js/format.js?v=0.5.2"></script>
-  <script defer src="js/related-articles.js?v=0.5.2"></script>
-  <script defer src="js/news-feed.js?v=0.5.2"></script>
-  <script defer src="js/summaries.js?v=0.5.2"></script>
-  <script defer src="js/news-controls.js?v=0.5.2"></script>
-  <script defer src="js/navigation.js?v=0.5.2"></script>
-  <script defer src="js/api.js?v=0.5.2"></script>
-  <script defer src="js/events.js?v=0.5.2"></script>
-  <script defer src="js/main.js?v=0.5.2"></script>
+  <script defer src="js/state.js?v=0.6.0"></script>
+  <script defer src="js/views.js?v=0.6.0"></script>
+  <script defer src="js/format.js?v=0.6.0"></script>
+  <script defer src="js/related-articles.js?v=0.6.0"></script>
+  <script defer src="js/news-feed.js?v=0.6.0"></script>
+  <script defer src="js/summaries.js?v=0.6.0"></script>
+  <script defer src="js/news-controls.js?v=0.6.0"></script>
+  <script defer src="js/navigation.js?v=0.6.0"></script>
+  <script defer src="js/api.js?v=0.6.0"></script>
+  <script defer src="js/statistics.js?v=0.6.0"></script>
+  <script defer src="js/events.js?v=0.6.0"></script>
+  <script defer src="js/main.js?v=0.6.0"></script>
   </body>
 </html>
 

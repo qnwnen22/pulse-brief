@@ -9,6 +9,10 @@
   },
   {
     "method": "GET",
+    "url": "/api/collection-statistics"
+  },
+  {
+    "method": "GET",
     "url": "/api/articles"
   },
   {

@@ -4,7 +4,7 @@ using MongoDB.Driver;
 namespace PulseBrief;
 
 /// <summary>MongoDB를 기본 저장소로 사용해 기사, 이슈 그룹, 요약 데이터를 읽고 씁니다.</summary>
-public sealed class MongoArticleStore : IArticleStore
+public sealed partial class MongoArticleStore : IArticleStore, ICollectionStatisticsStore
 {
     private readonly IMongoCollection<Article> _articles;
     private readonly IMongoCollection<ArticleGroup> _groups;
@@ -29,6 +29,8 @@ public sealed class MongoArticleStore : IArticleStore
         _groups = database.GetCollection<ArticleGroup>("articleGroups");
         _summaries = database.GetCollection<DailyIssueSummary>("summaries");
         _newsStats = database.GetCollection<NewsStats>("newsStats");
+        _collectionDays = database.GetCollection<CollectionDayStatistics>("collectionDays");
+        _collectionState = database.GetCollection<CollectionStatisticsState>("collectionStatisticsState");
     }
 
     /// <summary>MongoDB에 저장된 전체 기사 목록을 최신 발행 순으로 조회합니다.</summary>

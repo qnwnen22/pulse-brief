@@ -5,7 +5,8 @@ public sealed class CollectorWorker(
     NewsPipeline pipeline,
     IConfiguration configuration,
     IHostApplicationLifetime lifetime,
-    OperationalLogService operationalLog) : BackgroundService
+    OperationalLogService operationalLog,
+    CollectionStatisticsMaintenance statistics) : BackgroundService
 {
     private readonly TimeSpan _interval = TimeSpan.FromMinutes(Math.Max(1, configuration.GetValue("AutoRefreshMinutes", 10)));
     private readonly bool _runOnce = Environment.GetCommandLineArgs().Any(argument => argument.Equals("--once", StringComparison.OrdinalIgnoreCase))
@@ -48,6 +49,17 @@ public sealed class CollectorWorker(
             Console.WriteLine("[collector] pipeline started");
             var result = await pipeline.RunAsync(cancellationToken);
             Console.WriteLine($"[collector] pipeline finished: fetched={result.FetchedCount}, articles={result.ArticleCount}, groups={result.GroupCount}");
+            try
+            {
+                await statistics.RefreshAsync(false, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+            catch (Exception error)
+            {
+                Console.WriteLine($"[statistics] cache refresh failed: {error.Message}");
+                await operationalLog.RecordAsync("warning", "statistics_refresh_failed", "Collection statistics refresh failed.",
+                    new { error.Message }, cancellationToken);
+            }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

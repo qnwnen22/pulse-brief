@@ -78,3 +78,19 @@ function formatIssueTime(issue) {
     day: "2-digit",
   });
 }
+
+function renderMetricCard(label, value, description, helpText, valueClass = "") {
+  const className = valueClass ? ` ${valueClass}` : "";
+  return `
+    <article class="metric">
+      <div class="metric-label">
+        <span>${escapeHtml(label)}</span>
+        <span class="metric-help" tabindex="0" aria-label="${escapeHtml(label)} 도움말">
+          <span class="metric-tooltip">${escapeHtml(helpText)}</span>
+        </span>
+      </div>
+      <strong class="${className.trim()}">${escapeHtml(value)}</strong>
+      <small>${escapeHtml(description)}</small>
+    </article>
+  `;
+}

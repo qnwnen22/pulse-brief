@@ -77,6 +77,14 @@ PulseBrief.sln
 
 `PulseBrief.Collector/Program.cs` → `CollectorWorker.cs` → `PulseBrief.Core/Services/Pipeline/NewsPipeline.cs` 순서입니다. 파이프라인은 RSS 수집, 본문 보강, 로컬 임베딩, 유사 기사 그룹화, 저장, 금일 지표 갱신을 조정합니다.
 
+### 수집 통계
+
+`wwwroot/js/statistics.js` → `Controllers/StatisticsController.cs` → `CollectionStatisticsService` → `ICollectionStatisticsStore` 순서입니다. 공개 조회는 날짜별 캐시만 조합합니다. 응답 모델은 Core의 `Models/Responses/CollectionStatisticsResponse.cs`, 저장 모델은 `Models/Documents/CollectionDayStatistics.cs`에 있습니다.
+
+`MongoArticleStore.Statistics.cs`는 같은 MongoDB 연결을 재사용하는 partial Repository입니다. 최초 저장 시각의 커버링 인덱스로 하루씩 제한 조회하고 본문·임베딩을 읽지 않습니다. 인덱스 준비와 최초 캐시 구축은 수집기의 `--statistics-backfill` 모드로 명시적으로 실행하며 웹/일반 수집기 시작 시 자동 수행하지 않습니다. `CollectorWorker`가 수집 성공 후 `CollectionStatisticsMaintenance`를 통해 오늘·어제와 미완료 과거 날짜 최대 1개를 갱신합니다. 이 작업은 AI/요약 생성과 무관합니다.
+
+요약과 통계의 지표 표시는 공통 `format.js`의 `renderMetricCard`를 재사용합니다. 통계 기간 선택 및 차트는 통계 파일에만 있고 공통 메뉴 렌더러에는 통계 ID별 분기를 추가하지 않습니다.
+
 ### 관리자
 
 | 기능 | Controller | 주요 Service |

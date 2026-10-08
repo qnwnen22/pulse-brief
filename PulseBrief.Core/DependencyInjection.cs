@@ -9,6 +9,9 @@ public static class DependencyInjection
         services.AddSingleton<AppPaths>();
         services.AddSingleton<MongoArticleStore>();
         services.AddSingleton<IArticleStore>(provider => provider.GetRequiredService<MongoArticleStore>());
+        services.AddSingleton<ICollectionStatisticsStore>(provider => provider.GetRequiredService<MongoArticleStore>());
+        services.AddSingleton<CollectionStatisticsService>();
+        services.AddSingleton<CollectionStatisticsMaintenance>();
         services.AddHttpClient<ArticleContentFetcher>(client =>
         {
             client.Timeout = TimeSpan.FromSeconds(configuration.GetValue("ArticleContent:TimeoutSeconds", 15));
