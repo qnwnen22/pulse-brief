@@ -1467,6 +1467,10 @@ h2 {
     grid-template-columns: 1fr;
   }
 
+  .app-shell {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
   .sidebar {
     position: static;
   }
