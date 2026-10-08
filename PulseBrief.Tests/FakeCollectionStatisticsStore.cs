@@ -11,7 +11,11 @@ public sealed class FakeCollectionStatisticsStore : ICollectionStatisticsStore
         ArticleCount = offset == 0 ? 5 : 10,
         Publishers = new() { ["연합뉴스"] = offset == 0 ? 3 : 6, ["한겨레"] = offset == 0 ? 2 : 4 },
         Categories = new() { ["정치/정책"] = offset == 0 ? 3 : 6, ["사회"] = offset == 0 ? 2 : 4 },
-        CategoryVersion = ArticleCategoryClassifier.StatisticsVersion
+        CategoryVersion = ArticleCategoryClassifier.StatisticsVersion,
+        PublisherCategoryVersion = CollectionStatisticsService.PublisherCategoryVersion,
+        PublisherCategories = offset == 0
+            ? new() { ["연합뉴스"] = new() { ["정치/정책"] = 2, ["사회"] = 1 }, ["한겨레"] = new() { ["정치/정책"] = 1, ["사회"] = 1 } }
+            : new() { ["연합뉴스"] = new() { ["정치/정책"] = 4, ["사회"] = 2 }, ["한겨레"] = new() { ["정치/정책"] = 2, ["사회"] = 2 } }
     }).ToList();
     public List<DateOnly> RefreshedDates { get; } = [];
     public bool FailReads { get; set; }
@@ -40,7 +44,9 @@ public sealed class FakeCollectionStatisticsStore : ICollectionStatisticsStore
         Days.Add(new()
         {
             Id = KoreaDate.Key(date), IsComplete = date < today, ArticleCount = 10, Publishers = new() { ["연합뉴스"] = 10 },
-            Categories = new() { ["사회"] = 10 }, CategoryVersion = ArticleCategoryClassifier.StatisticsVersion
+            Categories = new() { ["사회"] = 10 }, CategoryVersion = ArticleCategoryClassifier.StatisticsVersion,
+            PublisherCategories = new() { ["연합뉴스"] = new() { ["사회"] = 10 } },
+            PublisherCategoryVersion = CollectionStatisticsService.PublisherCategoryVersion
         });
         return Task.CompletedTask;
     }

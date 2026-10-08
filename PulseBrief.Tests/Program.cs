@@ -101,6 +101,8 @@ try
         Check(collectionStats["areCategoriesReady"]!.GetValue<bool>() && collectionStats["categories"]!.AsArray().Count == 9, "Category statistics contract is incomplete.");
         Check(collectionStats["categories"]!.AsArray().Sum(item => item!["count"]!.GetValue<long>()) == collectionStats["total"]!.GetValue<long>(), "Category API totals differ from stored article totals.");
         Check(collectionStats["isCategoryComparisonReady"]!.GetValue<bool>() == (period != "all"), "Category comparison API readiness changed.");
+        Check(collectionStats["weekdays"]!.AsArray().Count == 7 && collectionStats["weekdays"]!.AsArray().Sum(day => day!["sampleDays"]!.GetValue<int>()) == collectionStats["expectedDays"]!.GetValue<int>(), "Weekday API coverage is incorrect.");
+        Check(collectionStats["arePublisherCategoriesReady"]!.GetValue<bool>() && collectionStats["publisherCategories"]!.AsArray().Sum(row => row!["total"]!.GetValue<long>()) == collectionStats["total"]!.GetValue<long>(), "Cross distribution API totals are incorrect.");
         Check(collectionStats["publisherTrends"]!.AsArray().Sum(series => series!["trend"]!.AsArray().Sum(point => point!["count"]!.GetValue<long>())) == collectionStats["total"]!.GetValue<long>(), "Publisher trend API totals differ from the period total.");
     }
     await Request(client, "GET", "/api/collection-statistics?period=invalid", 400);

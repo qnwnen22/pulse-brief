@@ -63,6 +63,7 @@ public sealed partial class MongoArticleStore
         var end = KoreaDate.StartOfDay(date.AddDays(1)).UtcDateTime;
         var publishers = new Dictionary<string, long>(StringComparer.Ordinal);
         var categories = new Dictionary<string, long>(StringComparer.Ordinal);
+        var publisherCategories = new Dictionary<string, Dictionary<string, long>>(StringComparer.Ordinal);
         DateTime? afterTime = null;
         string? afterId = null;
         long count = 0;
@@ -100,6 +101,9 @@ public sealed partial class MongoArticleStore
                 publishers[publisher] = publishers.GetValueOrDefault(publisher) + 1;
                 var category = ArticleCategoryClassifier.ForMetadata(source, row["Title"].AsString, row["Summary"].AsString);
                 categories[category] = categories.GetValueOrDefault(category) + 1;
+                if (!publisherCategories.TryGetValue(publisher, out var breakdown))
+                    publisherCategories[publisher] = breakdown = new(StringComparer.Ordinal);
+                breakdown[category] = breakdown.GetValueOrDefault(category) + 1;
             }
             if (page.Count < StatisticsPageSize) break;
             afterTime = page[^1]["FirstSeenAt"]["DateTime"].ToUniversalTime();
@@ -108,7 +112,8 @@ public sealed partial class MongoArticleStore
         var day = new CollectionDayStatistics
         {
             Id = KoreaDate.Key(date), Publishers = publishers, Categories = categories,
-            CategoryVersion = ArticleCategoryClassifier.StatisticsVersion, ArticleCount = count, IsComplete = date < today
+            CategoryVersion = ArticleCategoryClassifier.StatisticsVersion, ArticleCount = count, IsComplete = date < today,
+            PublisherCategories = publisherCategories, PublisherCategoryVersion = CollectionStatisticsService.PublisherCategoryVersion
         };
         await _collectionDays.ReplaceOneAsync(item => item.Id == day.Id, day, new ReplaceOptions { IsUpsert = true }, budget.Token);
     }

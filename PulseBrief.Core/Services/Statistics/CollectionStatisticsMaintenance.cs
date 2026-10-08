@@ -10,7 +10,7 @@ public sealed class CollectionStatisticsMaintenance(ICollectionStatisticsStore s
         var today = KoreaDate.Today();
         var first = DateOnly.ParseExact(state.FirstDate, "yyyy-MM-dd");
         var saved = await store.ReadCollectionDaysAsync(first, today, cancellationToken);
-        var complete = saved.Where(day => day.IsComplete && CollectionStatisticsService.HasCurrentCategories(day))
+        var complete = saved.Where(day => day.IsComplete && CollectionStatisticsService.HasCurrentPublisherCategories(day))
             .Select(day => day.Id).ToHashSet(StringComparer.Ordinal);
         await store.RefreshCollectionDayAsync(today, today, cancellationToken);
         if (first < today && !complete.Contains(KoreaDate.Key(today.AddDays(-1))))
