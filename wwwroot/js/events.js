@@ -1,8 +1,8 @@
 
-navItems.forEach((item) => {
-  item.addEventListener("click", () => {
-    showView(item.dataset.view);
-  });
+navList?.addEventListener("click", (event) => {
+  const item = event.target.closest(".nav-item[data-view]");
+  if (!item || !navList.contains(item)) return;
+  showView(item.dataset.view);
 });
 
 document.querySelectorAll("[data-view].footer-link").forEach((item) => {

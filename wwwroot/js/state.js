@@ -73,6 +73,7 @@ let newsStats = null;
 let activeFilter = "전체";
 let currentPage = 1;
 let activeWeeklyCategory = "전체";
+let activeViewId = "";
 const pageSize = 10;
 
 const newsList = document.querySelector("#newsList");
@@ -98,8 +99,7 @@ const dailySummaryDateSelect = document.querySelector("#dailySummaryDateSelect")
 const weeklySummary = document.querySelector("#weeklySummary");
 const weeklyCategoryTabs = document.querySelector("#weeklyCategoryTabs");
 const weeklyStats = document.querySelector("#weeklyStats");
-const navItems = document.querySelectorAll(".nav-item[data-view]");
-const viewPanels = document.querySelectorAll(".view-panel[data-panel]");
+const navList = document.querySelector("#serviceNavigation");
 const appLoading = document.querySelector("#appLoading");
 const refreshButton = document.querySelector("#refreshButton");
 const appVersion = document.querySelector("#appVersion");
@@ -122,22 +122,3 @@ const preferredCategories = [
   "생활/건강",
   "지역",
 ];
-
-const viewTitles = {
-  briefing: {
-    eyebrow: "Briefing",
-    title: "카테고리별 이슈 흐름 요약",
-  },
-  feed: {
-    eyebrow: "News Search",
-    title: "뉴스 검색과 원문 출처 확인",
-  },
-  statistics: {
-    eyebrow: "Statistics",
-    title: "통계",
-  },
-  notice: {
-    eyebrow: "Service Notice",
-    title: "서비스 고지와 운영 기준",
-  },
-};

@@ -29,9 +29,15 @@ for (const [file, routes, prefix] of [
 ]) {
   const html = fs.readFileSync(path.join(webRoot, file), "utf8");
   const scripts = [...html.matchAll(/<script\b([^>]*?)\bsrc="([^"]+)"[^>]*><\/script>/g)];
-  assert.equal(scripts.length, 10, `${file}: expected ten feature scripts`);
+  assert.ok(scripts.length > 0, `${file}: feature scripts are missing`);
+  assert.equal(new Set(scripts.map((script) => script[2])).size, scripts.length, `${file}: duplicate scripts`);
   assert.ok(scripts[0][2].includes("/state.js"));
   assert.ok(scripts.at(-1)[2].includes("/main.js"));
+  if (file === "index.html") {
+    const definitionsIndex = scripts.findIndex((script) => script[2].includes("/views.js"));
+    const navigationIndex = scripts.findIndex((script) => script[2].includes("/navigation.js"));
+    assert.ok(definitionsIndex > 0 && definitionsIndex < navigationIndex, "view definitions must load before navigation");
+  }
   for (const route of routes) {
     for (const [, href] of html.matchAll(/<link\b[^>]*\bhref="([^"]+)"/g)) {
       const url = new URL(href, `http://localhost${route}`);

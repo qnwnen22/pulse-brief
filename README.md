@@ -3,7 +3,7 @@
 Pulse Brief는 여러 언론사의 RSS와 기사 원문을 수집하고, 유사한 보도를 하나의 이슈로 묶어 보여 주는 공개 뉴스 브리핑 서비스입니다. 뉴스 검색과 카테고리별 일간·주간 요약을 제공하며, 운영 데이터는 AWS Lightsail의 MongoDB를 기준으로 관리합니다.
 
 - 공개 서비스: [https://news.pulse-brief.co.kr](https://news.pulse-brief.co.kr)
-- 현재 버전: [`0.5.1`](VERSION)
+- 현재 버전: [`0.5.2`](VERSION)
 - 변경 이력: [CHANGELOG.md](CHANGELOG.md)
 - 기본 브랜치: `master`
 

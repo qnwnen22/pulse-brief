@@ -22,20 +22,23 @@ fs.mkdirSync(output, { recursive: true });
     await page.goto(target);
     await page.locator("#appLoading").waitFor({ state: "hidden" });
     await page.waitForLoadState("networkidle");
-    assert.equal(await page.locator(".nav-item").count(), 4);
+    const definitions = await page.evaluate(() => getAvailableViewDefinitions());
+    assert.equal(await page.locator(".nav-item").count(), definitions.length);
     assert.ok(await page.locator(".brand-logo").evaluate((img) => img.complete && img.naturalWidth > 0));
     for (const [width, height] of [[1440, 1000], [820, 1180], [390, 844], [390, 1200], [375, 812], [320, 740]]) {
       await page.setViewportSize({ width, height });
       const before = apiRequests;
       let headerHeight;
-      for (const view of ["statistics", "feed", "notice", "briefing", "statistics"]) {
-        await page.locator(`.nav-item[data-view="${view}"]`).click();
+      const statistics = definitions.find((view) => view.id === "statistics");
+      for (const view of [statistics, ...definitions, statistics]) {
+        await page.locator(`.nav-item[data-view="${view.id}"]`).click();
         assert.equal(await page.locator(".view-panel.active").count(), 1);
-        assert.ok(await page.locator(`.view-panel[data-panel="${view}"]`).isVisible());
-        assert.equal(await page.locator(".nav-item[aria-current=page]").getAttribute("data-view"), view);
-        assert.equal(await page.locator("#newsMetricGrid").isVisible(), view === "feed");
-        assert.equal(await page.locator("#refreshButton").isVisible(), view !== "statistics");
-        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${view} overflow at ${width}`);
+        assert.ok(await page.locator(`.view-panel[data-panel="${view.id}"]`).isVisible());
+        assert.equal(await page.locator(".nav-item[aria-current=page]").getAttribute("data-view"), view.id);
+        assert.equal(await page.locator("#newsMetricGrid").isVisible(), Boolean(view.showNewsMetrics));
+        assert.equal(await page.locator("#refreshButton").isVisible(), view.showRefresh !== false);
+        assert.equal(await page.locator("#menuTitle").innerText(), view.title);
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${view.id} overflow at ${width}`);
         if (width <= 1050) {
           const measured = await page.locator(".sidebar").evaluate((el) => {
             const style = getComputedStyle(el);
@@ -47,7 +50,7 @@ fs.mkdirSync(output, { recursive: true });
           });
           if (width <= 720) {
             assert.ok(measured.height <= measured.contentHeight + 1,
-              `${view} header stretched at ${width}x${height}: ${measured.height}px for ${measured.contentHeight}px content`);
+              `${view.id} header stretched at ${width}x${height}: ${measured.height}px for ${measured.contentHeight}px content`);
             assert.ok(measured.height <= 80, `mobile header too tall: ${measured.height}px`);
           }
           headerHeight ??= measured.height;
@@ -69,8 +72,49 @@ fs.mkdirSync(output, { recursive: true });
     await page.locator('.nav-item[data-view="statistics"]').focus();
     await page.keyboard.press("Enter");
     assert.ok(await page.locator('[data-panel="statistics"]').isVisible());
+
+    await page.setViewportSize({ width: 320, height: 740 });
+    const beforeExtension = apiRequests;
+    const headerHeight = (await page.locator(".sidebar").boundingBox()).height;
+    for (const extraCount of [1, 4]) {
+      await page.evaluate((count) => {
+        for (let index = 1; index <= count; index++) {
+          const id = `qa-view-${index}`;
+          if (viewDefinitions.some((view) => view.id === id)) continue;
+          viewDefinitions.push({
+            id, label: `\uCD94\uAC00${index}`, icon: "+", eyebrow: "QA", title: `QA report ${index}`,
+            showNewsMetrics: index === 1, showRefresh: false,
+          });
+          const panel = document.createElement("section");
+          panel.className = "view-panel";
+          panel.dataset.panel = id;
+          panel.textContent = "Browser-only extension fixture";
+          document.querySelector(".content-grid").append(panel);
+        }
+        renderNavigation();
+      }, extraCount);
+      assert.equal(await page.locator(".nav-item").count(), definitions.length + extraCount);
+      await page.locator(`.nav-item[data-view="qa-view-${extraCount}"]`).click();
+      assert.equal(await page.locator("#menuTitle").innerText(), `QA report ${extraCount}`);
+      assert.equal(await page.locator("#newsMetricGrid").isVisible(), extraCount === 1);
+      assert.equal(await page.locator("#refreshButton").isVisible(), false);
+      assert.equal(await page.locator(".view-panel.active").count(), 1);
+      assert.ok(await page.locator(`[data-panel="qa-view-${extraCount}"]`).isVisible());
+      assert.ok(Math.abs((await page.locator(".sidebar").boundingBox()).height - headerHeight) <= 1);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      assert.ok(await page.locator("#serviceNavigation").evaluate((el) => el.scrollWidth > el.clientWidth), "extra menus must scroll inside navigation");
+      await page.screenshot({ path: path.join(output, `extra-${extraCount}-320.png`), fullPage: true });
+    }
+    await page.evaluate((count) => {
+      viewDefinitions.splice(count);
+      document.querySelectorAll('[data-panel^="qa-view-"]').forEach((panel) => panel.remove());
+      renderNavigation();
+    }, definitions.length);
+    assert.equal(await page.locator(".nav-item").count(), definitions.length);
+    assert.equal(await page.locator(".nav-item[aria-current=page]").getAttribute("data-view"), definitions[0].id);
+    assert.equal(apiRequests, beforeExtension, "extending and rerendering navigation must not request data");
     assert.deepEqual(errors, []);
-    console.log("PASS: statistics and existing menus at 1440/820/390/375/320px including tall screens, stable compact header, no overflow or extra requests, logo, footer and keyboard navigation");
+    console.log("PASS: configured menus at 1440/820/390/375/320px and tall screens, browser-only 5/8-menu extensions, compact header, contained scrolling, no extra requests, footer and keyboard navigation");
   } finally {
     await browser.close();
   }

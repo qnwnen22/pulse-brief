@@ -1,19 +1,49 @@
-function showView(view) {
-  const targetView = [...viewPanels].some((panel) => panel.dataset.panel === view) ? view : "briefing";
-  const title = viewTitles[targetView] || viewTitles.briefing;
-  navItems.forEach((item) => {
-    const isActive = item.dataset.view === targetView;
+function getAvailableViewDefinitions() {
+  const panelIds = new Set([...document.querySelectorAll(".view-panel[data-panel]")]
+    .map((panel) => panel.dataset.panel));
+  return viewDefinitions.filter((view) => panelIds.has(view.id));
+}
+
+function renderNavigation() {
+  if (!navList) return;
+  const definitions = getAvailableViewDefinitions();
+  navList.replaceChildren(...definitions.map((view) => {
+    const button = document.createElement("button");
+    button.className = "nav-item";
+    button.type = "button";
+    button.dataset.view = view.id;
+    const icon = document.createElement("span");
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = view.icon || "";
+    button.append(icon, document.createTextNode(view.label));
+    return button;
+  }));
+  document.querySelectorAll(".footer-link[data-view]").forEach((item) => {
+    const view = definitions.find((definition) => definition.id === item.dataset.view);
+    item.hidden = !view;
+    if (view) item.textContent = view.label;
+  });
+  showView(activeViewId);
+}
+
+function showView(viewId) {
+  const definitions = getAvailableViewDefinitions();
+  const view = definitions.find((definition) => definition.id === viewId) || definitions[0];
+  if (!view) return;
+  activeViewId = view.id;
+  navList?.querySelectorAll(".nav-item[data-view]").forEach((item) => {
+    const isActive = item.dataset.view === view.id;
     item.classList.toggle("active", isActive);
     if (isActive) item.setAttribute("aria-current", "page");
     else item.removeAttribute("aria-current");
   });
-  viewPanels.forEach((panel) => {
-    panel.classList.toggle("active", panel.dataset.panel === targetView);
+  document.querySelectorAll(".view-panel[data-panel]").forEach((panel) => {
+    panel.classList.toggle("active", panel.dataset.panel === view.id);
   });
-  newsMetricGrid?.classList.toggle("hidden", targetView !== "feed");
-  if (refreshButton) refreshButton.hidden = targetView === "statistics";
-  if (menuEyebrow) menuEyebrow.textContent = title.eyebrow;
-  if (menuTitle) menuTitle.textContent = title.title;
+  newsMetricGrid?.classList.toggle("hidden", !view.showNewsMetrics);
+  if (refreshButton) refreshButton.hidden = view.showRefresh === false;
+  if (menuEyebrow) menuEyebrow.textContent = view.eyebrow;
+  if (menuTitle) menuTitle.textContent = view.title;
 }
 
 

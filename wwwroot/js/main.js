@@ -3,8 +3,8 @@ async function initializeApp() {
   document.body.classList.add("loading-active");
 
   try {
+    renderNavigation();
     await Promise.all([loadServerBriefs(), loadNewsStats()]);
-    showView("briefing");
     renderPublisherFilter();
     renderCategoryFilters();
     renderNews();

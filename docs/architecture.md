@@ -95,6 +95,16 @@ PulseBrief.sln
 
 HTML의 `defer` 스크립트 목록이 실행 순서를 정의합니다. 현재는 일반 스크립트의 공통 스코프를 사용하므로, 파일을 추가할 때 중복 함수·변수 이름과 로드 순서를 확인합니다. 별도 번들러나 ES 모듈로 전환한 것은 아니며 기존 `file://` 미리보기도 유지합니다. 버전 도구는 사용자·관리자 HTML의 모든 JavaScript 캐시 버전을 함께 갱신합니다.
 
+### 공통 메뉴와 화면 확장
+
+- `wwwroot/js/views.js`: 메뉴 순서, ID, 이름, 아이콘, 헤더 제목과 공통 지표·버튼 표시 정책의 단일 정의입니다. `showNewsMetrics`는 기본 false, `showRefresh`는 기본 true이며 첫 번째 유효한 정의가 기본 화면입니다.
+- `wwwroot/js/navigation.js`: 정의에 대응하는 본문이 있는 메뉴만 생성하고, 공통 헤더·활성 표시·화면 전환을 처리합니다. 재생성해도 활성 화면을 유지하며 없어진 화면은 기본 화면으로 복귀합니다.
+- `wwwroot/js/events.js`: 메뉴 컨테이너의 이벤트 위임을 사용하므로 새 메뉴나 재생성된 버튼에 개별 클릭 핸들러를 추가할 필요가 없습니다.
+- `wwwroot/index.html`: 공통 화면 틀과 각 기능의 본문을 보관합니다. 메뉴 버튼과 헤더 제목은 이 파일에 중복 작성하지 않습니다.
+- 반응형 메뉴는 CSS 자동 컬럼을 사용합니다. 메뉴가 많아지면 메뉴 영역 안에서만 가로 스크롤하며 페이지 전체 너비나 헤더 높이를 늘리지 않습니다.
+
+새 화면은 `views.js`에 정의를 추가하고 HTML에 같은 ID의 `data-panel` 본문을 작성합니다. 데이터 처리와 본문 렌더링이 필요한 기능만 별도 JavaScript 파일을 추가합니다. `navigation.js`에 메뉴 ID별 조건이나 CSS에 메뉴 개수를 추가하지 않습니다. 기능 고유 본문을 공통 템플릿으로 강제하지 않으며, 기존 API 로딩과 자동 요약 중단 정책도 바꾸지 않습니다.
+
 ## 변경 및 검증
 
 ```powershell
@@ -102,7 +112,10 @@ dotnet build PulseBrief.sln
 dotnet run --project PulseBrief.Tests/PulseBrief.Tests.csproj --no-launch-profile
 node tools/test-summary-rendering.cjs
 node tools/test-static-assets.cjs
+node tools/test-navigation.cjs
 ```
+
+브라우저 회귀 테스트 `tools/test-navigation-browser.cjs`는 Playwright가 설치된 Node 런타임에서 실행합니다. 데스크톱·모바일·긴 화면과 브라우저 안에서만 임시 추가한 5개·8개 메뉴의 화면 전환, 내부 스크롤, 헤더 높이, 추가 API 요청 방지를 검사합니다. 테스트 메뉴는 소스나 운영 DB에 저장하지 않습니다.
 
 API 테스트는 임시 설정 폴더와 메모리 저장소를 사용합니다. 운영 MongoDB나 OpenAI API를 호출하지 않고, 공개 과거 요약 조회와 날짜 정렬을 포함한 라우트, 요청 바인딩, 인증·CSRF, 요약 비활성화, 관련 링크와 BSON 호환성을 검증합니다.
 
@@ -118,6 +131,7 @@ dotnet run --project PulseBrief.Tests/PulseBrief.Tests.csproj --no-launch-profil
 
 ## 운영 원칙
 
+- 새 기능 및 수정 전에 기존 공통 구현을 확인하고 실제 중복과 확장 비용을 줄이는 범위에서 재사용합니다. 지속적인 개발 지침은 저장소 루트 `AGENTS.md`를 따릅니다.
 - 기존 API 주소, JSON 필드 및 MongoDB 문서 형식을 유지합니다.
 - 운영 DB는 기간·필드·건수를 제한해서 읽고, 무거운 분석은 로컬에서 처리합니다.
 - 구조를 바꾸는 작업에서도 수집 주기, 조회 상한, 자동 요약 중단 설정을 유지합니다.
