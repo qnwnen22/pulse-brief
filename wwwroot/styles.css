@@ -237,6 +237,7 @@ button {
 }
 
 .workspace {
+  min-width: 0;
   padding: 28px;
 }
 
@@ -545,6 +546,7 @@ h2 {
   display: block;
 }
 
+.statistics-panel,
 .statistics-content {
   min-width: 0;
 }
@@ -580,6 +582,13 @@ h2 {
 .statistics-share-track { display: block; width: 100%; max-width: 240px; height: 8px; background: #e6ebef; }
 .statistics-share-track > span { display: block; height: 100%; background: #bb536c; }
 .statistics-updated { margin-bottom: 0; }
+
+@media (max-width: 1050px) {
+  .statistics-metrics .metric-help { position: static; }
+  .statistics-metrics .metric-tooltip { right: 0; width: min(260px, calc(100vw - 32px)); }
+  .statistics-metrics .metric:nth-child(odd) .metric-tooltip { right: auto; left: 0; }
+  .statistics-metrics .metric-tooltip::after { display: none; }
+}
 
 @media (max-width: 720px) {
   .statistics-panel .statistics-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }

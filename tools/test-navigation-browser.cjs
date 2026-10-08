@@ -39,6 +39,8 @@ fs.mkdirSync(output, { recursive: true });
         assert.equal(await page.locator("#refreshButton").isVisible(), view.showRefresh !== false);
         assert.equal(await page.locator("#menuTitle").innerText(), view.title);
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${view.id} overflow at ${width}`);
+        const panel = await page.locator(`.view-panel[data-panel="${view.id}"]`).boundingBox();
+        assert.ok(panel.x >= 0 && panel.x + panel.width <= width, `${view.id} panel is clipped at ${width}`);
         if (width <= 1050) {
           const measured = await page.locator(".sidebar").evaluate((el) => {
             const style = getComputedStyle(el);

@@ -27,6 +27,8 @@ fs.mkdirSync(output, { recursive: true });
         await page.locator(`#statisticsPeriods [data-period="${period}"]`).click();
         await page.waitForFunction(period => document.querySelector("#statisticsContent").getAttribute("aria-busy") === "false" && statisticsCache.has(period), period);
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `page overflows at ${width}, ${period}`);
+        const panel = await page.locator('[data-panel="statistics"]').boundingBox();
+        assert.ok(panel.x >= 0 && panel.x + panel.width <= width, `statistics panel is clipped at ${width}, ${period}`);
         assert.equal(await page.locator('#statisticsPeriods [aria-pressed="true"]').getAttribute("data-period"), period);
         assert.ok(await page.locator(".statistics-metrics .metric strong").evaluateAll(elements => elements.every(el => el.scrollWidth <= el.clientWidth)), "metric value overflows");
         assert.ok(await page.locator(".statistics-toolbar button").evaluateAll(elements => elements.every(el => el.scrollWidth <= el.clientWidth)), "period button text overflows");
@@ -36,6 +38,13 @@ fs.mkdirSync(output, { recursive: true });
           assert.ok((await page.locator(".sidebar").boundingBox()).height <= 80);
           assert.equal(await page.locator(".statistics-metrics").evaluate(el => getComputedStyle(el).gridTemplateColumns.split(" ").length), 2);
         }
+        for (const help of await page.locator(".statistics-metrics .metric-help").all()) {
+          await help.focus();
+          const tooltip = await help.locator(".metric-tooltip").boundingBox();
+          const bounds = await help.evaluate(el => ({ label: el.getAttribute("aria-label"), card: el.closest(".metric").getBoundingClientRect().toJSON(), right: getComputedStyle(el.querySelector(".metric-tooltip")).right, left: getComputedStyle(el.querySelector(".metric-tooltip")).left }));
+          assert.ok(tooltip.x >= -0.5 && tooltip.x + tooltip.width <= width + 0.5, `metric tooltip leaves viewport at ${width}: ${JSON.stringify({ tooltip, bounds })}`);
+        }
+        await page.locator("#statisticsRefresh").focus();
         await page.screenshot({ path: path.join(output, `${period}-${width}.png`), fullPage: true });
       }
     }
