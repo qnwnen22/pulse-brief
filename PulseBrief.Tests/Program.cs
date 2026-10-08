@@ -100,6 +100,8 @@ try
         Check(collectionStats["todayCount"]!.GetValue<int>() == 5, "Today's provisional collection count changed.");
         Check(collectionStats["areCategoriesReady"]!.GetValue<bool>() && collectionStats["categories"]!.AsArray().Count == 9, "Category statistics contract is incomplete.");
         Check(collectionStats["categories"]!.AsArray().Sum(item => item!["count"]!.GetValue<long>()) == collectionStats["total"]!.GetValue<long>(), "Category API totals differ from stored article totals.");
+        Check(collectionStats["isCategoryComparisonReady"]!.GetValue<bool>() == (period != "all"), "Category comparison API readiness changed.");
+        Check(collectionStats["publisherTrends"]!.AsArray().Sum(series => series!["trend"]!.AsArray().Sum(point => point!["count"]!.GetValue<long>())) == collectionStats["total"]!.GetValue<long>(), "Publisher trend API totals differ from the period total.");
     }
     await Request(client, "GET", "/api/collection-statistics?period=invalid", 400);
     await Request(client, "GET", "/api/collection-statistics?period=999999", 400);

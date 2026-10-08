@@ -26,6 +26,31 @@ public static class CollectionStatisticsTests
         check(result.AreCategoriesReady && result.Categories.Count == 9 && result.Categories[0] is { Category: "정치/정책", Count: 84, Share: 60 }, "Category counts or shares are incorrect.");
         check(result.Categories.Sum(item => item.Count) == result.Total, "Category totals must count every saved article exactly once.");
         check(result.Categories.Any(item => item.Count == 0 && item.Share == 0), "Zero-article categories must remain available.");
+        check(result.IsCategoryComparisonReady && result.Categories[0] is { PreviousCount: 42, ChangePercent: 100, ShareChangePoints: 0 }, "Category comparison must use an equal-length previous period.");
+        check(result.PreviousFromDate == KoreaDate.Key(today.AddDays(-14)) && result.PreviousToDate == KoreaDate.Key(today.AddDays(-8)), "Previous period date boundaries are incorrect.");
+        check(result.Categories.Single(item => item.Category == "스포츠") is { PreviousCount: 0, ChangePercent: null, ShareChangePoints: 0 }, "Zero-category comparison generated a percentage.");
+        check(result.PublisherTrends.Count == 2 && result.PublisherTrends[0].Trend.Count == 7
+            && result.PublisherTrends[0].Trend.Sum(point => point.Count) == 84, "Publisher trends must reuse current-period day counts.");
+        check(result.PublisherTrends[0].Trend[0].Date == KoreaDate.Key(today.AddDays(-7))
+            && result.PublisherTrends[0].Trend[^1].Count == 12, "Today or previous-period articles leaked into publisher trends.");
+        var all = CollectionStatisticsService.Calculate("all", today, first, first, days);
+        check(!all.IsCategoryComparisonReady && all.Categories.All(item => item.PreviousCount is null), "All-history categories must not invent a previous period.");
+        check(all.PublisherTrends[0].Trend.All(point => point.Date.Length == 7)
+            && all.PublisherTrends[0].Trend.Sum(point => point.Count) == 126, "All-history publisher trends must be compact monthly sums.");
+        days[8].CategoryVersion = 0;
+        result = CollectionStatisticsService.Calculate("7", today, today.AddDays(-7), first, days);
+        check(result.AreCategoriesReady && !result.IsCategoryComparisonReady && result.PreviousTotal == 70,
+            "Legacy previous categories must not hide current shares or fabricate category changes.");
+        days[8].CategoryVersion = ArticleCategoryClassifier.StatisticsVersion;
+        days[8].IsComplete = false;
+        result = CollectionStatisticsService.Calculate("7", today, today.AddDays(-7), first, days);
+        check(result.IsReady && !result.IsCategoryComparisonReady && result.PreviousTotal is null, "Missing comparison days must not count as zero.");
+        days[8].IsComplete = true;
+        days[1].Categories = new() { ["정치/정책"] = 8, ["사회"] = 12 };
+        result = CollectionStatisticsService.Calculate("7", today, today.AddDays(-7), first, days);
+        check(result.Categories.Single(item => item.Category == "정치/정책") is { Count: 80, ChangePercent: 90.5, ShareChangePoints: -2.9 },
+            "Percentage points must compare unrounded period shares, independently of count growth.");
+        days[1].Categories = new() { ["정치/정책"] = 12, ["사회"] = 8 };
 
         days[1].CategoryVersion = 0;
         result = CollectionStatisticsService.Calculate("7", today, today.AddDays(-7), first, days);
@@ -56,6 +81,9 @@ public static class CollectionStatisticsTests
         result = CollectionStatisticsService.Calculate("7", today, today.AddDays(-7), first, days);
         check(!result.IsReady && result.Total is null && result.DailyAverage is null && result.Publishers.Count == 0, "Incomplete cache was presented as a complete period.");
         check(result.Trend[^1].Count is null && result.CompletedDays == 6, "Missing dates must not be treated as zero.");
+        check(result.PublisherTrends.All(item => item.Trend[^1].Count is null), "Missing publisher dates must not become zero counts.");
+        all = CollectionStatisticsService.Calculate("all", today, first, first, days);
+        check(all.PublisherTrends.All(item => item.Trend[^1].Count is null), "An incomplete date must make its monthly publisher total unknown.");
         zero.IsComplete = true;
         foreach (var day in days.Where(day => string.CompareOrdinal(day.Id, KoreaDate.Key(today.AddDays(-7))) < 0)) day.ArticleCount = 0;
         result = CollectionStatisticsService.Calculate("7", today, today.AddDays(-7), first, days);
@@ -69,7 +97,7 @@ public static class CollectionStatisticsTests
         var store = new FakeCollectionStatisticsStore();
         var service = new CollectionStatisticsService(store);
         var cached = await service.ReadAsync("7", today, CancellationToken.None);
-        check(cached.Total == 70 && store.IndexInitializations == 0 && store.RefreshedDates.Count == 0, "Public statistics read attempted article maintenance or index provisioning.");
+        check(cached.Total == 70 && store.CacheReads == 1 && store.IndexInitializations == 0 && store.RefreshedDates.Count == 0, "Public statistics must compose changes and trends from one cache read, without article maintenance.");
         store.State = null;
         check(!(await service.ReadAsync("7", today, CancellationToken.None)).IsReady, "Absent cache did not return a waiting state.");
         store.State = new() { FirstDate = KoreaDate.Key(today.AddDays(-60)) };
@@ -110,5 +138,27 @@ public static class CollectionStatisticsTests
         }).ToList();
         var emptyResult = CollectionStatisticsService.Calculate("7", today, today.AddDays(-7), first, emptyDays);
         check(emptyResult.AreCategoriesReady && emptyResult.Categories.All(item => item.Share == 0), "Empty periods must not produce NaN or infinity category shares.");
+        check(emptyResult.PublisherTrends.Count == 0, "Empty periods must not invent publisher series.");
+        var zeroComparison = Enumerable.Range(8, 7).Select(offset => new CollectionDayStatistics
+        {
+            Id = KoreaDate.Key(today.AddDays(-offset)), IsComplete = true, CategoryVersion = ArticleCategoryClassifier.StatisticsVersion
+        }).ToList();
+        var current = Enumerable.Range(1, 7).Select(offset => new CollectionDayStatistics
+        {
+            Id = KoreaDate.Key(today.AddDays(-offset)), IsComplete = true, ArticleCount = 10,
+            Categories = new() { ["사회"] = 10 }, Publishers = new() { ["한겨레"] = 10 }, CategoryVersion = ArticleCategoryClassifier.StatisticsVersion
+        }).ToList();
+        result = CollectionStatisticsService.Calculate("7", today, today.AddDays(-7), first, [.. current, .. zeroComparison]);
+        check(result.IsCategoryComparisonReady && result.Categories.All(item => item.PreviousCount == 0 && item.ChangePercent is null && item.ShareChangePoints is null),
+            "Zero previous article totals must not yield percentages or percentage points.");
+        result = CollectionStatisticsService.Calculate("7", today, today.AddDays(-7), first, [.. emptyDays, .. zeroComparison]);
+        check(result.IsCategoryComparisonReady && result.Categories.All(item => item.ShareChangePoints is null), "Two empty periods generated percentage-point changes.");
+        result = CollectionStatisticsService.Calculate("7", today, today.AddDays(-7), today.AddDays(-10), [.. current, .. zeroComparison]);
+        check(!result.IsCategoryComparisonReady && result.Categories.All(item => item.PreviousCount is null), "Pre-collection dates must not be fabricated as complete comparisons.");
+        current[0].Publishers = new() { ["연합뉴스"] = 10 };
+        result = CollectionStatisticsService.Calculate("7", today, today.AddDays(-7), first, current);
+        check(result.PublisherTrends.Single(item => item.Publisher == "한겨레").Trend[^1].Count == 0
+            && result.PublisherTrends.Sum(item => item.Trend.Sum(point => point.Count)) == result.Total,
+            "Absent publishers on complete days must be zero without losing total counts.");
     }
 }

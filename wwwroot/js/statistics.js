@@ -1,5 +1,6 @@
 let statisticsPeriod = "7";
 let statisticsRequest = 0;
+let statisticsPublisher = "";
 const statisticsCache = new Map();
 
 function initializeStatistics() {
@@ -15,6 +16,13 @@ function initializeStatistics() {
     loadCollectionStatistics();
   });
   document.querySelector("#statisticsRefresh")?.addEventListener("click", () => loadCollectionStatistics(true));
+  document.querySelector("#statisticsContent")?.addEventListener("change", event => {
+    if (event.target.id !== "statisticsPublisher") return;
+    statisticsPublisher = event.target.value;
+    const data = statisticsCache.get(statisticsPeriod)?.data;
+    const chart = document.querySelector("#publisherTrendContent");
+    if (data && chart) chart.innerHTML = renderPublisherTrend(data);
+  });
 }
 
 async function loadCollectionStatistics(force = false) {
@@ -53,15 +61,66 @@ function statisticsNumber(value, fraction = 0) {
 }
 
 function collectionTrendPoints(data) {
-  if (data.period !== "all") return data.trend;
+  return statisticsTrendPoints(data.trend, data.period);
+}
+
+function statisticsTrendPoints(points, period) {
+  if (period !== "all") return points;
   const months = new Map();
-  for (const point of data.trend) {
+  for (const point of points) {
     const key = point.date.slice(0, 7);
     const previous = months.get(key);
     const count = point.count == null || previous?.count === null ? null : (previous?.count || 0) + point.count;
     months.set(key, { date: key, count });
   }
   return [...months.values()];
+}
+
+function statisticsChange(value, unit, fraction = 0) {
+  return Number.isFinite(value) ? `${value > 0 ? "+" : ""}${statisticsNumber(value === 0 ? 0 : value, fraction)}${unit}` : "--";
+}
+
+function renderStatisticsTrendChart(points, period, label) {
+  const maximum = Math.max(1, ...points.map(point => point.count || 0));
+  return `<div class="statistics-chart-scroll" tabindex="0" aria-label="${escapeHtml(label)}">
+    <div class="statistics-bars" style="min-width:${points.length * (period === "all" ? 52 : 32)}px;grid-template-columns:repeat(${Math.max(1, points.length)},minmax(0,1fr))">
+      ${points.map(point => `<div class="statistics-bar-column">
+        <div class="statistics-bar-track"><div class="statistics-bar${point.count == null ? " missing" : ""}" style="height:${point.count == null ? 100 : Math.max(1, point.count / maximum * 100)}%" tabindex="0" title="${escapeHtml(point.date)}: ${point.count == null ? "집계 대기" : `${statisticsNumber(point.count)}건`}" aria-label="${escapeHtml(point.date)} ${point.count == null ? "집계 대기" : `${statisticsNumber(point.count)}건`}"></div></div>
+        <span>${escapeHtml(period === "all" ? point.date : point.date.slice(5).replace("-", "."))}</span></div>`).join("")}
+    </div>
+  </div>
+  <details class="statistics-details"><summary>수집 추이 상세</summary><div class="statistics-table-scroll"><table class="statistics-table"><thead><tr><th scope="col">날짜</th><th scope="col">수집 기사</th></tr></thead><tbody>${points.map(point => `<tr><th scope="row">${escapeHtml(point.date)}</th><td>${statisticsNumber(point.count)}건</td></tr>`).join("")}</tbody></table></div></details>`;
+}
+
+function renderPublisherTrend(data) {
+  const series = (data.publisherTrends || []).find(item => item.publisher === statisticsPublisher);
+  return series ? renderStatisticsTrendChart(statisticsTrendPoints(series.trend, data.period), data.period, `${statisticsPublisher} 수집 추이`)
+    : '<p class="statistics-status">해당 기간에 수집된 언론사 데이터가 없습니다.</p>';
+}
+
+function renderPublisherTrendSection(data) {
+  const series = data.publisherTrends || [];
+  if (!series.some(item => item.publisher === statisticsPublisher)) statisticsPublisher = series[0]?.publisher || "";
+  return `<section class="statistics-section publisher-trend-section" aria-labelledby="publisher-trend-title">
+    <div class="section-head compact"><h2 id="publisher-trend-title">언론사별 ${data.period === "all" ? "월별" : "일별"} 수집 추이</h2>
+      ${series.length ? `<label class="statistics-select-control" for="statisticsPublisher"><span>언론사</span><select id="statisticsPublisher">${series.map(item => `<option value="${escapeHtml(item.publisher)}"${item.publisher === statisticsPublisher ? " selected" : ""}>${escapeHtml(item.publisher)}</option>`).join("")}</select></label>` : ""}
+    </div>
+    <div id="publisherTrendContent">${renderPublisherTrend(data)}</div>
+  </section>`;
+}
+
+function renderCategoryComparison(data) {
+  const ready = data.period !== "all" && data.isReady && data.areCategoriesReady && data.isCategoryComparisonReady;
+  let status = "직전 기간의 카테고리 집계가 부족합니다.";
+  if (data.period === "all") status = "전체 기간은 직전 기간 비교 대상이 없습니다.";
+  else if (!data.isReady || !data.areCategoriesReady) status = "현재 기간의 카테고리 집계 완료 후 표시됩니다.";
+  return `<section class="statistics-section" aria-labelledby="category-change-title">
+    <div class="section-head compact"><h2 id="category-change-title">카테고리별 증감</h2><span class="statistics-unit">동일 기간 비교</span></div>
+    ${!ready ? `<p class="statistics-status" role="status">${status}</p>`
+      : `<p class="statistics-meta">직전 ${escapeHtml(data.previousFromDate)} ~ ${escapeHtml(data.previousToDate)} 대비</p>
+        <div class="statistics-table-scroll" tabindex="0" aria-label="카테고리별 증감 표"><table class="statistics-table category-change-table"><thead><tr><th scope="col">카테고리</th><th scope="col">현재 기사</th><th scope="col">직전 기사</th><th scope="col">기사 증감</th><th scope="col">증감률</th><th scope="col">비중 변화</th></tr></thead><tbody>${data.categories.map(item => `<tr><th scope="row">${escapeHtml(item.category)}</th><td data-label="현재 기사">${statisticsNumber(item.count)}건</td><td data-label="직전 기사">${statisticsNumber(item.previousCount)}건</td><td data-label="기사 증감">${statisticsChange(item.count - item.previousCount, "건")}</td><td data-label="증감률">${statisticsChange(item.changePercent, "%", 1)}</td><td data-label="비중 변화">${statisticsChange(item.shareChangePoints, "%p", 1)}</td></tr>`).join("")}</tbody></table></div>
+        <p class="statistics-meta">직전 기사 수가 0건이면 증감률은 제외합니다. 어느 기간이든 전체 기사 수가 0건이면 비중 변화는 제외합니다.</p>`}
+  </section>`;
 }
 
 function renderStatisticsShareSection({ id, title, label, labelKey, items, isReady, note, pendingText }) {
@@ -87,7 +146,6 @@ function renderCollectionStatistics(data) {
     : data.previousTotal === 0 ? "직전 기간 0건, 증감률 계산 제외"
     : data.previousTotal == null ? "직전 기간 집계 부족" : `직전 ${data.expectedDays}일 ${statisticsNumber(data.previousTotal)}건`;
   const points = collectionTrendPoints(data);
-  const maximum = Math.max(1, ...points.map(point => point.count || 0));
   const updated = data.updatedAt ? new Date(data.updatedAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }) : "--";
   content.innerHTML = `
     <p class="statistics-meta">${escapeHtml(data.fromDate)} ~ ${escapeHtml(data.toDate)} · 최초 저장일 기준 · 한국 시간 · 오늘 제외</p>
@@ -100,14 +158,7 @@ function renderCollectionStatistics(data) {
     </div>
     <section class="statistics-section" aria-labelledby="collection-trend-title">
       <div class="section-head compact"><h2 id="collection-trend-title">${data.period === "all" ? "월별" : "일별"} 수집 추이</h2><span class="statistics-unit">단위: 건</span></div>
-      <div class="statistics-chart-scroll" tabindex="0" aria-label="수집 추이 차트">
-        <div class="statistics-bars" style="min-width:${points.length * (data.period === "all" ? 52 : 32)}px;grid-template-columns:repeat(${Math.max(1, points.length)},minmax(0,1fr))">
-          ${points.map(point => `<div class="statistics-bar-column">
-            <div class="statistics-bar-track"><div class="statistics-bar${point.count == null ? " missing" : ""}" style="height:${point.count == null ? 100 : Math.max(1, point.count / maximum * 100)}%" tabindex="0" title="${escapeHtml(point.date)}: ${point.count == null ? "집계 대기" : `${statisticsNumber(point.count)}건`}" aria-label="${escapeHtml(point.date)} ${point.count == null ? "집계 대기" : `${statisticsNumber(point.count)}건`}"></div></div>
-            <span>${escapeHtml(data.period === "all" ? point.date : point.date.slice(5).replace("-", "."))}</span></div>`).join("")}
-        </div>
-      </div>
-      <details class="statistics-details"><summary>수집 추이 상세</summary><div class="statistics-table-scroll"><table class="statistics-table"><thead><tr><th scope="col">날짜</th><th scope="col">수집 기사</th></tr></thead><tbody>${points.map(point => `<tr><th scope="row">${escapeHtml(point.date)}</th><td>${statisticsNumber(point.count)}건</td></tr>`).join("")}</tbody></table></div></details>
+      ${renderStatisticsTrendChart(points, data.period, "수집 추이 차트")}
     </section>
     <div class="statistics-breakdowns">
       ${renderStatisticsShareSection({
@@ -120,5 +171,7 @@ function renderCollectionStatistics(data) {
         note: "제목·RSS 요약 자동 분류. 기사당 카테고리 하나를 반영하며 뉴스 검색의 이슈 단위 분류와 다를 수 있습니다."
       })}
     </div>
+    ${renderCategoryComparison(data)}
+    ${renderPublisherTrendSection(data)}
     <p class="statistics-meta statistics-updated">집계 갱신: ${escapeHtml(updated)}</p>`;
 }

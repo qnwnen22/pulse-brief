@@ -584,6 +584,12 @@ h2 {
 .statistics-share-track { display: block; width: 100%; max-width: 240px; height: 8px; background: #e6ebef; }
 .statistics-share-track > span { display: block; height: 100%; background: #bb536c; }
 .category-table .statistics-share-track > span { background: #168571; }
+.category-change-table { min-width: 660px; }
+.category-change-table td { white-space: nowrap; }
+.statistics-select-control { width: 220px; min-width: 0; max-width: 100%; }
+.publisher-trend-section .statistics-bar { background: #bb536c; }
+.publisher-trend-section .statistics-bar:hover, .publisher-trend-section .statistics-bar:focus { background: #91334a; outline-color: #91334a; }
+.publisher-trend-section .statistics-bar.missing { background: #e1e7ec; }
 .statistics-updated { margin-bottom: 0; }
 
 @media (max-width: 1050px) {
@@ -595,6 +601,13 @@ h2 {
 }
 
 @media (max-width: 720px) {
+  .category-change-table { min-width: 0; }
+  .category-change-table thead { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); }
+  .category-change-table tbody { display: block; }
+  .category-change-table tbody tr { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px 12px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+  .category-change-table tbody th { grid-column: 1 / -1; }
+  .statistics-table.category-change-table th, .statistics-table.category-change-table td { padding: 0; border: 0; text-align: left; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+  .category-change-table td::before { content: attr(data-label); display: block; margin-bottom: 4px; font-size: 11px; color: var(--muted); }
   .statistics-panel .statistics-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
   .statistics-metrics .metric { padding: 12px; min-height: 114px; }
   .statistics-metrics .metric strong { font-size: 21px; }
@@ -639,7 +652,8 @@ h2 {
   align-items: center;
 }
 
-.summary-history-control {
+.summary-history-control,
+.statistics-select-control {
   display: grid;
   gap: 6px;
   min-width: 190px;
@@ -648,7 +662,8 @@ h2 {
   font-weight: 800;
 }
 
-.summary-history-control select {
+.summary-history-control select,
+.statistics-select-control select {
   width: 100%;
   min-height: 38px;
   padding: 0 34px 0 10px;
@@ -1784,7 +1799,8 @@ h2 {
     align-items: start;
   }
 
-  .summary-history-control {
+  .summary-history-control,
+  .statistics-select-control {
     width: 100%;
   }
 

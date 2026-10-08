@@ -16,12 +16,16 @@ public sealed class FakeCollectionStatisticsStore : ICollectionStatisticsStore
     public List<DateOnly> RefreshedDates { get; } = [];
     public bool FailReads { get; set; }
     public int IndexInitializations { get; private set; }
+    public int CacheReads { get; private set; }
 
     public Task<CollectionStatisticsState?> ReadCollectionStatisticsStateAsync(CancellationToken cancellationToken) =>
         FailReads ? throw new InvalidOperationException("Fixture cache unavailable") : Task.FromResult(State);
 
-    public Task<List<CollectionDayStatistics>> ReadCollectionDaysAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken) =>
-        Task.FromResult(Days.Where(day => string.CompareOrdinal(day.Id, KoreaDate.Key(from)) >= 0 && string.CompareOrdinal(day.Id, KoreaDate.Key(to)) <= 0).ToList());
+    public Task<List<CollectionDayStatistics>> ReadCollectionDaysAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken)
+    {
+        CacheReads++;
+        return Task.FromResult(Days.Where(day => string.CompareOrdinal(day.Id, KoreaDate.Key(from)) >= 0 && string.CompareOrdinal(day.Id, KoreaDate.Key(to)) <= 0).ToList());
+    }
 
     public Task InitializeCollectionStatisticsAsync(CancellationToken cancellationToken)
     {

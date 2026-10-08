@@ -87,6 +87,10 @@ PulseBrief.sln
 
 요약과 통계의 지표 표시는 공통 `format.js`의 `renderMetricCard`를 재사용합니다. 언론사·카테고리 표는 `statistics.js`의 `renderStatisticsShareSection`에 라벨과 데이터 필드만 전달하여 같은 표시 구조를 사용합니다. 통계 기간 선택 및 차트는 통계 파일에만 있고 공통 메뉴 렌더러에는 통계 ID별 분기를 추가하지 않습니다.
 
+카테고리별 증감과 언론사 추이도 `CollectionStatisticsService`가 기존 날짜별 캐시 한 번의 조회에서 조합합니다. 비교 기간 카테고리 버전·합계까지 검증한 경우에만 증감과 %p를 반환하고, 전체 기간의 언론사 추이는 응답 크기를 줄이도록 서버에서 월별 합산합니다. 저장 스키마 변경, 기사 재집계나 수집기 재시작이 필요하지 않습니다.
+
+전체 수집량과 선택한 언론사 차트는 `renderStatisticsTrendChart`를 공유합니다. 언론사 선택은 통계 콘텐츠의 이벤트 위임과 이미 받은 `publisherTrends`만 사용합니다. 날짜 선택기와 통계 선택기의 공통 스타일을 함께 정의하며 카테고리 증감 표는 모바일에서 세로 항목으로 바뀝니다.
+
 ### 관리자
 
 | 기능 | Controller | 주요 Service |

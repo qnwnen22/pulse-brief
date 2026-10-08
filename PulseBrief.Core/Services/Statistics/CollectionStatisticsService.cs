@@ -41,10 +41,27 @@ public sealed class CollectionStatisticsService(ICollectionStatisticsStore store
         var total = ready ? trend.Sum(point => point.Count!.Value) : (long?)null;
         var categoriesReady = ready && categoryCompletedDays == length;
         long? previousTotal = null;
+        List<CollectionDayStatistics?> previous = [];
         if (period != "all" && length > 0 && from.AddDays(-length) >= firstDate)
         {
-            var previous = Enumerable.Range(1, length).Select(offset => byDate.GetValueOrDefault(KoreaDate.Key(from.AddDays(-offset)))).ToList();
+            previous = Enumerable.Range(1, length).Select(offset => byDate.GetValueOrDefault(KoreaDate.Key(from.AddDays(-offset)))).ToList();
             if (previous.All(day => day?.IsComplete == true)) previousTotal = previous.Sum(day => day!.ArticleCount);
+        }
+        var comparisonReady = categoriesReady && previousTotal.HasValue && previous.All(day => HasCurrentCategories(day!));
+        var categoryShares = categoriesReady ? BuildShares(categories, total!.Value, (name, count, share) => new CollectionCategoryShare(name, count, share)) : [];
+        if (comparisonReady)
+        {
+            categoryShares = categoryShares.Select(item =>
+            {
+                var previousCount = previous.Sum(day => day!.Categories.GetValueOrDefault(item.Category));
+                return item with
+                {
+                    PreviousCount = previousCount,
+                    ChangePercent = previousCount > 0 ? Math.Round((item.Count - previousCount) * 100d / previousCount, 1) : null,
+                    ShareChangePoints = total > 0 && previousTotal > 0
+                        ? Math.Round(item.Count * 100d / total.Value - previousCount * 100d / previousTotal.Value, 1) : null
+                };
+            }).ToList();
         }
         return new()
         {
@@ -53,12 +70,15 @@ public sealed class CollectionStatisticsService(ICollectionStatisticsStore store
             Total = total, DailyAverage = ready ? Math.Round((double)total!.Value / length, 1) : null,
             TodayCount = byDate.GetValueOrDefault(KoreaDate.Key(today))?.ArticleCount,
             PreviousTotal = previousTotal,
+            PreviousFromDate = period != "all" && length > 0 ? KoreaDate.Key(from.AddDays(-length)) : null,
+            PreviousToDate = period != "all" && length > 0 ? KoreaDate.Key(from.AddDays(-1)) : null,
             ChangePercent = ready && previousTotal > 0 ? Math.Round((total!.Value - previousTotal.Value) * 100d / previousTotal.Value, 1) : null,
             UpdatedAt = days.Count > 0 ? days.Max(day => day.UpdatedAt) : null,
             Trend = trend,
             Publishers = ready ? BuildShares(publishers, total!.Value, (name, count, share) => new CollectionPublisherShare(name, count, share)) : [],
+            PublisherTrends = BuildPublisherTrends(period, trend, byDate, publishers),
             AreCategoriesReady = categoriesReady, CategoryCompletedDays = categoryCompletedDays,
-            Categories = categoriesReady ? BuildShares(categories, total!.Value, (name, count, share) => new CollectionCategoryShare(name, count, share)) : []
+            IsCategoryComparisonReady = comparisonReady, Categories = categoryShares
         };
     }
 
@@ -70,4 +90,16 @@ public sealed class CollectionStatisticsService(ICollectionStatisticsStore store
     private static List<T> BuildShares<T>(Dictionary<string, long> counts, long total, Func<string, long, double, T> create) =>
         counts.OrderByDescending(pair => pair.Value).ThenBy(pair => pair.Key, StringComparer.Ordinal)
             .Select(pair => create(pair.Key, pair.Value, total > 0 ? Math.Round(pair.Value * 100d / total, 1) : 0)).ToList();
+
+    private static List<CollectionPublisherTrend> BuildPublisherTrends(string period, List<CollectionTrendPoint> trend,
+        Dictionary<string, CollectionDayStatistics> byDate, Dictionary<string, long> publishers) =>
+        publishers.OrderByDescending(pair => pair.Value).ThenBy(pair => pair.Key, StringComparer.Ordinal).Select(pair =>
+        {
+            var points = trend.Select(point => new CollectionTrendPoint(point.Date,
+                point.Count.HasValue ? byDate[point.Date].Publishers.GetValueOrDefault(pair.Key) : null)).ToList();
+            if (period == "all")
+                points = points.GroupBy(point => point.Date[..7]).Select(month => new CollectionTrendPoint(month.Key,
+                    month.All(point => point.Count.HasValue) ? month.Sum(point => point.Count!.Value) : null)).ToList();
+            return new CollectionPublisherTrend(pair.Key, points);
+        }).ToList();
 }

@@ -13,15 +13,25 @@ public sealed class CollectionStatisticsResponse
     public double? DailyAverage { get; set; }
     public long? TodayCount { get; set; }
     public long? PreviousTotal { get; set; }
+    public string? PreviousFromDate { get; set; }
+    public string? PreviousToDate { get; set; }
     public double? ChangePercent { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
     public List<CollectionTrendPoint> Trend { get; set; } = [];
     public List<CollectionPublisherShare> Publishers { get; set; } = [];
+    public List<CollectionPublisherTrend> PublisherTrends { get; set; } = [];
     public bool AreCategoriesReady { get; set; }
+    public bool IsCategoryComparisonReady { get; set; }
     public int CategoryCompletedDays { get; set; }
     public List<CollectionCategoryShare> Categories { get; set; } = [];
 }
 
 public sealed record CollectionTrendPoint(string Date, long? Count);
 public sealed record CollectionPublisherShare(string Publisher, long Count, double Share);
-public sealed record CollectionCategoryShare(string Category, long Count, double Share);
+public sealed record CollectionPublisherTrend(string Publisher, List<CollectionTrendPoint> Trend);
+public sealed record CollectionCategoryShare(string Category, long Count, double Share)
+{
+    public long? PreviousCount { get; init; }
+    public double? ChangePercent { get; init; }
+    public double? ShareChangePoints { get; init; }
+}

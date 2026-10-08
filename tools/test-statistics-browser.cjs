@@ -12,6 +12,8 @@ fs.mkdirSync(output, { recursive: true });
   try {
     const page = await browser.newPage();
     const errors = [];
+    let statisticsRequests = 0;
+    page.on("request", request => { if (request.url().includes("/api/collection-statistics")) statisticsRequests++; });
     page.on("pageerror", error => errors.push(error.message));
     await page.goto(target);
     await page.locator("#appLoading").waitFor({ state: "hidden" });
@@ -34,6 +36,20 @@ fs.mkdirSync(output, { recursive: true });
         const data = await page.evaluate(period => statisticsCache.get(period).data, period);
         assert.equal(data.categories.reduce((total, item) => total + item.count, 0), data.total, "Categories must count each article exactly once.");
         assert.equal(await page.locator(".category-table tbody tr").count(), 9);
+        assert.equal(await page.locator(".category-change-table tbody tr").count(), period === "all" ? 0 : 9);
+        const publisherNames = data.publisherTrends.map(item => item.publisher);
+        assert.equal(await page.locator("#statisticsPublisher option").count(), publisherNames.length);
+        const beforeSelection = statisticsRequests;
+        for (const publisher of [publisherNames[0], publisherNames.at(-1)]) {
+          await page.locator("#statisticsPublisher").selectOption(publisher);
+          const series = data.publisherTrends.find(item => item.publisher === publisher);
+          const rendered = await page.locator("#publisherTrendContent .statistics-details tbody td").allTextContents();
+          assert.deepEqual(rendered, series.trend.map(point => `${point.count.toLocaleString("ko-KR")}건`), "Publisher selection rendered the wrong series.");
+          assert.equal(await page.locator("#publisherTrendContent .statistics-bar").count(), series.trend.length);
+          assert.ok(await page.locator("#publisherTrendContent .statistics-bars").evaluate(el => el.getBoundingClientRect().height > 0));
+        }
+        assert.equal(statisticsRequests, beforeSelection, "Publisher selection must not trigger server requests.");
+        assert.ok(await page.locator("#statisticsPublisher").evaluate(el => el.getBoundingClientRect().right <= innerWidth), "Publisher select leaves the viewport.");
         assert.ok(await page.locator(".statistics-share-table").evaluateAll(tables => tables.every(table => {
           const box = table.getBoundingClientRect();
           return box.left >= 0 && box.right <= innerWidth;
@@ -46,6 +62,10 @@ fs.mkdirSync(output, { recursive: true });
         if (width <= 720) {
           assert.ok((await page.locator(".sidebar").boundingBox()).height <= 80);
           assert.equal(await page.locator(".statistics-metrics").evaluate(el => getComputedStyle(el).gridTemplateColumns.split(" ").length), 2);
+          assert.ok(await page.locator(".category-change-table tbody td").evaluateAll(cells => cells.every(cell => {
+            const box = cell.getBoundingClientRect();
+            return box.left >= 0 && box.right <= innerWidth;
+          })), "Category changes must be visible without horizontal scrolling on mobile.");
         }
         for (const help of await page.locator(".statistics-metrics .metric-help").all()) {
           await help.focus();
@@ -55,10 +75,14 @@ fs.mkdirSync(output, { recursive: true });
         }
         await page.locator("#statisticsRefresh").focus();
         await page.screenshot({ path: path.join(output, `${period}-${width}.png`), fullPage: true });
+        if (width === 375 && period === "7") {
+          await page.locator('section[aria-labelledby="category-change-title"]').screenshot({ path: path.join(output, "category-change-mobile.png") });
+          await page.locator(".publisher-trend-section").screenshot({ path: path.join(output, "publisher-trend-mobile.png") });
+        }
       }
     }
-    await page.locator(".statistics-details summary").click();
-    assert.ok(await page.locator(".statistics-details table").isVisible());
+    await page.locator(".statistics-details summary").first().click();
+    assert.ok(await page.locator(".statistics-details table").first().isVisible());
     const monthlyMatches = await page.evaluate(() => {
       const data = statisticsCache.get("all").data;
       return collectionTrendPoints(data).reduce((sum, point) => sum + (point.count || 0), 0) === data.total;
@@ -82,6 +106,7 @@ fs.mkdirSync(output, { recursive: true });
     assert.ok((await page.locator("#statisticsContent").innerText()).includes("집계 중"));
     assert.equal(await page.locator(".publisher-table").count(), 0);
     assert.equal(await page.locator(".category-table").count(), 0);
+    assert.equal(await page.locator(".category-change-table").count(), 0);
     await page.unroute("**/api/collection-statistics?*");
 
     await page.route("**/api/collection-statistics?*", route => route.fulfill({ json: {
@@ -93,6 +118,17 @@ fs.mkdirSync(output, { recursive: true });
     assert.ok((await page.locator("#statisticsContent").innerText()).includes("카테고리 집계 중"));
     assert.ok(await page.locator(".publisher-table").isVisible(), "Category migration must not hide ready publisher statistics.");
     assert.equal(await page.locator(".category-table").count(), 0);
+    assert.equal(await page.locator(".category-change-table").count(), 0);
+    await page.unroute("**/api/collection-statistics?*");
+
+    await page.route("**/api/collection-statistics?*", route => route.fulfill({ json: {
+      ...sample, period: "all", publisherTrends: [], isCategoryComparisonReady: false
+    } }));
+    await page.locator("#statisticsRefresh").click();
+    await page.waitForFunction(() => document.querySelector("#statisticsContent").getAttribute("aria-busy") === "false");
+    assert.equal(await page.locator("#statisticsPublisher").count(), 0);
+    assert.equal(await page.locator(".category-change-table").count(), 0);
+    assert.ok((await page.locator("#publisherTrendContent").innerText()).includes("데이터가 없습니다"));
     await page.unroute("**/api/collection-statistics?*");
 
     await page.route("**/api/collection-statistics?*", route => route.fulfill({ json: {
@@ -120,7 +156,7 @@ fs.mkdirSync(output, { recursive: true });
     await page.waitForFunction(() => statisticsCache.has("30"));
     assert.ok((await page.locator("#collection-trend-title").innerText()).startsWith("월별"), "Stale response replaced the selected period.");
     assert.deepEqual(errors, []);
-    console.log("PASS: statistics periods, publisher/category shares, monthly totals, 1440/820/390/375/320px layout, charts, error recovery, legacy/partial/zero caches and stale-response protection");
+    console.log("PASS: periods, publisher/category shares and changes, publisher trends without requests, monthly totals, 1440/820/390/375/320px layout, error recovery, legacy/partial/zero caches and stale responses");
   } finally {
     await browser.close();
   }
