@@ -79,6 +79,7 @@ function updateDailySummaryAddress(date) {
 
 function getSummaryProviderLabel(summary) {
   if (!summary) return "로컬 요약";
+  if (summary.provider === "manual" && summary.model === "\uB2F7\uCE20 \uD074\uB77C\uC6B0\uB4DC") return `AI \uC694\uC57D \u00B7 ${summary.model}`;
   if (summary.provider === "openai") return `AI 요약 · ${summary.model || "OpenAI"}`;
   if (summary.provider === "manual") return `수동 요약${summary.model ? ` · ${summary.model}` : ""}`;
   return "로컬 요약";

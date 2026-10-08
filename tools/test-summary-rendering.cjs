@@ -117,4 +117,21 @@ assert.ok(!linkHtml.includes("연결된 관련 기사를 찾지 못했습니다.
 
 const local = render(currentFeed, null, null, "사회");
 assert.ok(local.html("#weeklySummary").includes("Current news"));
-console.log("PASS: saved daily/weekly summaries across 9 categories, missing feeds, independent responses, empty state, archived links and local fallback");
+const labels = render([], daily, weekly);
+assert.equal(
+  vm.runInContext('getSummaryProviderLabel({ provider: "manual", model: "\\uB2F7\\uCE20 \\uD074\\uB77C\\uC6B0\\uB4DC" })', labels.context),
+  "AI \uC694\uC57D \u00B7 \uB2F7\uCE20 \uD074\uB77C\uC6B0\uB4DC",
+);
+assert.equal(
+  vm.runInContext('getSummaryProviderLabel({ provider: "manual", model: "Codex CLI" })', labels.context),
+  "\uC218\uB3D9 \uC694\uC57D \u00B7 Codex CLI",
+);
+assert.equal(
+  vm.runInContext('getSummaryProviderLabel({ provider: "manual", model: "Other model" })', labels.context),
+  "\uC218\uB3D9 \uC694\uC57D \u00B7 Other model",
+);
+assert.equal(
+  vm.runInContext('getSummaryProviderLabel({ provider: "openai", model: "GPT test" })', labels.context),
+  "AI \uC694\uC57D \u00B7 GPT test",
+);
+console.log("PASS: saved daily/weekly summaries across 9 categories, missing feeds, independent responses, empty state, archived links, local fallback and summary provider labels");

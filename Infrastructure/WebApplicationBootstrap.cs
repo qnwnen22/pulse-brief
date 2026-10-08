@@ -24,6 +24,10 @@ public static class WebApplicationBootstrap
         builder.Services.AddSingleton<AdminContentService>();
         builder.Services.AddSingleton<AdminFeedService>();
         builder.Services.AddSingleton<ArticleMaintenanceService>();
+        builder.Services.AddHttpClient("cloudflare-access-jwks", client => client.Timeout = TimeSpan.FromSeconds(5));
+        builder.Services.AddSingleton(provider => new CloudflareAccessJwtAuthenticator(
+            provider.GetRequiredService<IConfiguration>(),
+            provider.GetRequiredService<IHttpClientFactory>().CreateClient("cloudflare-access-jwks")));
         configure?.Invoke(builder);
         if (builder.Configuration.GetValue("Collector:EnableInWebHost", false))
         {
@@ -33,6 +37,19 @@ public static class WebApplicationBootstrap
         var app = builder.Build();
         _ = app.Services.GetRequiredService<ApplicationLifetimeInfo>();
         app.UseMiddleware<SecurityHeadersMiddleware>();
+        var manualSummaryMcpEnabled = CloudflareAccessJwtAuthenticator.IsEnabled(app.Configuration);
+        if (manualSummaryMcpEnabled)
+            ManualSummaryMcpEndpoint.Map(app, CloudflareAccessJwtAuthenticator.ReadSettings(app.Configuration));
+        else
+            app.Use(async (context, next) =>
+            {
+                if (string.Equals(context.Request.Path.Value, "/mcp", StringComparison.OrdinalIgnoreCase))
+                {
+                    context.Response.StatusCode = StatusCodes.Status404NotFound;
+                    return;
+                }
+                await next(context);
+            });
         app.UseDefaultFiles();
         app.UseStaticFiles();
         app.MapControllers();

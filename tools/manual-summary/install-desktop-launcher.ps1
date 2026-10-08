@@ -30,6 +30,7 @@ $config.NodePath = $node
 $config.SshPath = $ssh
 $config.CodexPath = $codex
 if (-not $config.Contains('MaxArticles')) { $config.MaxArticles = 10000 }
+if (-not $config.Contains('CodexTimeoutMinutes')) { $config.CodexTimeoutMinutes = 30 }
 [IO.File]::WriteAllText($configPath, ($config | ConvertTo-Json -Depth 5), (New-Object Text.UTF8Encoding($false)))
 
 $desktop = [Environment]::GetFolderPath('Desktop')

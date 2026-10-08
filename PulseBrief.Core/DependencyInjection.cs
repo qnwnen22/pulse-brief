@@ -18,6 +18,7 @@ public static class DependencyInjection
         services.AddSingleton<BriefGenerator>();
         services.AddHttpClient<OpenAiDailySummaryClient>();
         services.AddSingleton<DailySummaryService>();
+        services.AddSingleton<ManualSummaryMcpService>();
         services.AddSingleton<SummaryLinkService>();
         services.AddSingleton<PipelineRunTracker>();
         services.AddSingleton<OperationalLogService>();

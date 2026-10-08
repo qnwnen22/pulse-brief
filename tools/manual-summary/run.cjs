@@ -6,6 +6,15 @@ const publication = require("./publication.cjs");
 const { validateSummaryKey } = require("./periods.cjs");
 const root = path.resolve(__dirname, "../..");
 const { requireThat, hash, readJson, writeJson } = core;
+const defaultCodexTimeoutMinutes = 30;
+const reductionCharacterLimit = 240000;
+const reductionBatchTarget = 180000;
+
+function codexTimeoutMilliseconds(config) {
+  const minutes = config.CodexTimeoutMinutes ?? defaultCodexTimeoutMinutes;
+  requireThat(Number.isInteger(minutes) && minutes >= 15 && minutes <= 60, "Codex 실행 시간 제한 설정 오류");
+  return minutes * 60 * 1000;
+}
 
 function loadConfig(file) {
   requireThat(fs.existsSync(file), "실행 도구 설정이 없습니다. install-desktop-launcher.ps1을 먼저 실행해 주세요.");
@@ -17,6 +26,8 @@ function loadConfig(file) {
   for (const key of ["SshPath", "CodexPath"]) requireThat(path.isAbsolute(config[key]) && fs.existsSync(config[key]), `${key} 실행 파일을 찾을 수 없습니다. 설치 도구를 다시 실행해 주세요.`);
   config.MaxArticles ??= 10000;
   requireThat(Number.isInteger(config.MaxArticles) && config.MaxArticles > 0 && config.MaxArticles <= 50000, "기사 상한 설정 오류");
+  config.CodexTimeoutMinutes ??= defaultCodexTimeoutMinutes;
+  codexTimeoutMilliseconds(config);
   publication.siteUrl(config);
   return config;
 }
@@ -149,7 +160,7 @@ async function askCodex(config, directory, label, prompt, schema, validate, log)
   writeJson(stem + ".started.json", { label, fingerprint, startedAt: new Date().toISOString() });
   log(`${label}: Codex 처리 중`);
   await processRun(config.CodexPath, codexArgs(stem + ".schema.json", responseFile), {
-    input: prompt, timeout: 900000, cwd: directory, env: codexEnvironment(), logPath: stem + ".log"
+    input: prompt, timeout: codexTimeoutMilliseconds(config), cwd: directory, env: codexEnvironment(), logPath: stem + ".log"
   });
   requireThat(fs.existsSync(responseFile), "Codex 결과 파일이 없습니다. 자동 재시도하지 않습니다.");
   const result = validate(readJson(responseFile));
@@ -160,10 +171,91 @@ const editorial = "You are writing a Korean news briefing from stored news, not 
 function mapPrompt(date, batch) {
   return `${editorial}\nDate: ${date} (Asia/Seoul). Classify and cluster EVERY article into exactly one topic, including low-interest singleton articles. articleKeys must contain EVERY input key exactly once across all topics, with no invented or repeated keys. Use only these categories: ${core.categories.join(", ")}. Give each topic a specific title, short factual summary and up to 5 keywords.\n<news_data>${JSON.stringify(batch)}</news_data>`;
 }
+function reductionData(topics) {
+  return topics.map(topic => {
+    const { articleKeys, originalTopicKeys, articleCount, ...rest } = topic;
+    const count = articleCount ?? articleKeys?.length;
+    requireThat(Number.isInteger(count) && count > 0, "이슈 기사 수 형식 오류");
+    return { ...rest, articleCount: count };
+  });
+}
+function reductionSize(topics) { return JSON.stringify(reductionData(topics)).length; }
 function reducePrompt(date, category, topics) {
-  const data = topics.map(({ articleKeys, ...topic }) => ({ ...topic, articleCount: articleKeys.length }));
-  requireThat(JSON.stringify(data).length <= 240000, `${category}: 이슈 자료가 처리 상한을 초과했습니다. 일부를 버리고 요약하지 않습니다.`);
+  const data = reductionData(topics);
+  requireThat(JSON.stringify(data).length <= reductionCharacterLimit, `${category}: 이슈 자료가 처리 상한을 초과했습니다. 일부를 버리고 요약하지 않습니다.`);
   return `${editorial}\nDate: ${date}, category: ${category}. Merge topics about the same specific event into issues. topicKeys must include EVERY supplied topic key exactly once, including minor stories; do not omit or invent keys. Set featured=true for the 1 to 3 most consequential issues and false for all others. Assign score 0..100 (editorial importance, not probability). Provide a concise category summary focused on those featured issues. Avoid double-counting related reports and prefer diverse publishers. Each issue needs a short factual summary and up to 5 keywords.\n<news_data>${JSON.stringify(data)}</news_data>`;
+}
+function makeReductionBatches(topics, target = reductionBatchTarget) {
+  const batches = [];
+  let current = [];
+  for (const topic of topics) {
+    requireThat(reductionSize([topic]) <= reductionCharacterLimit, "이슈 하나의 축약 입력이 처리 상한을 초과했습니다.");
+    if (current.length && reductionSize([...current, topic]) > target) {
+      batches.push(current);
+      current = [];
+    }
+    current.push(topic);
+  }
+  if (current.length) batches.push(current);
+  return batches;
+}
+function collapseReduction(category, topics, results, layer) {
+  const byKey = new Map(topics.map(topic => [topic.key, topic]));
+  let index = 0;
+  return results.flatMap(result => result.issues.map(issue => {
+    const inputs = issue.topicKeys.map(key => byKey.get(key));
+    requireThat(inputs.every(Boolean), `${category}: 부분 요약 근거를 찾을 수 없습니다.`);
+    return {
+      title: issue.title,
+      category,
+      summary: issue.summary,
+      keywords: issue.keywords,
+      key: `r${layer}-${++index}`,
+      sources: [...new Set(inputs.flatMap(topic => topic.sources || []))],
+      articleCount: inputs.reduce((sum, topic) => sum + (topic.articleCount ?? topic.articleKeys.length), 0),
+      originalTopicKeys: inputs.flatMap(topic => topic.originalTopicKeys || [topic.key])
+    };
+  }));
+}
+function expandReduction(result, topics, originalTopics) {
+  const byKey = new Map(topics.map(topic => [topic.key, topic]));
+  const expanded = {
+    ...result,
+    issues: result.issues.map(issue => ({
+      ...issue,
+      topicKeys: issue.topicKeys.flatMap(key => {
+        const topic = byKey.get(key);
+        requireThat(topic, `최종 요약 근거를 찾을 수 없습니다: ${key}`);
+        return topic.originalTopicKeys || [topic.key];
+      })
+    }))
+  };
+  return core.validateReduction(expanded, originalTopics);
+}
+async function reduceCategory({ api, config, directory, date, category, topics, log }) {
+  if (reductionSize(topics) <= reductionCharacterLimit) {
+    return api.askCodex(config, directory, `${category} 요약`, reducePrompt(date, category, topics), core.reduceSchema, value => core.validateReduction(value, topics), log);
+  }
+
+  let working = topics.map(topic => ({ ...topic, articleCount: topic.articleKeys.length, originalTopicKeys: [topic.key] }));
+  let layer = 1;
+  while (reductionSize(working) > reductionCharacterLimit) {
+    requireThat(layer <= 4, `${category}: 계층 축약 단계가 안전 상한을 초과했습니다.`);
+    const before = reductionSize(working);
+    const batches = makeReductionBatches(working);
+    log(`${category}: 입력 상한을 넘어 ${batches.length}개 부분 요약으로 나눕니다.`);
+    const results = [];
+    for (let index = 0; index < batches.length; index++) {
+      const batch = batches[index];
+      results.push(await api.askCodex(config, directory, `${category} 부분 요약 ${layer}-${index + 1}/${batches.length}`, reducePrompt(date, category, batch), core.reduceSchema, value => core.validateReduction(value, batch), log));
+    }
+    working = collapseReduction(category, working, results, layer);
+    requireThat(reductionSize(working) < before, `${category}: 부분 요약이 입력 크기를 줄이지 못해 중단했습니다.`);
+    layer++;
+  }
+
+  const result = await api.askCodex(config, directory, `${category} 최종 요약`, reducePrompt(date, category, working), core.reduceSchema, value => core.validateReduction(value, working), log);
+  return expandReduction(result, working, topics);
 }
 async function run({ date, directory, config, canonicalFile, checkOnly = false, log = console.log, dependencies = {}, generateSummary }) {
   validateSummaryKey(date);
@@ -223,7 +315,7 @@ async function run({ date, directory, config, canonicalFile, checkOnly = false, 
   for (const category of core.categories) {
     const ownTopics = topics.filter(topic => topic.category === category);
     if (!ownTopics.length) continue;
-    reductions[category] = await api.askCodex(config, directory, `${category} 요약`, reducePrompt(date, category, ownTopics), core.reduceSchema, value => core.validateReduction(value, ownTopics), log);
+    reductions[category] = await reduceCategory({ api, config, directory, date, category, topics: ownTopics, log });
   }
   return deploy(core.buildDraft(date, articles, topics, reductions));
 }
@@ -235,5 +327,5 @@ async function main(args) {
   writeJson(path.join(directory, "result.json"), result);
   console.log(JSON.stringify(result));
 }
-module.exports = { root, loadConfig, processRun, readRemote, checkRemote, publishSummary, exportArticles, codexArgs, askCodex, run, mapPrompt, reducePrompt };
+module.exports = { root, loadConfig, processRun, readRemote, checkRemote, publishSummary, exportArticles, codexArgs, codexTimeoutMilliseconds, askCodex, run, mapPrompt, reducePrompt, makeReductionBatches, reduceCategory };
 if (require.main === module) main(process.argv.slice(2)).catch(error => { console.error(`중단: ${error.message}`); process.exitCode = 1; });

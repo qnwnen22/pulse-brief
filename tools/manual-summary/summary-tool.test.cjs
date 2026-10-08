@@ -183,6 +183,38 @@ test("model invocations disable shell, plugins, hooks and web search", () => {
   for (const flag of ["--sandbox read-only", "--ignore-user-config", "--ignore-rules", "--disable shell_tool", "--disable plugins", "--disable hooks", 'web_search="disabled"']) assert.ok(args.includes(flag));
   assert.ok(!args.includes("dangerously"));
 });
+test("Codex requests allow large category reductions without an unbounded timeout", () => {
+  assert.equal(launcher.codexTimeoutMilliseconds({}), 30 * 60 * 1000);
+  assert.equal(launcher.codexTimeoutMilliseconds({ CodexTimeoutMinutes: 15 }), 15 * 60 * 1000);
+  assert.throws(() => launcher.codexTimeoutMilliseconds({ CodexTimeoutMinutes: 14 }), /시간 제한 설정 오류/);
+  assert.throws(() => launcher.codexTimeoutMilliseconds({ CodexTimeoutMinutes: 61 }), /시간 제한 설정 오류/);
+  assert.throws(() => launcher.codexTimeoutMilliseconds({ CodexTimeoutMinutes: 30.5 }), /시간 제한 설정 오류/);
+});
+test("large categories are reduced hierarchically without dropping topic evidence", async () => {
+  const topics = Array.from({ length: 110 }, (_, index) => ({
+    title: `경제 이슈 ${index + 1}`,
+    category: "경제/산업",
+    summary: "경제 자료 ".repeat(450),
+    articleKeys: [`a${index + 1}`],
+    keywords: ["경제"],
+    key: `t${index + 1}`,
+    sources: [`언론사 ${index + 1}`]
+  }));
+  const labels = [];
+  const api = { askCodex: async (config, directory, label, prompt, schema, validate) => {
+    labels.push(label);
+    const data = JSON.parse(prompt.match(/<news_data>([\s\S]+)<\/news_data>/)[1]);
+    return validate({
+      summary: `${label} 결과`,
+      issues: data.map((topic, index) => ({ title: topic.title, summary: "검증된 요약", topicKeys: [topic.key], keywords: topic.keywords, score: 50, featured: index === 0 }))
+    });
+  } };
+  const result = await launcher.reduceCategory({ api, config: {}, directory: "unused", date, category: "경제/산업", topics, log: () => {} });
+  assert.ok(labels.some(label => label.includes("부분 요약")));
+  assert.equal(labels.at(-1), "경제/산업 최종 요약");
+  assert.deepEqual(result.issues.flatMap(issue => issue.topicKeys).sort(), topics.map(topic => topic.key).sort());
+  assert.equal(result.issues.filter(issue => issue.featured).length, 1);
+});
 function mongoFixture({ exists = false, count = 2, maxArticles = 10, summaryIndex = true, dateIndex = true } = {}) {
   const calls = [], records = [];
   function cursor(items) {

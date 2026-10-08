@@ -8,6 +8,9 @@
     <ProjectReference Include="PulseBrief.Core\PulseBrief.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.23.0" />
+  </ItemGroup>
+  <ItemGroup>
     <Compile Remove="PulseBrief.Core\**\*;PulseBrief.Collector\**\*;PulseBrief.Tests\**\*;publish\**\*;backups\**\*;data\**\*;reports\**\*" />
     <Content Remove="PulseBrief.Core\**\*;PulseBrief.Collector\**\*;PulseBrief.Tests\**\*;publish\**\*;backups\**\*;manual-summaries\**\*;data\**\*;reports\**\*" />
     <None Remove="PulseBrief.Core\**\*;PulseBrief.Collector\**\*;PulseBrief.Tests\**\*;publish\**\*;backups\**\*;data\**\*;reports\**\*" />

@@ -15,6 +15,12 @@ public interface IArticleStore
 
     Task<List<Article>> ReadArticlesByIdsAsync(IReadOnlyCollection<string> ids);
 
+    Task<long> CountArticlesForManualSummaryAsync(DateOnly date, DateTimeOffset snapshotAt, CancellationToken cancellationToken = default);
+
+    IAsyncEnumerable<Article> StreamArticlesForManualSummaryAsync(
+        DateOnly date, DateTimeOffset snapshotAt, DateTimeOffset? afterPublishedAt, string? afterId,
+        int limit, CancellationToken cancellationToken = default);
+
     /// <summary>공개 화면에 표시할 캐시된 뉴스 통계를 조회합니다.</summary>
     Task<NewsStats?> ReadNewsStatsAsync(CancellationToken cancellationToken = default);
 
@@ -33,6 +39,8 @@ public interface IArticleStore
     /// <summary>일간 또는 주간 요약 문서를 저장하거나 갱신합니다.</summary>
     Task SaveDailySummaryAsync(DailyIssueSummary summary);
 
+    Task<DailySummaryInsertResult> TryInsertManualDailySummaryAsync(DailyIssueSummary summary, CancellationToken cancellationToken = default);
+
     /// <summary>기사 목록을 저장하거나 기존 기사 문서를 갱신합니다.</summary>
     Task SaveArticlesAsync(IReadOnlyCollection<Article> articles);
 
@@ -42,3 +50,5 @@ public interface IArticleStore
     /// <summary>RSS로 새로 수집한 기사를 기존 데이터와 병합하고 전체 기사 목록을 반환합니다.</summary>
     Task<List<Article>> UpsertArticlesAsync(IReadOnlyCollection<Article> incoming);
 }
+
+public sealed record DailySummaryInsertResult(DailyIssueSummary Summary, bool Inserted);

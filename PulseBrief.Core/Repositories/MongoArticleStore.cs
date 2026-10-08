@@ -88,6 +88,89 @@ public sealed class MongoArticleStore : IArticleStore
             .ToListAsync();
     }
 
+    public async Task<long> CountArticlesForManualSummaryAsync(
+        DateOnly date, DateTimeOffset snapshotAt, CancellationToken cancellationToken = default)
+    {
+        await EnsureInitializedAsync();
+        await EnsureManualSummaryDateIndexAsync(cancellationToken);
+        return await _articles.CountDocumentsAsync(
+            BuildManualSummaryFilter(date, snapshotAt),
+            new CountOptions { MaxTime = TimeSpan.FromSeconds(15) },
+            cancellationToken);
+    }
+
+    public async IAsyncEnumerable<Article> StreamArticlesForManualSummaryAsync(
+        DateOnly date, DateTimeOffset snapshotAt, DateTimeOffset? afterPublishedAt, string? afterId, int limit,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        if (limit is < 1 or > 10001) throw new ArgumentOutOfRangeException(nameof(limit));
+        if (afterPublishedAt.HasValue != !string.IsNullOrWhiteSpace(afterId))
+            throw new ArgumentException("Both cursor sort fields must be supplied together.");
+        await EnsureInitializedAsync();
+        await EnsureManualSummaryDateIndexAsync(cancellationToken);
+
+        var filter = BuildManualSummaryFilter(date, snapshotAt);
+        if (afterPublishedAt is { } lastPublishedAt && !string.IsNullOrWhiteSpace(afterId))
+        {
+            var publishedAt = new StringFieldDefinition<Article, DateTime>("PublishedAt.DateTime");
+            filter &= Builders<Article>.Filter.Lt(publishedAt, lastPublishedAt.UtcDateTime)
+                | (Builders<Article>.Filter.Eq(publishedAt, lastPublishedAt.UtcDateTime)
+                    & Builders<Article>.Filter.Lt(article => article.Id, afterId));
+        }
+        var projection = Builders<Article>.Projection
+            .Include(article => article.Id)
+            .Include(article => article.Title)
+            .Include(article => article.Url)
+            .Include(article => article.Source)
+            .Include(article => article.Author)
+            .Include(article => article.Summary)
+            .Include(article => article.Content)
+            .Include(article => article.PublishedAt)
+            .Include(article => article.FirstSeenAt);
+        var options = new FindOptions<Article, Article>
+        {
+            BatchSize = 1,
+            Hint = new MongoDB.Bson.BsonString("PublishedAt_DateTime_-1"),
+            Limit = limit,
+            MaxTime = TimeSpan.FromSeconds(15),
+            Projection = projection,
+            Sort = Builders<Article>.Sort.Descending("PublishedAt.DateTime").Descending(article => article.Id)
+        };
+        using var cursor = await _articles.FindAsync(filter, options, cancellationToken);
+        while (await cursor.MoveNextAsync(cancellationToken))
+        {
+            foreach (var article in cursor.Current)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                yield return article;
+            }
+        }
+    }
+
+    private async Task EnsureManualSummaryDateIndexAsync(CancellationToken cancellationToken)
+    {
+        var articleIndexes = await _articles.Indexes.ListAsync(cancellationToken);
+        var hasPublishedDateIndex = (await articleIndexes.ToListAsync(cancellationToken)).Any(index =>
+        {
+            if (!index.TryGetValue("key", out var key) || !key.IsBsonDocument) return false;
+            var fields = key.AsBsonDocument;
+            return fields.ElementCount == 1 && fields.TryGetValue("PublishedAt.DateTime", out var direction) && direction.ToInt32() != 0;
+        });
+        if (!hasPublishedDateIndex) throw new InvalidOperationException("PublishedAt.DateTime index missing; refusing a collection scan.");
+    }
+
+    private static FilterDefinition<Article> BuildManualSummaryFilter(DateOnly date, DateTimeOffset snapshotAt)
+    {
+        var start = KoreaDate.StartOfDay(date).UtcDateTime;
+        var end = KoreaDate.StartOfDay(date.AddDays(1)).UtcDateTime;
+        var publishedAt = new StringFieldDefinition<Article, DateTime>("PublishedAt.DateTime");
+        var firstSeenAt = new StringFieldDefinition<Article, DateTime>("FirstSeenAt.DateTime");
+        return Builders<Article>.Filter.Gte(publishedAt, start)
+            & Builders<Article>.Filter.Lt(publishedAt, end)
+            & Builders<Article>.Filter.Lte(firstSeenAt, snapshotAt.UtcDateTime)
+            & Builders<Article>.Filter.Ne(article => article.IsExcluded, true);
+    }
+
     public async Task<NewsStats?> ReadNewsStatsAsync(CancellationToken cancellationToken = default)
     {
         await EnsureInitializedAsync();
@@ -166,6 +249,36 @@ public sealed class MongoArticleStore : IArticleStore
             item => item.Date == summary.Date,
             summary,
             new ReplaceOptions { IsUpsert = true });
+    }
+
+    public async Task<DailySummaryInsertResult> TryInsertManualDailySummaryAsync(DailyIssueSummary summary, CancellationToken cancellationToken = default)
+    {
+        await EnsureInitializedAsync();
+        var summaryIndexes = await _summaries.Indexes.ListAsync(cancellationToken);
+        var hasUniqueDateIndex = (await summaryIndexes.ToListAsync(cancellationToken)).Any(index =>
+        {
+            if (!index.TryGetValue("unique", out var unique) || !unique.IsBoolean || !unique.AsBoolean
+                || index.Contains("partialFilterExpression")
+                || !index.TryGetValue("key", out var key) || !key.IsBsonDocument) return false;
+            var fields = key.AsBsonDocument;
+            return fields.ElementCount == 1 && fields.TryGetValue("Date", out var direction) && direction.ToInt32() == 1;
+        });
+        if (!hasUniqueDateIndex) throw new InvalidOperationException("Unique summary Date index missing; refusing manual publication.");
+
+        var existing = await _summaries.Find(item => item.Date == summary.Date).FirstOrDefaultAsync(cancellationToken);
+        if (existing is not null) return new DailySummaryInsertResult(existing, false);
+
+        try
+        {
+            await _summaries.InsertOneAsync(summary, cancellationToken: cancellationToken);
+            return new DailySummaryInsertResult(summary, true);
+        }
+        catch (MongoWriteException error) when (error.WriteError?.Category == ServerErrorCategory.DuplicateKey)
+        {
+            existing = await _summaries.Find(item => item.Date == summary.Date).FirstOrDefaultAsync(cancellationToken);
+            if (existing is null) throw;
+            return new DailySummaryInsertResult(existing, false);
+        }
     }
 
     /// <summary>기사 문서 목록을 id 기준으로 upsert합니다.</summary>

@@ -19,6 +19,9 @@ public sealed class FakeArticleStore : IArticleStore
     public Dictionary<string, DailyIssueSummary> Summaries { get; } = new();
     public int FullReads { get; private set; }
     public int SummaryWrites { get; private set; }
+    public int ManualSummaryInserts { get; private set; }
+    public int ManualArticleRangeReads { get; private set; }
+    public int ManualArticleRowsYielded { get; private set; }
     public int LargestIdLookup { get; private set; }
     public bool FailLinkLookup { get; set; }
 
@@ -54,6 +57,35 @@ public sealed class FakeArticleStore : IArticleStore
         if (FailLinkLookup) throw new InvalidOperationException("Simulated link lookup failure");
         return Task.FromResult(Articles.Where(article => ids.Contains(article.Id)).ToList());
     }
+    public Task<long> CountArticlesForManualSummaryAsync(DateOnly date, DateTimeOffset snapshotAt, CancellationToken cancellationToken = default)
+    {
+        var start = KoreaDate.StartOfDay(date);
+        var count = Articles.LongCount(article => !article.IsExcluded && article.PublishedAt >= start && article.PublishedAt < start.AddDays(1)
+            && article.FirstSeenAt <= snapshotAt);
+        return Task.FromResult(count);
+    }
+
+    public async IAsyncEnumerable<Article> StreamArticlesForManualSummaryAsync(DateOnly date, DateTimeOffset snapshotAt,
+        DateTimeOffset? afterPublishedAt, string? afterId, int limit,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        ManualArticleRangeReads++;
+        var start = KoreaDate.StartOfDay(date);
+        var rows = Articles.Where(article => !article.IsExcluded && article.PublishedAt >= start && article.PublishedAt < start.AddDays(1)
+                && article.FirstSeenAt <= snapshotAt
+                && (!afterPublishedAt.HasValue || article.PublishedAt < afterPublishedAt.Value
+                    || (article.PublishedAt == afterPublishedAt.Value && string.CompareOrdinal(article.Id, afterId) < 0)))
+            .OrderByDescending(article => article.PublishedAt)
+            .ThenByDescending(article => article.Id, StringComparer.Ordinal)
+            .Take(limit);
+        foreach (var row in rows)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            ManualArticleRowsYielded++;
+            yield return row;
+            await Task.Yield();
+        }
+    }
     public Task<NewsStats?> ReadNewsStatsAsync(CancellationToken cancellationToken = default) => Task.FromResult<NewsStats?>(new NewsStats { TodayDate = KoreaDate.Key(KoreaDate.Today()), TodayArticleCount = Articles.Count });
     public async Task<NewsStats> RefreshNewsStatsAsync(CancellationToken cancellationToken = default) => (await ReadNewsStatsAsync(cancellationToken))!;
     public Task<DailyIssueSummary?> ReadDailySummaryAsync(string date) => Task.FromResult(Summaries.GetValueOrDefault(date));
@@ -64,6 +96,13 @@ public sealed class FakeArticleStore : IArticleStore
         .ToList());
     public Task<List<DailyIssueSummary>> ReadDailySummariesAsync() => Task.FromResult(Summaries.Values.ToList());
     public Task SaveDailySummaryAsync(DailyIssueSummary summary) { SummaryWrites++; Summaries[summary.Date] = summary; return Task.CompletedTask; }
+    public Task<DailySummaryInsertResult> TryInsertManualDailySummaryAsync(DailyIssueSummary summary, CancellationToken cancellationToken = default)
+    {
+        if (Summaries.TryGetValue(summary.Date, out var existing)) return Task.FromResult(new DailySummaryInsertResult(existing, false));
+        Summaries.Add(summary.Date, summary);
+        ManualSummaryInserts++;
+        return Task.FromResult(new DailySummaryInsertResult(summary, true));
+    }
     public Task SaveArticlesAsync(IReadOnlyCollection<Article> articles) => Task.CompletedTask;
     public Task SaveGroupsAsync(IReadOnlyCollection<ArticleGroup> groups) => Task.CompletedTask;
     public Task<List<Article>> UpsertArticlesAsync(IReadOnlyCollection<Article> incoming) => Task.FromResult(Articles);
