@@ -24,6 +24,8 @@ public sealed class CollectionStatisticsService(ICollectionStatisticsStore store
         var byDate = days.ToDictionary(day => day.Id, StringComparer.Ordinal);
         var trend = new List<CollectionTrendPoint>();
         var publishers = new Dictionary<string, long>(StringComparer.Ordinal);
+        var categories = ArticleCategoryClassifier.Categories.ToDictionary(category => category, _ => 0L, StringComparer.Ordinal);
+        var categoryCompletedDays = 0;
         var length = today.DayNumber - from.DayNumber;
         for (var date = from; date < today; date = date.AddDays(1))
         {
@@ -31,9 +33,13 @@ public sealed class CollectionStatisticsService(ICollectionStatisticsStore store
             trend.Add(new(KoreaDate.Key(date), day?.IsComplete == true ? day.ArticleCount : null));
             if (day?.IsComplete != true) continue;
             foreach (var (name, count) in day.Publishers) publishers[name] = publishers.GetValueOrDefault(name) + count;
+            if (!HasCurrentCategories(day)) continue;
+            categoryCompletedDays++;
+            foreach (var (name, count) in day.Categories) categories[name] += count;
         }
         var ready = length > 0 && trend.All(point => point.Count.HasValue);
         var total = ready ? trend.Sum(point => point.Count!.Value) : (long?)null;
+        var categoriesReady = ready && categoryCompletedDays == length;
         long? previousTotal = null;
         if (period != "all" && length > 0 && from.AddDays(-length) >= firstDate)
         {
@@ -50,8 +56,18 @@ public sealed class CollectionStatisticsService(ICollectionStatisticsStore store
             ChangePercent = ready && previousTotal > 0 ? Math.Round((total!.Value - previousTotal.Value) * 100d / previousTotal.Value, 1) : null,
             UpdatedAt = days.Count > 0 ? days.Max(day => day.UpdatedAt) : null,
             Trend = trend,
-            Publishers = ready ? publishers.OrderByDescending(pair => pair.Value).ThenBy(pair => pair.Key, StringComparer.Ordinal)
-                .Select(pair => new CollectionPublisherShare(pair.Key, pair.Value, total > 0 ? Math.Round(pair.Value * 100d / total.Value, 1) : 0)).ToList() : []
+            Publishers = ready ? BuildShares(publishers, total!.Value, (name, count, share) => new CollectionPublisherShare(name, count, share)) : [],
+            AreCategoriesReady = categoriesReady, CategoryCompletedDays = categoryCompletedDays,
+            Categories = categoriesReady ? BuildShares(categories, total!.Value, (name, count, share) => new CollectionCategoryShare(name, count, share)) : []
         };
     }
+
+    public static bool HasCurrentCategories(CollectionDayStatistics day) =>
+        day.CategoryVersion == ArticleCategoryClassifier.StatisticsVersion
+        && day.Categories.All(pair => pair.Value >= 0 && ArticleCategoryClassifier.Categories.Contains(pair.Key, StringComparer.Ordinal))
+        && day.Categories.Values.Sum() == day.ArticleCount;
+
+    private static List<T> BuildShares<T>(Dictionary<string, long> counts, long total, Func<string, long, double, T> create) =>
+        counts.OrderByDescending(pair => pair.Value).ThenBy(pair => pair.Key, StringComparer.Ordinal)
+            .Select(pair => create(pair.Key, pair.Value, total > 0 ? Math.Round(pair.Value * 100d / total, 1) : 0)).ToList();
 }

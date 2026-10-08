@@ -98,6 +98,8 @@ try
         var collectionStats = await Request(client, "GET", $"/api/collection-statistics?period={period}", 200);
         Check(collectionStats!["isReady"]!.GetValue<bool>(), "Completed statistics cache was not ready.");
         Check(collectionStats["todayCount"]!.GetValue<int>() == 5, "Today's provisional collection count changed.");
+        Check(collectionStats["areCategoriesReady"]!.GetValue<bool>() && collectionStats["categories"]!.AsArray().Count == 9, "Category statistics contract is incomplete.");
+        Check(collectionStats["categories"]!.AsArray().Sum(item => item!["count"]!.GetValue<long>()) == collectionStats["total"]!.GetValue<long>(), "Category API totals differ from stored article totals.");
     }
     await Request(client, "GET", "/api/collection-statistics?period=invalid", 400);
     await Request(client, "GET", "/api/collection-statistics?period=999999", 400);

@@ -17,7 +17,11 @@ public sealed class CollectionStatisticsResponse
     public DateTimeOffset? UpdatedAt { get; set; }
     public List<CollectionTrendPoint> Trend { get; set; } = [];
     public List<CollectionPublisherShare> Publishers { get; set; } = [];
+    public bool AreCategoriesReady { get; set; }
+    public int CategoryCompletedDays { get; set; }
+    public List<CollectionCategoryShare> Categories { get; set; } = [];
 }
 
 public sealed record CollectionTrendPoint(string Date, long? Count);
 public sealed record CollectionPublisherShare(string Publisher, long Count, double Share);
+public sealed record CollectionCategoryShare(string Category, long Count, double Share);

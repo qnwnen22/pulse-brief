@@ -64,6 +64,16 @@ function collectionTrendPoints(data) {
   return [...months.values()];
 }
 
+function renderStatisticsShareSection({ id, title, label, labelKey, items, isReady, note, pendingText }) {
+  return `<section class="statistics-section" aria-labelledby="${id}-share-title">
+    <div class="section-head compact"><h2 id="${id}-share-title">${escapeHtml(title)}</h2><span class="statistics-unit">저장 기사 기준</span></div>
+    ${!isReady ? `<p class="statistics-status" role="status">${escapeHtml(pendingText)}</p>`
+      : !items.length ? '<p class="statistics-status">해당 기간에 수집된 기사가 없습니다.</p>'
+      : `<div class="statistics-table-scroll"><table class="statistics-table statistics-share-table ${id}-table"><thead><tr><th scope="col">${escapeHtml(label)}</th><th scope="col">수집 기사</th><th scope="col">비중</th></tr></thead><tbody>${items.map(item => `<tr><th scope="row">${escapeHtml(item[labelKey])}</th><td>${statisticsNumber(item.count)}건</td><td><div class="statistics-share"><span class="statistics-share-track" aria-hidden="true"><span style="width:${Math.max(0, Math.min(100, item.share))}%"></span></span><span>${statisticsNumber(item.share, 1)}%</span></div></td></tr>`).join("")}</tbody></table></div>`}
+    <p class="statistics-meta">${escapeHtml(note)}</p>
+  </section>`;
+}
+
 function renderCollectionStatistics(data) {
   const content = document.querySelector("#statisticsContent");
   if (!content) return;
@@ -99,10 +109,16 @@ function renderCollectionStatistics(data) {
       </div>
       <details class="statistics-details"><summary>수집 추이 상세</summary><div class="statistics-table-scroll"><table class="statistics-table"><thead><tr><th scope="col">날짜</th><th scope="col">수집 기사</th></tr></thead><tbody>${points.map(point => `<tr><th scope="row">${escapeHtml(point.date)}</th><td>${statisticsNumber(point.count)}건</td></tr>`).join("")}</tbody></table></div></details>
     </section>
-    <section class="statistics-section" aria-labelledby="publisher-share-title">
-      <div class="section-head compact"><h2 id="publisher-share-title">언론사 비중</h2><span class="statistics-unit">저장 기사 기준</span></div>
-      ${!ready ? '<p class="statistics-status">기간 집계 완료 후 표시됩니다.</p>' : !data.publishers.length ? '<p class="statistics-status">해당 기간에 수집된 기사가 없습니다.</p>' : `<div class="statistics-table-scroll"><table class="statistics-table publisher-table"><thead><tr><th scope="col">언론사</th><th scope="col">수집 기사</th><th scope="col">비중</th></tr></thead><tbody>${data.publishers.map(item => `<tr><th scope="row">${escapeHtml(item.publisher)}</th><td>${statisticsNumber(item.count)}건</td><td><div class="statistics-share"><span class="statistics-share-track" aria-hidden="true"><span style="width:${Math.max(0, Math.min(100, item.share))}%"></span></span><span>${statisticsNumber(item.share, 1)}%</span></div></td></tr>`).join("")}</tbody></table></div>`}
-      <p class="statistics-meta">Pulse Brief에 저장된 기사 내 비중이며 언론사 시장 점유율이 아닙니다.</p>
-    </section>
+    <div class="statistics-breakdowns">
+      ${renderStatisticsShareSection({
+        id: "publisher", title: "언론사 비중", label: "언론사", labelKey: "publisher", items: data.publishers, isReady: ready,
+        pendingText: "기간 집계 완료 후 표시됩니다.", note: "Pulse Brief에 저장된 기사 내 비중이며 언론사 시장 점유율이 아닙니다."
+      })}
+      ${renderStatisticsShareSection({
+        id: "category", title: "카테고리 비중", label: "카테고리", labelKey: "category", items: data.categories || [], isReady: ready && data.areCategoriesReady,
+        pendingText: `카테고리 집계 중 · ${statisticsNumber(data.categoryCompletedDays || 0)} / ${statisticsNumber(data.expectedDays)}일 완료`,
+        note: "제목·RSS 요약 자동 분류. 기사당 카테고리 하나를 반영하며 뉴스 검색의 이슈 단위 분류와 다를 수 있습니다."
+      })}
+    </div>
     <p class="statistics-meta statistics-updated">집계 갱신: ${escapeHtml(updated)}</p>`;
 }

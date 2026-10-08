@@ -6,6 +6,7 @@ namespace PulseBrief;
 public sealed partial class MongoArticleStore
 {
     private const string CollectionIndex = "FirstSeenAt_statistics_1";
+    private const int StatisticsPageSize = 250;
     private readonly IMongoCollection<CollectionDayStatistics> _collectionDays;
     private readonly IMongoCollection<CollectionStatisticsState> _collectionState;
 
@@ -61,12 +62,13 @@ public sealed partial class MongoArticleStore
         var start = KoreaDate.StartOfDay(date).UtcDateTime;
         var end = KoreaDate.StartOfDay(date.AddDays(1)).UtcDateTime;
         var publishers = new Dictionary<string, long>(StringComparer.Ordinal);
+        var categories = new Dictionary<string, long>(StringComparer.Ordinal);
         DateTime? afterTime = null;
         string? afterId = null;
         long count = 0;
         while (true)
         {
-            var filter = new BsonDocument("FirstSeenAt.DateTime", new BsonDocument { { "$gte", start }, { "$lt", end } });
+            var filter = new BsonDocument("FirstSeenAt.DateTime", new BsonDocument { { "$gte", afterTime ?? start }, { "$lt", end } });
             if (afterTime is not null)
                 filter = new BsonDocument("$and", new BsonArray { filter, new BsonDocument("$or", new BsonArray
                 {
@@ -75,9 +77,14 @@ public sealed partial class MongoArticleStore
                 }) });
             var options = new FindOptions<Article, BsonDocument>
             {
-                Hint = CollectionIndex, Limit = 1000, BatchSize = 1000, MaxTime = TimeSpan.FromSeconds(5),
+                Hint = CollectionIndex, Limit = StatisticsPageSize, BatchSize = StatisticsPageSize, MaxTime = TimeSpan.FromSeconds(5),
                 Sort = new BsonDocument { { "FirstSeenAt.DateTime", 1 }, { "_id", 1 } },
-                Projection = new BsonDocument { { "_id", 1 }, { "FirstSeenAt.DateTime", 1 }, { "FeedUrl", 1 }, { "Source", 1 } }
+                Projection = new BsonDocument
+                {
+                    { "_id", 1 }, { "FirstSeenAt.DateTime", 1 }, { "FeedUrl", 1 }, { "Source", 1 },
+                    { "Title", BoundedStatisticsText("Title", ArticleCategoryClassifier.MetadataTitleLength) },
+                    { "Summary", BoundedStatisticsText("Summary", ArticleCategoryClassifier.MetadataSummaryLength) }
+                }
             };
             using var cursor = await _articles.FindAsync(filter, options, budget.Token);
             var page = await cursor.ToListAsync(budget.Token);
@@ -91,15 +98,27 @@ public sealed partial class MongoArticleStore
                 var publisher = string.IsNullOrWhiteSpace(feed) ? source : RssSourceCatalog.SourceInfoForUrl(feed).Publisher;
                 if (string.IsNullOrWhiteSpace(publisher)) publisher = "알 수 없음";
                 publishers[publisher] = publishers.GetValueOrDefault(publisher) + 1;
+                var category = ArticleCategoryClassifier.ForMetadata(source, row["Title"].AsString, row["Summary"].AsString);
+                categories[category] = categories.GetValueOrDefault(category) + 1;
             }
-            if (page.Count < 1000) break;
+            if (page.Count < StatisticsPageSize) break;
             afterTime = page[^1]["FirstSeenAt"]["DateTime"].ToUniversalTime();
             afterId = page[^1]["_id"].AsString;
         }
         var day = new CollectionDayStatistics
         {
-            Id = KoreaDate.Key(date), Publishers = publishers, ArticleCount = count, IsComplete = date < today
+            Id = KoreaDate.Key(date), Publishers = publishers, Categories = categories,
+            CategoryVersion = ArticleCategoryClassifier.StatisticsVersion, ArticleCount = count, IsComplete = date < today
         };
         await _collectionDays.ReplaceOneAsync(item => item.Id == day.Id, day, new ReplaceOptions { IsUpsert = true }, budget.Token);
     }
+
+    private static BsonDocument BoundedStatisticsText(string field, int limit) => new("$substrCP", new BsonArray
+    {
+        new BsonDocument("$cond", new BsonArray
+        {
+            new BsonDocument("$eq", new BsonArray { new BsonDocument("$type", "$" + field), "string" }), "$" + field, ""
+        }),
+        0, limit
+    });
 }

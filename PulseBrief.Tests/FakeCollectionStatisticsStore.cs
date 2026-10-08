@@ -9,7 +9,9 @@ public sealed class FakeCollectionStatisticsStore : ICollectionStatisticsStore
     {
         Id = KoreaDate.Key(KoreaDate.Today().AddDays(-offset)), IsComplete = offset > 0,
         ArticleCount = offset == 0 ? 5 : 10,
-        Publishers = new() { ["연합뉴스"] = offset == 0 ? 3 : 6, ["한겨레"] = offset == 0 ? 2 : 4 }
+        Publishers = new() { ["연합뉴스"] = offset == 0 ? 3 : 6, ["한겨레"] = offset == 0 ? 2 : 4 },
+        Categories = new() { ["정치/정책"] = offset == 0 ? 3 : 6, ["사회"] = offset == 0 ? 2 : 4 },
+        CategoryVersion = ArticleCategoryClassifier.StatisticsVersion
     }).ToList();
     public List<DateOnly> RefreshedDates { get; } = [];
     public bool FailReads { get; set; }
@@ -31,7 +33,11 @@ public sealed class FakeCollectionStatisticsStore : ICollectionStatisticsStore
     {
         RefreshedDates.Add(date);
         Days.RemoveAll(day => day.Id == KoreaDate.Key(date));
-        Days.Add(new() { Id = KoreaDate.Key(date), IsComplete = date < today, ArticleCount = 10, Publishers = new() { ["연합뉴스"] = 10 } });
+        Days.Add(new()
+        {
+            Id = KoreaDate.Key(date), IsComplete = date < today, ArticleCount = 10, Publishers = new() { ["연합뉴스"] = 10 },
+            Categories = new() { ["사회"] = 10 }, CategoryVersion = ArticleCategoryClassifier.StatisticsVersion
+        });
         return Task.CompletedTask;
     }
 }

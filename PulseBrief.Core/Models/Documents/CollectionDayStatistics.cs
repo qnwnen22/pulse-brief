@@ -7,6 +7,8 @@ public sealed class CollectionDayStatistics
 {
     public string Id { get; set; } = "";
     public Dictionary<string, long> Publishers { get; set; } = new();
+    public Dictionary<string, long> Categories { get; set; } = new();
+    public int CategoryVersion { get; set; }
     public long ArticleCount { get; set; }
     public bool IsComplete { get; set; }
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;

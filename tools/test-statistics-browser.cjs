@@ -20,7 +20,9 @@ fs.mkdirSync(output, { recursive: true });
     const sample = await page.evaluate(() => statisticsCache.get("7").data);
     assert.equal(await page.locator(".statistics-metrics .metric").count(), 4);
     assert.equal(await page.locator(".publisher-table tbody tr").count(), sample.publishers.length);
+    assert.equal(await page.locator(".category-table tbody tr").count(), sample.categories.length);
     assert.ok(sample.isReady, "Statistics cache must be complete before release QA.");
+    assert.ok(sample.areCategoriesReady, "Category statistics cache must be complete before release QA.");
     for (const [width, height] of [[1440, 1000], [820, 1180], [390, 844], [375, 812], [320, 740]]) {
       await page.setViewportSize({ width, height });
       for (const period of ["7", "30", "all"]) {
@@ -29,6 +31,13 @@ fs.mkdirSync(output, { recursive: true });
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `page overflows at ${width}, ${period}`);
         const panel = await page.locator('[data-panel="statistics"]').boundingBox();
         assert.ok(panel.x >= 0 && panel.x + panel.width <= width, `statistics panel is clipped at ${width}, ${period}`);
+        const data = await page.evaluate(period => statisticsCache.get(period).data, period);
+        assert.equal(data.categories.reduce((total, item) => total + item.count, 0), data.total, "Categories must count each article exactly once.");
+        assert.equal(await page.locator(".category-table tbody tr").count(), 9);
+        assert.ok(await page.locator(".statistics-share-table").evaluateAll(tables => tables.every(table => {
+          const box = table.getBoundingClientRect();
+          return box.left >= 0 && box.right <= innerWidth;
+        })), `share table is clipped at ${width}, ${period}`);
         assert.equal(await page.locator('#statisticsPeriods [aria-pressed="true"]').getAttribute("data-period"), period);
         assert.ok(await page.locator(".statistics-metrics .metric strong").evaluateAll(elements => elements.every(el => el.scrollWidth <= el.clientWidth)), "metric value overflows");
         assert.ok(await page.locator(".statistics-toolbar button").evaluateAll(elements => elements.every(el => el.scrollWidth <= el.clientWidth)), "period button text overflows");
@@ -72,6 +81,27 @@ fs.mkdirSync(output, { recursive: true });
     await page.locator(".statistics-bar.missing").first().waitFor();
     assert.ok((await page.locator("#statisticsContent").innerText()).includes("집계 중"));
     assert.equal(await page.locator(".publisher-table").count(), 0);
+    assert.equal(await page.locator(".category-table").count(), 0);
+    await page.unroute("**/api/collection-statistics?*");
+
+    await page.route("**/api/collection-statistics?*", route => route.fulfill({ json: {
+      ...sample, period: "all", areCategoriesReady: false, categoryCompletedDays: 6, categories: []
+    } }));
+    await page.locator("#statisticsRefresh").click();
+    await page.locator("#category-share-title").waitFor();
+    await page.waitForFunction(() => document.querySelector("#statisticsContent").getAttribute("aria-busy") === "false");
+    assert.ok((await page.locator("#statisticsContent").innerText()).includes("카테고리 집계 중"));
+    assert.ok(await page.locator(".publisher-table").isVisible(), "Category migration must not hide ready publisher statistics.");
+    assert.equal(await page.locator(".category-table").count(), 0);
+    await page.unroute("**/api/collection-statistics?*");
+
+    await page.route("**/api/collection-statistics?*", route => route.fulfill({ json: {
+      ...sample, period: "all", total: 0, dailyAverage: 0, publishers: [], categories: sample.categories.map(item => ({ ...item, count: 0, share: 0 }))
+    } }));
+    await page.locator("#statisticsRefresh").click();
+    await page.locator(".category-table").waitFor();
+    assert.ok(!(await page.locator("#statisticsContent").innerText()).includes("NaN"));
+    assert.ok(await page.locator(".category-table tbody td:last-child").evaluateAll(cells => cells.every(cell => cell.textContent.trim() === "0%")));
     await page.unroute("**/api/collection-statistics?*");
 
     await page.evaluate(() => statisticsCache.clear());
@@ -90,7 +120,7 @@ fs.mkdirSync(output, { recursive: true });
     await page.waitForFunction(() => statisticsCache.has("30"));
     assert.ok((await page.locator("#collection-trend-title").innerText()).startsWith("월별"), "Stale response replaced the selected period.");
     assert.deepEqual(errors, []);
-    console.log("PASS: statistics periods, publisher share, monthly totals, 1440/820/390/375/320px layout, chart pixels, error recovery, partial cache and stale-response protection");
+    console.log("PASS: statistics periods, publisher/category shares, monthly totals, 1440/820/390/375/320px layout, charts, error recovery, legacy/partial/zero caches and stale-response protection");
   } finally {
     await browser.close();
   }

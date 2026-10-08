@@ -575,15 +575,19 @@ h2 {
 .statistics-table th:first-child { text-align: left; overflow-wrap: anywhere; }
 .statistics-table thead th { color: var(--muted); font-size: 12px; font-weight: 600; }
 .statistics-table tbody th { font-weight: 600; }
-.publisher-table th:first-child { width: 30%; }
-.publisher-table td:nth-child(2) { white-space: nowrap; }
+.statistics-breakdowns { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 24px; }
+.statistics-breakdowns .statistics-section { min-width: 0; }
+.statistics-share-table th:first-child { width: 30%; }
+.statistics-share-table td:nth-child(2) { white-space: nowrap; }
 .statistics-share { display: flex; align-items: center; justify-content: end; gap: 10px; }
 .statistics-share > span:last-child { min-width: 48px; white-space: nowrap; }
 .statistics-share-track { display: block; width: 100%; max-width: 240px; height: 8px; background: #e6ebef; }
 .statistics-share-track > span { display: block; height: 100%; background: #bb536c; }
+.category-table .statistics-share-track > span { background: #168571; }
 .statistics-updated { margin-bottom: 0; }
 
 @media (max-width: 1050px) {
+  .statistics-breakdowns { grid-template-columns: minmax(0,1fr); gap: 0; }
   .statistics-metrics .metric-help { position: static; }
   .statistics-metrics .metric-tooltip { right: 0; width: min(260px, calc(100vw - 32px)); }
   .statistics-metrics .metric:nth-child(odd) .metric-tooltip { right: auto; left: 0; }

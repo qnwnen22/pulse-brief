@@ -81,9 +81,11 @@ PulseBrief.sln
 
 `wwwroot/js/statistics.js` → `Controllers/StatisticsController.cs` → `CollectionStatisticsService` → `ICollectionStatisticsStore` 순서입니다. 공개 조회는 날짜별 캐시만 조합합니다. 응답 모델은 Core의 `Models/Responses/CollectionStatisticsResponse.cs`, 저장 모델은 `Models/Documents/CollectionDayStatistics.cs`에 있습니다.
 
-`MongoArticleStore.Statistics.cs`는 같은 MongoDB 연결을 재사용하는 partial Repository입니다. 최초 저장 시각의 커버링 인덱스로 하루씩 제한 조회하고 본문·임베딩을 읽지 않습니다. 인덱스 준비와 최초 캐시 구축은 수집기의 `--statistics-backfill` 모드로 명시적으로 실행하며 웹/일반 수집기 시작 시 자동 수행하지 않습니다. `CollectorWorker`가 수집 성공 후 `CollectionStatisticsMaintenance`를 통해 오늘·어제와 미완료 과거 날짜 최대 1개를 갱신합니다. 이 작업은 AI/요약 생성과 무관합니다.
+`MongoArticleStore.Statistics.cs`는 같은 MongoDB 연결을 재사용하는 partial Repository입니다. 최초 저장 시각 인덱스를 강제 사용해 하루씩 최대 250건 페이지로 제한 조회하며, 카테고리 집계에 필요한 제목·RSS 요약도 서버에서 길이를 제한해 반환합니다. 본문·임베딩은 가져오지 않지만 메타데이터 필드를 얻기 위한 기사 문서 접근은 필요합니다. 인덱스 준비와 최초 캐시 구축은 수집기의 `--statistics-backfill` 모드로 명시적으로 실행하며 웹/일반 수집기 시작 시 자동 수행하지 않습니다. `CollectorWorker`가 수집 성공 후 `CollectionStatisticsMaintenance`를 통해 오늘·미완료 어제와 미완료/구버전 과거 날짜 최대 1개를 갱신합니다. 완료된 과거 캐시는 반복 조회하지 않습니다. 이 작업은 AI/요약 생성과 무관합니다.
 
-요약과 통계의 지표 표시는 공통 `format.js`의 `renderMetricCard`를 재사용합니다. 통계 기간 선택 및 차트는 통계 파일에만 있고 공통 메뉴 렌더러에는 통계 ID별 분기를 추가하지 않습니다.
+`ArticleCategoryClassifier`가 기존 카테고리 키워드 규칙을 보관합니다. 이슈 그룹은 기존대로 여러 기사의 본문까지 포함해 분류하며, 통계는 출처·제목·RSS 요약만 기사 단위로 분류합니다. 날짜별 캐시에 카테고리 버전과 기사 수를 함께 저장하고 합계가 전체 기사 수와 일치할 때만 비중을 표시합니다. 구버전 카테고리 보충 중에도 기존 수집량·언론사 통계는 사용 가능합니다.
+
+요약과 통계의 지표 표시는 공통 `format.js`의 `renderMetricCard`를 재사용합니다. 언론사·카테고리 표는 `statistics.js`의 `renderStatisticsShareSection`에 라벨과 데이터 필드만 전달하여 같은 표시 구조를 사용합니다. 통계 기간 선택 및 차트는 통계 파일에만 있고 공통 메뉴 렌더러에는 통계 ID별 분기를 추가하지 않습니다.
 
 ### 관리자
 
