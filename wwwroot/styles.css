@@ -544,6 +544,28 @@ h2 {
   display: block;
 }
 
+.statistics-content {
+  min-width: 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.statistics-empty {
+  display: grid;
+  place-items: center;
+  min-height: 240px;
+  margin: 0;
+  padding: 40px 16px;
+  color: var(--muted);
+  line-height: 1.6;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.icon-button[hidden] {
+  display: none;
+}
+
 .briefing-panel.view-panel.active {
   display: grid;
 }
@@ -1450,7 +1472,7 @@ h2 {
   }
 
   .nav-list {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .top-actions {
@@ -1530,17 +1552,20 @@ h2 {
   }
 
   .nav-list {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 4px;
   }
 
   .nav-item {
     justify-content: center;
     gap: 4px;
-    min-height: 40px;
+    min-width: 0;
+    min-height: 44px;
     padding: 6px 3px;
     font-size: 12px;
-    white-space: nowrap;
+    text-align: center;
+    white-space: normal;
+    word-break: keep-all;
   }
 
   .nav-item > span {

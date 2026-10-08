@@ -2,12 +2,16 @@ function showView(view) {
   const targetView = [...viewPanels].some((panel) => panel.dataset.panel === view) ? view : "briefing";
   const title = viewTitles[targetView] || viewTitles.briefing;
   navItems.forEach((item) => {
-    item.classList.toggle("active", item.dataset.view === targetView);
+    const isActive = item.dataset.view === targetView;
+    item.classList.toggle("active", isActive);
+    if (isActive) item.setAttribute("aria-current", "page");
+    else item.removeAttribute("aria-current");
   });
   viewPanels.forEach((panel) => {
     panel.classList.toggle("active", panel.dataset.panel === targetView);
   });
   newsMetricGrid?.classList.toggle("hidden", targetView !== "feed");
+  if (refreshButton) refreshButton.hidden = targetView === "statistics";
   if (menuEyebrow) menuEyebrow.textContent = title.eyebrow;
   if (menuTitle) menuTitle.textContent = title.title;
 }

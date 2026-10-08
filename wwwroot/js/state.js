@@ -132,6 +132,10 @@ const viewTitles = {
     eyebrow: "News Search",
     title: "뉴스 검색과 원문 출처 확인",
   },
+  statistics: {
+    eyebrow: "Statistics",
+    title: "통계",
+  },
   notice: {
     eyebrow: "Service Notice",
     title: "서비스 고지와 운영 기준",
