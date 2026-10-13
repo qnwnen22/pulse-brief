@@ -274,6 +274,61 @@ function sampleSummary() {
     Categories: [{ Category: "지역", IssueCount: 1, ArticleCount: 2, Summary: "시험 요약" }],
     TopIssues: [{ Title: "시험 도서관 개관", Category: "지역", Summary: "도서관이 개관했다.", ArticleCount: 2, ArticleIds: ["id-1", "id-2"], Score: 50, Sources: ["시험신문", "시험방송"], Keywords: ["도서관"] }] };
 }
+test("readability refactoring preserves model schemas and publication fingerprints", () => {
+  // These hashes identify existing model caches and publication recovery receipts.
+  assert.equal(core.hash(JSON.stringify(core.mapSchema)), "7e7bf890480a4f4e9e8dcc7ba10d62d29293bc27919572d16558bf85ea3019d6");
+  assert.equal(core.hash(JSON.stringify(core.reduceSchema)), "1f69042947a60da31f99d8528ed1a01ad531e165378c67cfa55d6c9a36596cb5");
+  const normalized = publication.normalizeSummary(sampleSummary(), date);
+  assert.equal(publication.fingerprint(normalized), "55abd7ba8b3b2db443b460a91ba491eacafe0d2483025d950d351f9e63820127");
+});
+
+test("article ordering, excerpts and exact batch boundaries stay deterministic", () => {
+  const publishedAt = news[0].PublishedAt;
+  const input = [
+    { ...news[0], Id: "older", PublishedAt: publishedAt, FirstSeenAt: "2026-09-06T01:10:00Z" },
+    { ...news[0], Id: "newer", PublishedAt: publishedAt, FirstSeenAt: "2026-09-06T01:20:00Z" },
+    { ...news[1], PublishedAt: publishedAt, FirstSeenAt: "invalid" }
+  ];
+  const articles = core.prepareArticles(input, date);
+  assert.deepEqual(articles.map(article => [article.Id, article.Key]), [["newer", "a1"], ["id-2", "a2"]]);
+
+  const longArticle = { ...articles[0], Content: "x".repeat(1201), Summary: "y".repeat(351) };
+  const [item] = core.makeBatches([longArticle]).flat();
+  assert.equal(item.bodyExcerpt.length, 1200);
+  assert.equal(item.rssSummary.length, 350);
+  assert.equal(item.excerpted, true);
+
+  const identical = [longArticle, longArticle, longArticle];
+  const itemCharacters = JSON.stringify(item).length;
+  assert.deepEqual(core.makeBatches(identical, 150, itemCharacters * 2).map(batch => batch.length), [2, 1]);
+  assert.throws(() => core.makeBatches([longArticle], 150, itemCharacters - 1), /상한/);
+});
+
+test("draft assembly preserves category order, tied scores and evidence order", () => {
+  const articles = core.prepareArticles(news, date);
+  const topics = articles.map((article, index) => ({
+    key: `t${index + 1}`,
+    category: "지역",
+    articleKeys: [article.Key]
+  }));
+  const issues = topics.map((topic, index) => ({
+    title: `이슈 ${index + 1}`,
+    summary: `확인된 사실 ${index + 1}`,
+    topicKeys: [topic.key],
+    keywords: ["도서관"],
+    score: 50,
+    featured: true
+  }));
+  const draft = core.buildDraft(date, articles, topics, {
+    "지역": { summary: "지역 요약", issues }
+  }, new Date("2026-09-07T01:00:00Z"));
+  assert.equal(draft.ArticleCount, 2);
+  assert.equal(draft.IssueCount, 2);
+  assert.deepEqual(draft.TopIssues.map(issue => issue.ArticleIds), [["id-2"], ["id-1"]]);
+  assert.deepEqual(draft.TopIssues.map(issue => issue.Title), ["이슈 1", "이슈 2"]);
+  assert.equal(JSON.stringify(publication.normalizeSummary(draft, date)), JSON.stringify(draft));
+});
+
 test("publication validation rejects bad counts, references and dates", () => {
   const summary = sampleSummary();
   assert.deepEqual(publication.normalizeSummary(summary, date), summary);

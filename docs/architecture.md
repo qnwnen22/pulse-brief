@@ -46,6 +46,21 @@ PulseBrief.sln
 
 이 구조는 Controller 기반 API와 정적 화면을 결합한 형태입니다. Razor View를 사용하는 서버 렌더링 MVC는 아닙니다. `PulseBrief.Core`에는 현재 MongoDB 구현과 외부 클라이언트도 포함되어 있으므로, 외부 의존성이 없는 순수 Domain 프로젝트를 뜻하지 않습니다.
 
+## 코드 읽기 기준
+
+줄 수보다 처리 의도와 순서를 우선합니다. 변수는 대상과 역할이 드러나게 이름을 붙이고, 조건문·반복문·객체 초기화는 여러 작업을 한 줄에 몰지 않습니다. 복잡한 업무 분기는 중첩 삼항식 대신 조건문으로 풀며, 함수 분리는 독립적인 책임이나 실제 중복이 있을 때만 적용합니다.
+
+이번에 정리한 주요 흐름은 다음 순서로 읽을 수 있습니다.
+
+- `CollectionStatisticsService.ReadAsync`: 기간 검증 → 캐시 시작일 결정 → 현재·비교 기간 캐시 한 번 조회.
+- `CollectionStatisticsService.Calculate`: 날짜별 집계 → 항목별 완료 여부 → `GetPreviousPeriodDays`로 비교 기간 구성 → `AddCategoryComparison`으로 증감 계산 → 응답 구성.
+- `HasCurrentPublisherCategories`: 버전과 카테고리 검증 → 언론사 전체 합계 → 교차표 행 합계 → 누락된 행 확인 → 열 합계. 미집계 날짜와 수집 0건을 구분합니다.
+- `statistics.js`: 통신과 응답 순서 관리는 `loadCollectionStatistics`, 차트·표·달력은 각 렌더러가 맡습니다. 표의 행과 차트의 막대를 먼저 준비한 뒤 본문에 넣으며, 교차표는 `renderPublisherCategoryMatrix`에서 구성합니다.
+- `summary-core.cjs`: 기사 검증·정렬·중복 제거 → 건수·문자 수 제한에 맞는 입력 분할 → `validateEvidenceCoverage`로 근거 누락·중복 확인 → 카테고리별 결과 구성.
+- `publication.cjs`: 개별 필드 정규화 → `validateCategoryTotals`로 전체·카테고리 합계 확인 → 배포 결과와 공개 응답 비교. JSON 필드 순서는 캐시와 배포 복구 기록의 식별값에 영향을 주므로 유지합니다.
+
+가독성 정리는 API·DB 스키마·업무 정책을 바꾸는 작업과 구분합니다. 동작을 바꿔야 할 필요가 발견되면 별도 변경으로 다루고, 정리한 흐름은 회귀 테스트로 확인합니다.
+
 ## 기능을 따라 읽는 순서
 
 ### 뉴스 검색
@@ -131,11 +146,15 @@ dotnet run --project PulseBrief.Tests/PulseBrief.Tests.csproj --no-launch-profil
 node tools/test-summary-rendering.cjs
 node tools/test-static-assets.cjs
 node tools/test-navigation.cjs
+node --test tools/test-statistics.cjs
+node --test tools/manual-summary/summary-tool.test.cjs tools/manual-summary/weekly-tool.test.cjs tools/manual-summary/scheduled.test.cjs
 ```
 
 브라우저 회귀 테스트 `tools/test-navigation-browser.cjs`는 Playwright가 설치된 Node 런타임에서 실행합니다. 데스크톱·모바일·긴 화면과 브라우저 안에서만 임시 추가한 5개·8개 메뉴의 화면 전환, 내부 스크롤, 헤더 높이, 추가 API 요청 방지를 검사합니다. 테스트 메뉴는 소스나 운영 DB에 저장하지 않습니다.
 
 API 테스트는 임시 설정 폴더와 메모리 저장소를 사용합니다. 운영 MongoDB나 OpenAI API를 호출하지 않고, 공개 과거 요약 조회와 날짜 정렬을 포함한 라우트, 요청 바인딩, 인증·CSRF, 요약 비활성화, 관련 링크와 BSON 호환성을 검증합니다.
+
+통계 단위 테스트는 누락·0건의 구분, 캐시 재사용, 강제 갱신, 늦게 도착한 응답·오류가 현재 화면을 바꾸지 않는지 확인합니다. 요약 도구 테스트는 모델 입력 스키마와 배포 결과의 고정 식별값, 기사 정렬·입력 분할·근거 순서를 포함하며 운영 DB나 실제 AI를 호출하지 않습니다.
 
 DB 없이 화면을 살펴보는 개발용 서버:
 
