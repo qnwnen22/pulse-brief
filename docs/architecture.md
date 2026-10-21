@@ -75,12 +75,16 @@ PulseBrief.sln
 
 ### 이슈 요약 조회
 
-1. `wwwroot/js/api.js`: 저장된 일간 날짜 목록과 선택 날짜의 일간·최신 주간 요약 API 요청.
+1. `wwwroot/js/api.js`: 일간·주간 설정에 따라 날짜 목록과 선택한 기간의 저장 요약을 공통 함수로 요청.
 2. `Controllers/SummariesController.cs`: 날짜 형식과 강제 생성 권한 확인.
 3. `PulseBrief.Core/Services/Summaries/DailySummaryService.cs`: 저장된 요약과 공개 날짜 목록 조회.
-4. `MongoArticleStore.cs`: 일간 날짜 목록은 본문 없이 `Date` 필드만 최신순 최대 730개 투영.
+4. `MongoArticleStore.cs`: 일간·주간 목록은 본문 없이 `Date` 필드만 최신순 최대 730개 투영. 공통 조회가 `Date` 인덱스와 5초 제한을 적용.
 5. `SummaryLinkService.cs`: 기록된 기사 ID로 관련 원문 링크 조회.
 6. `wwwroot/js/summaries.js`: 저장 날짜 선택기와 요약의 카테고리·본문 표시.
+
+주간 목록 API `/api/weekly-summary/dates`는 실제 7일 기간인 저장 키에서 종료일만 반환합니다. 공개 `/api/weekly-summary?endDate=yyyy-MM-dd`는 해당 종료일로 저장된 주간 한 건을 조회합니다. 날짜 생략 시 최근 완료 주간을 조회하는 기존 계약과 `force=true`의 관리자 인증·생성 중단 정책은 유지합니다.
+
+화면의 일간·주간 상태는 `createSummaryHistoryState`로 각각 만들고 `summaryHistoryConfigurations`에 API, 날짜 인자, 결과 반영 함수를 지정합니다. `loadSummaryHistory`, `loadStoredSummary`, `renderSummaryDateOptions`, `bindSummaryHistorySelect`를 공유하며 두 선택은 서로 독립적입니다. `summaryDate`와 `weeklyEndDate`를 URL에 보관하고 새로고침 시 유효한 선택을 유지합니다. 목록·요약 요청 번호를 확인해 오래된 응답이 새 선택을 덮지 않으며, 누락·실패 시 최신 뉴스로 대체하지 않고 상태를 표시합니다.
 
 공개 화면 접속과 뉴스 수집 파이프라인은 요약 생성 작업을 실행하지 않습니다. 전날 요약은 `tools/manual-summary/start-daily-summary.ps1`을 PC에서 실행하면 생성·검증 후 운영 DB에 자동 삽입하며 기존 날짜는 덮어쓰지 않습니다. 기존 `tools/cloud/import-daily-summary.ps1`은 별도 수동 교체 작업에 사용합니다. 서버의 생성 알고리즘과 비활성 관리자 API는 호환을 위해 남아 있지만 예약 호출 경로는 제거했습니다. 공개 `date` 조회는 이미 저장된 문서만 읽으며 누락 날짜를 자동 생성하지 않습니다.
 
@@ -146,6 +150,7 @@ dotnet run --project PulseBrief.Tests/PulseBrief.Tests.csproj --no-launch-profil
 node tools/test-summary-rendering.cjs
 node tools/test-static-assets.cjs
 node tools/test-navigation.cjs
+node --test tools/test-summary-history.cjs
 node --test tools/test-statistics.cjs
 node --test tools/manual-summary/summary-tool.test.cjs tools/manual-summary/weekly-tool.test.cjs tools/manual-summary/scheduled.test.cjs
 ```
@@ -155,6 +160,8 @@ node --test tools/manual-summary/summary-tool.test.cjs tools/manual-summary/week
 API 테스트는 임시 설정 폴더와 메모리 저장소를 사용합니다. 운영 MongoDB나 OpenAI API를 호출하지 않고, 공개 과거 요약 조회와 날짜 정렬을 포함한 라우트, 요청 바인딩, 인증·CSRF, 요약 비활성화, 관련 링크와 BSON 호환성을 검증합니다.
 
 통계 단위 테스트는 누락·0건의 구분, 캐시 재사용, 강제 갱신, 늦게 도착한 응답·오류가 현재 화면을 바꾸지 않는지 확인합니다. 요약 도구 테스트는 모델 입력 스키마와 배포 결과의 고정 식별값, 기사 정렬·입력 분할·근거 순서를 포함하며 운영 DB나 실제 AI를 호출하지 않습니다.
+
+`tools/test-summary-history-browser.cjs`는 같은 메모리 서버에서 과거 주간·일간 선택, 기간 변경당 한 건 조회, 새로고침·URL 복원, PC·모바일 5개 해상도와 빈 목록·404·오류 상태를 검증합니다. 브라우저 오류 응답은 테스트 안에서만 모의하며 운영 DB를 변경하지 않습니다.
 
 DB 없이 화면을 살펴보는 개발용 서버:
 

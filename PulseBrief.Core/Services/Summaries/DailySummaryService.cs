@@ -44,6 +44,27 @@ public sealed partial class DailySummaryService(IArticleStore store, OpenAiDaily
     public Task<List<string>> GetStoredDailySummaryDatesAsync(CancellationToken cancellationToken = default) =>
         store.ReadDailySummaryDatesAsync(PublicSummaryHistoryLimit, cancellationToken);
 
+    public async Task<List<string>> GetStoredWeeklySummaryDatesAsync(CancellationToken cancellationToken = default)
+    {
+        var keys = await store.ReadWeeklySummaryKeysAsync(PublicSummaryHistoryLimit, cancellationToken);
+        var endDates = new List<string>();
+        foreach (var key in keys)
+        {
+            var parts = key.Split(':');
+            if (parts.Length != 3 || parts[0] != "weekly"
+                || !DateOnly.TryParseExact(parts[1], "yyyy-MM-dd", out var startDate)
+                || !DateOnly.TryParseExact(parts[2], "yyyy-MM-dd", out var endDate)
+                || endDate.DayNumber - startDate.DayNumber != 6)
+            {
+                continue;
+            }
+
+            endDates.Add(KoreaDate.Key(endDate));
+        }
+
+        return endDates.Distinct(StringComparer.Ordinal).OrderDescending(StringComparer.Ordinal).ToList();
+    }
+
     /// <summary>지정한 날짜의 일간 요약을 조회하거나 새로 생성합니다. 기본값은 한국 시간 기준 전날입니다.</summary>
     public async Task<DailyIssueSummary> GetOrCreateSummaryAsync(DateOnly? date = null, bool force = false, CancellationToken cancellationToken = default)
     {

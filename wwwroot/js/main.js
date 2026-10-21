@@ -14,11 +14,8 @@ async function initializeApp() {
       console.warn(`[app-version] ${error.message}`);
     });
     Promise.all([
-      (async () => {
-        await loadDailySummaryDates();
-        return loadDailySummary(selectedDailySummaryDate);
-      })(),
-      loadWeeklySummary(),
+      loadSummaryHistory("daily"),
+      loadSummaryHistory("weekly"),
     ]).catch((error) => {
       console.warn(`[summary-load] ${error.message}`);
     });

@@ -65,10 +65,18 @@ const sampleIssues = [
 let issues = location.protocol === "file:" ? [...sampleIssues] : [];
 let dailyBrief = null;
 let weeklyBrief = null;
-let dailySummaryDates = [];
-let selectedDailySummaryDate = "";
-let dailySummaryDatesStatus = "idle";
-let dailySummaryStatus = "idle";
+function createSummaryHistoryState() {
+  return {
+    dates: [],
+    selectedDate: "",
+    datesStatus: "idle",
+    status: "idle",
+    requestId: 0
+  };
+}
+
+const dailySummaryHistory = createSummaryHistoryState();
+const weeklySummaryHistory = createSummaryHistoryState();
 let newsStats = null;
 let activeFilter = "전체";
 let currentPage = 1;
@@ -96,6 +104,7 @@ const topPaginationControls = document.querySelector("#topPaginationControls");
 const paginationContainers = [topPaginationControls, paginationControls].filter(Boolean);
 const categorySummary = document.querySelector("#categorySummary");
 const dailySummaryDateSelect = document.querySelector("#dailySummaryDateSelect");
+const weeklySummaryDateSelect = document.querySelector("#weeklySummaryDateSelect");
 const weeklySummary = document.querySelector("#weeklySummary");
 const weeklyCategoryTabs = document.querySelector("#weeklyCategoryTabs");
 const weeklyStats = document.querySelector("#weeklyStats");

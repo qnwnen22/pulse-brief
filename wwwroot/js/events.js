@@ -40,13 +40,18 @@ weeklyCategoryTabs.addEventListener("click", (event) => {
   renderWeeklySummary();
 });
 
-dailySummaryDateSelect?.addEventListener("change", () => {
-  const date = dailySummaryDateSelect.value;
-  if (!isDailySummaryDateKey(date)) return;
-  selectedDailySummaryDate = date;
-  updateDailySummaryAddress(date);
-  loadDailySummary(date);
-});
+function bindSummaryHistorySelect(select, history, updateAddress, loadSummary) {
+  select?.addEventListener("change", () => {
+    const date = select.value;
+    if (!isDailySummaryDateKey(date)) return;
+    history.selectedDate = date;
+    updateAddress(date);
+    loadSummary(date);
+  });
+}
+
+bindSummaryHistorySelect(dailySummaryDateSelect, dailySummaryHistory, updateDailySummaryAddress, loadDailySummary);
+bindSummaryHistorySelect(weeklySummaryDateSelect, weeklySummaryHistory, updateWeeklySummaryAddress, loadWeeklySummary);
 
 refreshButton?.addEventListener("click", () => {
   refreshFromServer();

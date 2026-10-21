@@ -96,10 +96,20 @@ assert.ok(empty.html("#categorySummary").includes("요약할 이슈 데이터가
 assert.equal(empty.html("#weeklyCategoryTabs"), "");
 
 const loading = render([], daily, weekly, "정치/정책");
-vm.runInContext('dailySummaryStatus = "loading"; renderCategorySummary();', loading.context);
+vm.runInContext('dailySummaryHistory.status = "loading"; renderCategorySummary();', loading.context);
 assert.ok(loading.html("#categorySummary").includes("불러오는 중입니다."));
-vm.runInContext('dailySummaryStatus = "missing"; selectedDailySummaryDate = "2026-09-05"; renderCategorySummary();', loading.context);
+vm.runInContext('dailySummaryHistory.status = "missing"; dailySummaryHistory.selectedDate = "2026-09-05"; renderCategorySummary();', loading.context);
 assert.ok(loading.html("#categorySummary").includes("2026년 9월 5일에 저장된 일간 요약이 없습니다."));
+
+const weeklyStates = render([], daily, weekly, "정치/정책");
+vm.runInContext('weeklySummaryHistory.status = "loading"; renderWeeklySummary();', weeklyStates.context);
+assert.ok(weeklyStates.html("#weeklySummary").includes("주간 요약을 불러오는 중"));
+assert.equal(weeklyStates.html("#weeklyStats"), "");
+assert.ok(weeklyStates.html("#categorySummary").includes(dailyData.categories.find(item => item.category === "정치/정책").summary));
+vm.runInContext('weeklySummaryHistory.status = "missing"; weeklySummaryHistory.selectedDate = "2026-09-06"; renderWeeklySummary();', weeklyStates.context);
+assert.ok(weeklyStates.html("#weeklySummary").includes("2026.08.31 ~ 2026.09.06에 저장된 주간 요약이 없습니다."));
+vm.runInContext('weeklySummaryHistory.status = "error"; renderWeeklySummary();', weeklyStates.context);
+assert.ok(weeklyStates.html("#weeklySummary").includes("주간 이슈 요약을 불러오지 못했습니다."));
 
 // A later weekly response must not hide a daily-only category.
 const union = render([], { categories: [{ category: "Daily only", summary: "Daily text" }] }, weekly, "Daily only");

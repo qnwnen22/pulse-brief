@@ -24,6 +24,7 @@ public sealed class FakeArticleStore : IArticleStore
     public int ManualArticleRowsYielded { get; private set; }
     public int LargestIdLookup { get; private set; }
     public bool FailLinkLookup { get; set; }
+    public int SummaryHistoryLimit { get; private set; }
 
     public FakeArticleStore()
     {
@@ -34,12 +35,13 @@ public sealed class FakeArticleStore : IArticleStore
         {
             today.AddDays(-1).ToString("yyyy-MM-dd"),
             today.AddDays(-2).ToString("yyyy-MM-dd"),
-            $"weekly:{end.AddDays(-6):yyyy-MM-dd}:{end:yyyy-MM-dd}"
+            $"weekly:{end.AddDays(-6):yyyy-MM-dd}:{end:yyyy-MM-dd}",
+            $"weekly:{end.AddDays(-13):yyyy-MM-dd}:{end.AddDays(-7):yyyy-MM-dd}"
         })
         {
             Summaries[key] = new DailyIssueSummary
             {
-                Date = key, Provider = "manual", Model = "Codex", Headline = "검증용 요약",
+                Date = key, Provider = "manual", Model = "Codex", Headline = $"검증용 요약 {key}",
                 Summary = "검증용 요약 본문", ArticleCount = 1, IssueCount = 1, SourceCount = 1,
                 Categories = [new DailyCategorySummary { Category = "정치/정책", Summary = "저장된 정치 요약", ArticleCount = 1, IssueCount = 1 }],
                 TopIssues = [new DailyTopIssue { Title = "테스트 이슈", Category = "정치/정책", Summary = "주요 이슈 본문", ArticleIds = ["test-article"], ArticleCount = 1, Sources = ["연합뉴스"], Score = 50 }]
@@ -94,6 +96,15 @@ public sealed class FakeArticleStore : IArticleStore
         .OrderDescending()
         .Take(limit)
         .ToList());
+    public Task<List<string>> ReadWeeklySummaryKeysAsync(int limit, CancellationToken cancellationToken = default)
+    {
+        SummaryHistoryLimit = limit;
+        return Task.FromResult(Summaries.Keys
+            .Where(key => key.StartsWith("weekly:", StringComparison.Ordinal))
+            .OrderDescending(StringComparer.Ordinal)
+            .Take(limit)
+            .ToList());
+    }
     public Task<List<DailyIssueSummary>> ReadDailySummariesAsync() => Task.FromResult(Summaries.Values.ToList());
     public Task SaveDailySummaryAsync(DailyIssueSummary summary) { SummaryWrites++; Summaries[summary.Date] = summary; return Task.CompletedTask; }
     public Task<DailySummaryInsertResult> TryInsertManualDailySummaryAsync(DailyIssueSummary summary, CancellationToken cancellationToken = default)

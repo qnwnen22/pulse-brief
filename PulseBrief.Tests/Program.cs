@@ -84,7 +84,7 @@ try
         .Where(endpoint => endpoint.Metadata.GetMetadata<Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor>() is not null)
         .SelectMany(endpoint => endpoint.Metadata.GetMetadata<HttpMethodMetadata>()!.HttpMethods.Select(method => $"{method} /{endpoint.RoutePattern.RawText!.TrimStart('/')}"))
         .Order().ToArray();
-    Check(expectedRoutes.SequenceEqual(actualRoutes), "The controller routes differ from the 0.1.21 API surface.");
+    Check(expectedRoutes.SequenceEqual(actualRoutes), "The controller routes differ from the expected API surface.");
 
     await Request(client, "GET", "/", 200);
     await Request(client, "GET", "/admin", 200);
@@ -129,6 +129,28 @@ try
     await Request(client, "GET", $"/api/daily-summary?date={storedDailyDate}", 200);
     await Request(client, "GET", "/api/daily-summary?date=invalid", 400);
     await Request(client, "GET", "/api/daily-summary?date=2000-01-01", 404);
+    var weeklySummaryDates = await Request(client, "GET", "/api/weekly-summary/dates", 200);
+    Check(weeklySummaryDates!.AsArray().Count == 2, "Weekly history must exclude daily summaries and include both saved weeks.");
+    var weeklyEndDates = weeklySummaryDates.AsArray().Select(item => item!.GetValue<string>()).ToArray();
+    Check(weeklyEndDates.SequenceEqual(weeklyEndDates.OrderDescending(StringComparer.Ordinal)), "Weekly history is not sorted newest first.");
+    Check(store.SummaryHistoryLimit == 730, "Weekly history must be bounded without reading summary bodies.");
+    foreach (var endDate in weeklyEndDates)
+    {
+        var parsed = DateOnly.ParseExact(endDate, "yyyy-MM-dd");
+        var summary = await Request(client, "GET", $"/api/weekly-summary?endDate={endDate}", 200);
+        Check(summary!["date"]!.GetValue<string>() == $"weekly:{parsed.AddDays(-6):yyyy-MM-dd}:{endDate}", "Public weekly lookup returned a different period.");
+        Check(summary["topIssues"]![0]!["relatedLinks"]!.AsArray().Count == 1, "Historical weekly evidence links are missing.");
+    }
+    foreach (var endDate in new[] { "invalid", "2026-02-30", "0001-01-01", "2026/09/06" })
+    {
+        await Request(client, "GET", $"/api/weekly-summary?endDate={endDate}", 400);
+    }
+    await Request(client, "GET", "/api/weekly-summary?endDate=2000-01-02", 404);
+    string[] invalidWeeklyKeys = ["weekly:invalid", "weekly:2026-09-01:2026-09-06", "weekly:2026-02-30:2026-03-08"];
+    foreach (var key in invalidWeeklyKeys) store.Summaries[key] = new() { Date = key };
+    var validWeeklyHistory = await Request(client, "GET", "/api/weekly-summary/dates", 200);
+    Check(validWeeklyHistory!.AsArray().Count == 2, "Malformed weekly periods must not appear in the public history.");
+    foreach (var key in invalidWeeklyKeys) store.Summaries.Remove(key);
     Check(store.FullReads == 0 && store.SummaryWrites == 0, "Public reads must not scan all data or generate summaries.");
     var pipelineConstructor = typeof(NewsPipeline).GetConstructors().Single();
     Check(!pipelineConstructor.GetParameters().Any(parameter => parameter.ParameterType == typeof(DailySummaryService)), "News collection pipeline must not depend on summary generation.");
@@ -145,7 +167,7 @@ try
     Check(unicodeGroup.SeedSummary == safelyTruncated, "Article grouping did not use safe Unicode truncation.");
     Check(unicodeGroup.ToBson().Length > 0, "Unicode-safe article group could not be serialized to BSON.");
 
-    foreach (var url in new[] { "/api/articles", "/api/groups", "/api/admin/dashboard", "/api/admin/diagnostics", "/api/admin/articles", "/api/admin/articles/test-article", "/api/admin/rss-feeds", "/api/daily-summary?force=true", "/api/weekly-summary?endDate=2026-09-06" })
+    foreach (var url in new[] { "/api/articles", "/api/groups", "/api/admin/dashboard", "/api/admin/diagnostics", "/api/admin/articles", "/api/admin/articles/test-article", "/api/admin/rss-feeds", "/api/daily-summary?force=true", "/api/weekly-summary?force=true" })
         await Request(client, "GET", url, 401);
     foreach (var url in new[] { "/api/refresh", "/api/admin/refresh", "/api/admin/fetch-missing-content", "/api/admin/fetch-missing-images", "/api/admin/logout", "/api/admin/summaries/daily/regenerate", "/api/admin/summaries/daily/preview", "/api/admin/summaries/weekly/regenerate", "/api/admin/rss-feeds", "/api/admin/rss-feeds/remove" })
         await Request(client, "POST", url, 401, new { });

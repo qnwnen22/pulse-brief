@@ -3,7 +3,7 @@
 Pulse Brief는 여러 언론사의 RSS와 기사 원문을 수집하고, 유사한 보도를 하나의 이슈로 묶어 보여 주는 공개 뉴스 브리핑 서비스입니다. 뉴스 검색과 카테고리별 일간·주간 요약을 제공하며, 운영 데이터는 AWS Lightsail의 MongoDB를 기준으로 관리합니다.
 
 - 공개 서비스: [https://news.pulse-brief.co.kr](https://news.pulse-brief.co.kr)
-- 현재 버전: [`0.9.1`](VERSION)
+- 현재 버전: [`0.10.0`](VERSION)
 - 변경 이력: [CHANGELOG.md](CHANGELOG.md)
 - 기본 브랜치: `master`
 
@@ -22,6 +22,8 @@ Pulse Brief는 여러 언론사의 RSS와 기사 원문을 수집하고, 유사�
 
 버전 `0.3.0`에서는 저장된 일간 요약 날짜 목록을 공개 API로 제한 조회하고, 이슈 요약 화면에서 과거 날짜를 선택할 수 있게 했습니다. 날짜 목록은 요약 본문 없이 최대 730개만 읽어 운영 MongoDB 부하를 제한합니다.
 
+버전 `0.10.0`부터 주간 요약도 저장된 기간을 선택할 수 있습니다. 일간 날짜와 주간 기간은 독립적으로 선택하며, 새로고침과 URL의 `summaryDate`·`weeklyEndDate`로 선택을 유지합니다. 기간 변경은 저장된 요약 한 건만 조회하고 새 요약을 생성하지 않습니다.
+
 ## 주요 기능
 
 - RSS/Atom 피드의 기사 제목, 링크, 발행 시각, 요약 수집
@@ -30,7 +32,7 @@ Pulse Brief는 여러 언론사의 RSS와 기사 원문을 수집하고, 유사�
 - 키워드, 카테고리, 언론사, 기간, 묶인 기사 수, 정렬 조건을 지원하는 뉴스 검색
 - 수집기가 미리 계산해 둔 한국 시간 기준 금일 기사 수 표시
 - 9개 카테고리의 일간 이슈 요약과 최근 완료 주간 요약
-- 저장된 일간 요약 날짜 선택과 URL `summaryDate=yyyy-MM-dd` 상태 유지
+- 저장된 일간 날짜·주간 기간 선택과 URL `summaryDate=yyyy-MM-dd`·`weeklyEndDate=yyyy-MM-dd` 상태 유지
 - 요약 이슈에 기록된 기사 ID 기반 관련 원문 링크 제공
 - RSS 소스, 기사, 그룹, 진단 정보를 관리하는 관리자 화면
 - 수집 통계: 일평균 수집량, 기간 수집량, 직전 기간 증감, 오늘 수집량, 수집 추이, 언론사·카테고리 비중 (최근 7일·30일·전체)
@@ -452,9 +454,10 @@ powershell -NoProfile -ExecutionPolicy Bypass `
 | `GET /api/collection-statistics?period=7\|30\|all` | 캐시 기반 수집량·추이·비중·카테고리 증감·요일 평균·언론사별 분야 분포 조회 |
 | `GET /api/daily-summary` | 한국 시간 기준 전날의 저장 일간 요약 조회. `date=yyyy-MM-dd`로 저장된 과거 날짜 조회 가능 |
 | `GET /api/daily-summary/dates` | 저장된 일간 요약 날짜를 최신순 최대 730개 조회 |
-| `GET /api/weekly-summary` | 한국 시간 기준 최근 완료 주간의 저장 요약 조회 |
+| `GET /api/weekly-summary` | 한국 시간 기준 최근 완료 주간의 저장 요약 조회. `endDate=yyyy-MM-dd`로 저장된 과거 주간 조회 가능 |
+| `GET /api/weekly-summary/dates` | 저장된 주간 종료일을 최신순 최대 730개 조회. 실제 7일 기간에 해당하는 주간 키만 포함 |
 
-공개 요약 API는 저장된 문서만 읽습니다. 자료가 없으면 `404`를 반환하며 요약을 만들거나 기존 문서를 변경하지 않습니다. `/api/weekly-summary?endDate=...`와 요약 API의 `force=true`는 관리자 인증이 필요합니다.
+공개 요약 API는 저장된 문서만 읽습니다. 자료가 없으면 `404`를 반환하며 요약을 만들거나 기존 문서를 변경하지 않습니다. 요약 API의 `force=true`는 관리자 인증이 필요하고 현재 생성 중단 정책도 유지합니다. 일간·주간 목록은 `Date` 인덱스와 키 필드 투영, 건수 상한, 5초 제한을 공유하며 요약 본문 전체 조회나 기사 집계를 실행하지 않습니다.
 
 ### 관리자 API
 

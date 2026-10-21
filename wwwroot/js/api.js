@@ -43,90 +43,124 @@ async function fetchWithTimeout(resource, options = {}, timeoutMs = 15000) {
   }
 }
 
-async function loadDailySummaryDates(preferredDate = "") {
+const summaryHistoryConfigurations = {
+  daily: {
+    history: dailySummaryHistory,
+    endpoint: "/api/daily-summary",
+    dateParameter: "date",
+    requestedDate: getRequestedDailySummaryDate,
+    renderOptions: renderDailySummaryDateOptions,
+    getDate: summary => summary?.date || "",
+    setSummary: summary => { dailyBrief = summary; }
+  },
+  weekly: {
+    history: weeklySummaryHistory,
+    endpoint: "/api/weekly-summary",
+    dateParameter: "endDate",
+    requestedDate: getRequestedWeeklySummaryDate,
+    renderOptions: renderWeeklySummaryDateOptions,
+    getDate: summary => parseWeeklySummaryRange(summary)?.end || "",
+    setSummary: summary => { weeklyBrief = summary; }
+  }
+};
+
+async function loadSummaryDates(configuration, preferredDate = "") {
   if (location.protocol === "file:") return false;
 
-  dailySummaryDatesStatus = "loading";
-  dailySummaryStatus = "loading";
-  renderDailySummaryDateOptions();
-  renderCategorySummary();
+  const { history, endpoint, renderOptions, requestedDate } = configuration;
+  const requestId = ++history.requestId;
+  history.datesStatus = "loading";
+  history.status = "loading";
+  renderOptions();
+  renderWeeklySummary();
   try {
-    const response = await fetchWithTimeout("/api/daily-summary/dates", { cache: "no-store" }, 5000);
-    if (!response.ok) throw new Error(`daily-summary-dates ${response.status}`);
+    const response = await fetchWithTimeout(`${endpoint}/dates`, { cache: "no-store" }, 5000);
+    if (!response.ok) throw new Error(`${endpoint}/dates ${response.status}`);
     const values = await response.json();
-    if (!Array.isArray(values)) throw new Error("daily-summary-dates invalid response");
+    if (requestId !== history.requestId) return false;
+    if (!Array.isArray(values)) throw new Error(`${endpoint}/dates invalid response`);
 
-    dailySummaryDates = [...new Set(values.filter(isDailySummaryDateKey))].sort().reverse();
-    const requestedDate = preferredDate || getRequestedDailySummaryDate();
-    selectedDailySummaryDate = dailySummaryDates.includes(requestedDate)
-      ? requestedDate
-      : dailySummaryDates[0] || "";
-    dailySummaryDatesStatus = "ready";
-    renderDailySummaryDateOptions();
+    history.dates = [...new Set(values.filter(isDailySummaryDateKey))].sort().reverse();
+    const preferred = preferredDate || requestedDate();
+    history.selectedDate = history.dates.includes(preferred) ? preferred : history.dates[0] || "";
+    history.datesStatus = "ready";
+    renderOptions();
     return true;
   } catch (error) {
-    console.warn(`[daily-summary-dates] ${error.message}`);
-    dailySummaryDatesStatus = "error";
-    renderDailySummaryDateOptions();
+    if (requestId !== history.requestId) return false;
+    console.warn(`[summary-dates] ${error.message}`);
+    history.datesStatus = "error";
+    renderOptions();
     return false;
   }
 }
 
-async function loadDailySummary(date = selectedDailySummaryDate) {
+async function loadStoredSummary(configuration, date = configuration.history.selectedDate) {
   if (location.protocol === "file:") return false;
 
+  const { history, endpoint, dateParameter, renderOptions, getDate, setSummary } = configuration;
+  const requestId = ++history.requestId;
   const targetDate = isDailySummaryDateKey(date) ? date : "";
-  if (targetDate) selectedDailySummaryDate = targetDate;
-  dailySummaryStatus = "loading";
-  renderDailySummaryDateOptions();
-  renderCategorySummary();
+  if (targetDate) history.selectedDate = targetDate;
+  history.status = "loading";
+  renderOptions();
+  renderWeeklySummary();
 
   try {
-    const query = targetDate ? `?date=${encodeURIComponent(targetDate)}` : "";
-    const response = await fetchWithTimeout(`/api/daily-summary${query}`, { cache: "no-store" }, 10000);
+    const query = targetDate ? `?${dateParameter}=${encodeURIComponent(targetDate)}` : "";
+    const response = await fetchWithTimeout(`${endpoint}${query}`, { cache: "no-store" }, 10000);
+    if (requestId !== history.requestId) return false;
     if (response.status === 404) {
-      dailyBrief = null;
-      dailySummaryStatus = "missing";
-      renderDailySummaryDateOptions();
-      renderWeeklySummary();
+      setSummary(null);
+      history.status = "missing";
       return false;
     }
-    if (!response.ok) throw new Error(`daily-summary ${response.status}`);
-    dailyBrief = await response.json();
-    dailySummaryStatus = "ready";
-    if (isDailySummaryDateKey(dailyBrief?.date)) {
-      selectedDailySummaryDate = dailyBrief.date;
-      if (!dailySummaryDates.includes(dailyBrief.date)) {
-        dailySummaryDates = [...dailySummaryDates, dailyBrief.date].sort().reverse();
-      }
+    if (!response.ok) throw new Error(`${endpoint} ${response.status}`);
+    const summary = await response.json();
+    if (requestId !== history.requestId) return false;
+    const actualDate = getDate(summary);
+    if (!isDailySummaryDateKey(actualDate) || (targetDate && actualDate !== targetDate)) {
+      throw new Error(`${endpoint} returned a different period`);
     }
-    renderDailySummaryDateOptions();
-    renderWeeklySummary();
+
+    setSummary(summary);
+    history.status = "ready";
+    history.selectedDate = actualDate;
+    if (!history.dates.includes(actualDate)) {
+      history.dates = [...history.dates, actualDate].sort().reverse();
+    }
     return true;
   } catch (error) {
-    console.warn(`[daily-summary] ${error.message}`);
-    dailyBrief = null;
-    dailySummaryStatus = "error";
-    renderDailySummaryDateOptions();
-    renderWeeklySummary();
+    if (requestId !== history.requestId) return false;
+    console.warn(`[summary] ${error.message}`);
+    setSummary(null);
+    history.status = "error";
     return false;
+  } finally {
+    if (requestId === history.requestId) {
+      renderOptions();
+      renderWeeklySummary();
+    }
   }
 }
 
-async function loadWeeklySummary() {
-  if (location.protocol === "file:") return false;
+function loadDailySummary(date = dailySummaryHistory.selectedDate) {
+  return loadStoredSummary(summaryHistoryConfigurations.daily, date);
+}
 
-  try {
-    const response = await fetch("/api/weekly-summary");
-    if (!response.ok) throw new Error(`weekly-summary ${response.status}`);
-    weeklyBrief = await response.json();
-    renderWeeklySummary();
-    return true;
-  } catch (error) {
-    console.warn(`[weekly-summary] ${error.message}`);
-    renderWeeklySummary();
-    return false;
+function loadWeeklySummary(date = weeklySummaryHistory.selectedDate) {
+  return loadStoredSummary(summaryHistoryConfigurations.weekly, date);
+}
+
+async function loadSummaryHistory(type, preferredDate = "") {
+  const configuration = summaryHistoryConfigurations[type];
+  const requestId = configuration.history.requestId + 1;
+  await loadSummaryDates(configuration, preferredDate);
+  // Another selection may supersede the history request while it is in flight.
+  if (configuration.history.requestId === requestId) {
+    return loadStoredSummary(configuration);
   }
+  return false;
 }
 
 async function loadAppVersion() {
@@ -158,9 +192,10 @@ async function refreshFromServer() {
     if (location.protocol !== "file:") {
       const [loaded] = await Promise.all([loadServerBriefs(), loadNewsStats()]);
       if (!loaded) console.warn("[refresh] failed to reload briefs");
-      const preferredDate = selectedDailySummaryDate;
-      await loadDailySummaryDates(preferredDate);
-      await Promise.all([loadDailySummary(selectedDailySummaryDate), loadWeeklySummary()]);
+      await Promise.all([
+        loadSummaryHistory("daily", dailySummaryHistory.selectedDate),
+        loadSummaryHistory("weekly", weeklySummaryHistory.selectedDate)
+      ]);
     } else {
       issues.unshift(issues.pop());
     }

@@ -77,7 +77,7 @@ public sealed class SummariesController(
     {
         try
         {
-            if ((force.GetValueOrDefault() || !string.IsNullOrWhiteSpace(endDate)) && !adminAuth.IsAuthenticated(HttpContext))
+            if (force.GetValueOrDefault() && !adminAuth.IsAuthenticated(HttpContext))
             {
                 return AdminAuthService.AdminRequired();
             }
@@ -85,7 +85,8 @@ public sealed class SummariesController(
             DateOnly? targetEndDate = null;
             if (!string.IsNullOrWhiteSpace(endDate))
             {
-                if (!DateOnly.TryParse(endDate, out var parsed))
+                if (!DateOnly.TryParseExact(endDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed)
+                    || parsed.DayNumber < 6)
                 {
                     return Results.BadRequest(new { error = "endDate must be yyyy-MM-dd" });
                 }
@@ -111,6 +112,20 @@ public sealed class SummariesController(
         catch (Exception error) when (error is not OperationCanceledException)
         {
             Console.WriteLine($"[weekly-summary] failed: {error}");
+            return Results.Json(CreateLocalError(HttpContext, error), statusCode: StatusCodes.Status500InternalServerError);
+        }
+    }
+
+    [HttpGet("/api/weekly-summary/dates")]
+    public async Task<IResult> WeeklyDates(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Results.Ok(await dailySummaryService.GetStoredWeeklySummaryDatesAsync(cancellationToken));
+        }
+        catch (Exception error) when (error is not OperationCanceledException)
+        {
+            Console.WriteLine($"[weekly-summary-dates] failed: {error}");
             return Results.Json(CreateLocalError(HttpContext, error), statusCode: StatusCodes.Status500InternalServerError);
         }
     }

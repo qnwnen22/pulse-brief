@@ -217,14 +217,29 @@ public sealed partial class MongoArticleStore : IArticleStore, ICollectionStatis
     }
 
     /// <summary>일간 날짜 키만 투영해 요약 본문을 읽지 않고 최신순으로 반환합니다.</summary>
-    public async Task<List<string>> ReadDailySummaryDatesAsync(int limit, CancellationToken cancellationToken = default)
+    public Task<List<string>> ReadDailySummaryDatesAsync(int limit, CancellationToken cancellationToken = default)
+    {
+        return ReadSummaryDateKeysAsync(@"^\d{4}-\d{2}-\d{2}$", limit, cancellationToken);
+    }
+
+    public Task<List<string>> ReadWeeklySummaryKeysAsync(int limit, CancellationToken cancellationToken = default)
+    {
+        return ReadSummaryDateKeysAsync(@"^weekly:\d{4}-\d{2}-\d{2}:\d{4}-\d{2}-\d{2}$", limit, cancellationToken);
+    }
+
+    private async Task<List<string>> ReadSummaryDateKeysAsync(string pattern, int limit, CancellationToken cancellationToken)
     {
         await EnsureInitializedAsync();
-        var dailyDate = Builders<DailyIssueSummary>.Filter.Regex(
+        var dateFilter = Builders<DailyIssueSummary>.Filter.Regex(
             summary => summary.Date,
-            new BsonRegularExpression(@"^\d{4}-\d{2}-\d{2}$"));
+            new BsonRegularExpression(pattern));
 
-        var dates = await _summaries.Find(dailyDate)
+        var options = new FindOptions
+        {
+            Hint = new BsonDocument("Date", 1),
+            MaxTime = TimeSpan.FromSeconds(5)
+        };
+        var dates = await _summaries.Find(dateFilter, options)
             .SortByDescending(summary => summary.Date)
             .Limit(Math.Clamp(limit, 1, 1000))
             .Project(summary => summary.Date)

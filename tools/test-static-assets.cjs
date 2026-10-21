@@ -15,9 +15,14 @@ const publicHtml = fs.readFileSync(path.join(webRoot, "index.html"), "utf8");
 assert.match(publicState, /location\.protocol === "file:" \? \[\.\.\.sampleIssues\] : \[\]/, "production must not start with sample news");
 assert.doesNotMatch(publicApi, /!serverIssues\.length/, "an empty server response must not preserve sample news");
 assert.match(publicHtml, /id="dailySummaryDateSelect"/, "daily summary history selector is missing");
-assert.match(publicApi, /\/api\/daily-summary\/dates/, "daily summary history API is not loaded");
-assert.match(publicApi, /\/api\/daily-summary\$\{query\}/, "selected daily summary date is not requested");
-assert.match(publicEvents, /dailySummaryDateSelect\?\.addEventListener\("change"/, "daily summary selector has no change handler");
+assert.match(publicHtml, /id="weeklySummaryDateSelect"/, "weekly summary history selector is missing");
+assert.match(publicApi, /endpoint: "\/api\/daily-summary"/, "daily summary history endpoint is missing");
+assert.match(publicApi, /endpoint: "\/api\/weekly-summary"/, "weekly summary history endpoint is missing");
+assert.match(publicApi, /dateParameter: "endDate"/, "weekly summary end date is not requested");
+assert.match(publicApi, /\$\{endpoint\}\/dates/, "summary history dates API is not loaded");
+for (const selector of ["dailySummaryDateSelect", "weeklySummaryDateSelect"]) {
+  assert.ok(publicEvents.includes(`bindSummaryHistorySelect(${selector},`), `${selector} has no shared change handler`);
+}
 const publicStylesheet = publicHtml.match(/<link\b[^>]*\brel="stylesheet"[^>]*\bhref="([^"]+)"/)?.[1];
 assert.ok(publicStylesheet, "public stylesheet link is missing");
 assert.equal(new URL(publicStylesheet, "http://localhost/").searchParams.get("v"), version, "public stylesheet cache version is stale");

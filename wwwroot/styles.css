@@ -693,6 +693,7 @@ h2 {
 .summary-history-control select,
 .statistics-select-control select {
   width: 100%;
+  min-width: 0;
   min-height: 38px;
   padding: 0 34px 0 10px;
   border: 1px solid #b7c7da;
@@ -706,6 +707,12 @@ h2 {
 .summary-history-control select:focus {
   border-color: var(--blue);
   outline: 3px solid rgba(37, 99, 235, 0.14);
+}
+
+.summary-history-control {
+  min-width: 0;
+  width: 280px;
+  max-width: 100%;
 }
 
 .summary-history-control select:disabled {

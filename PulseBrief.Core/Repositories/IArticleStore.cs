@@ -33,6 +33,9 @@ public interface IArticleStore
     /// <summary>저장된 일간 요약 날짜만 최신순으로 제한 조회합니다.</summary>
     Task<List<string>> ReadDailySummaryDatesAsync(int limit, CancellationToken cancellationToken = default);
 
+    /// <summary>저장된 주간 요약 키만 최신순으로 제한 조회합니다.</summary>
+    Task<List<string>> ReadWeeklySummaryKeysAsync(int limit, CancellationToken cancellationToken = default);
+
     /// <summary>저장된 모든 일간/주간 요약 문서를 조회합니다.</summary>
     Task<List<DailyIssueSummary>> ReadDailySummariesAsync();
 
