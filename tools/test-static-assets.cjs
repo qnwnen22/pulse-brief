@@ -16,6 +16,12 @@ assert.match(publicState, /location\.protocol === "file:" \? \[\.\.\.sampleIssue
 assert.doesNotMatch(publicApi, /!serverIssues\.length/, "an empty server response must not preserve sample news");
 assert.match(publicHtml, /id="dailySummaryDateSelect"/, "daily summary history selector is missing");
 assert.match(publicHtml, /id="weeklySummaryDateSelect"/, "weekly summary history selector is missing");
+assert.match(publicHtml, /id="summaryPeriodTabs"[^>]*role="tablist"/, "daily/weekly summary tabs are missing");
+for (const period of ["daily", "weekly"]) {
+  assert.ok(publicHtml.includes(`aria-controls="${period}SummaryPanel"`), `${period} tab has no matching panel`);
+  assert.ok(publicHtml.includes(`data-summary-panel="${period}"`), `${period} summary panel is missing`);
+}
+assert.match(publicEvents, /summaryPeriodTabs\?\.addEventListener\("keydown"/, "summary tabs lack keyboard navigation");
 assert.match(publicApi, /endpoint: "\/api\/daily-summary"/, "daily summary history endpoint is missing");
 assert.match(publicApi, /endpoint: "\/api\/weekly-summary"/, "weekly summary history endpoint is missing");
 assert.match(publicApi, /dateParameter: "endDate"/, "weekly summary end date is not requested");

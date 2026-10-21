@@ -86,6 +86,8 @@ PulseBrief.sln
 
 화면의 일간·주간 상태는 `createSummaryHistoryState`로 각각 만들고 `summaryHistoryConfigurations`에 API, 날짜 인자, 결과 반영 함수를 지정합니다. `loadSummaryHistory`, `loadStoredSummary`, `renderSummaryDateOptions`, `bindSummaryHistorySelect`를 공유하며 두 선택은 서로 독립적입니다. `summaryDate`와 `weeklyEndDate`를 URL에 보관하고 새로고침 시 유효한 선택을 유지합니다. 목록·요약 요청 번호를 확인해 오래된 응답이 새 선택을 덮지 않으며, 누락·실패 시 최신 뉴스로 대체하지 않고 상태를 표시합니다.
 
+`initializeSummaryTabs`는 `summaryPeriod` 또는 기존 주간 URL에서 표시 유형을 복원합니다. `selectSummaryPeriod`는 API 호출 없이 유형을 바꾸고, `renderSummaries`가 선택 유형의 카테고리·지표·본문을 조합합니다. `selectedSummaryCategories`는 유형별 선택을 보관하며 비활성 유형의 응답이 현재 화면의 카테고리나 수치를 바꾸지 않습니다. `renderSummaryStats`는 일간·주간 지표를 공통으로 표시하고, 본문 고유 표시는 `renderCategorySummary`·`renderWeeklySummaryContent`가 맡습니다. 두 패널과 날짜 선택기는 `hidden`으로 전환하며 탭의 ARIA 상태·방향키·Home/End 이동을 함께 관리합니다.
+
 공개 화면 접속과 뉴스 수집 파이프라인은 요약 생성 작업을 실행하지 않습니다. 전날 요약은 `tools/manual-summary/start-daily-summary.ps1`을 PC에서 실행하면 생성·검증 후 운영 DB에 자동 삽입하며 기존 날짜는 덮어쓰지 않습니다. 기존 `tools/cloud/import-daily-summary.ps1`은 별도 수동 교체 작업에 사용합니다. 서버의 생성 알고리즘과 비활성 관리자 API는 호환을 위해 남아 있지만 예약 호출 경로는 제거했습니다. 공개 `date` 조회는 이미 저장된 문서만 읽으며 누락 날짜를 자동 생성하지 않습니다.
 
 `DailySummaryService`는 하나의 클래스를 `partial`로 분할했습니다. 기본 파일은 공개 메서드, `.Daily`는 일간 초안, `.Candidates`는 이슈 묶기, `.Scoring`은 후보 점수·근거 추출, `.Weekly`는 일간 요약 합산, `.Helpers`는 공통 보조 처리를 담습니다.

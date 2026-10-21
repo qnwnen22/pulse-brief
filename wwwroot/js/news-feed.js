@@ -99,7 +99,7 @@ function renderNews() {
   if (!visible.length) {
     newsList.innerHTML = '<div class="empty-state">검색 조건에 맞는 이슈가 없습니다.</div>';
     renderMetrics(visible);
-    renderWeeklySummary();
+    renderSummaries();
     renderTodayKeywords();
     renderPagination(0);
     return;
@@ -141,7 +141,7 @@ function renderNews() {
   });
 
   renderMetrics(visible);
-  renderWeeklySummary();
+  renderSummaries();
   renderTodayKeywords();
   renderPagination(visible.length);
 }

@@ -72,7 +72,7 @@ async function loadSummaryDates(configuration, preferredDate = "") {
   history.datesStatus = "loading";
   history.status = "loading";
   renderOptions();
-  renderWeeklySummary();
+  renderSummaries();
   try {
     const response = await fetchWithTimeout(`${endpoint}/dates`, { cache: "no-store" }, 5000);
     if (!response.ok) throw new Error(`${endpoint}/dates ${response.status}`);
@@ -104,7 +104,7 @@ async function loadStoredSummary(configuration, date = configuration.history.sel
   if (targetDate) history.selectedDate = targetDate;
   history.status = "loading";
   renderOptions();
-  renderWeeklySummary();
+  renderSummaries();
 
   try {
     const query = targetDate ? `?${dateParameter}=${encodeURIComponent(targetDate)}` : "";
@@ -139,7 +139,7 @@ async function loadStoredSummary(configuration, date = configuration.history.sel
   } finally {
     if (requestId === history.requestId) {
       renderOptions();
-      renderWeeklySummary();
+      renderSummaries();
     }
   }
 }

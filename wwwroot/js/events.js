@@ -33,11 +33,29 @@ paginationContainers.forEach((container) => {
   });
 });
 
-weeklyCategoryTabs.addEventListener("click", (event) => {
-  const button = event.target.closest(".weekly-tab");
+summaryCategoryTabs.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-summary-category]");
   if (!button) return;
-  activeWeeklyCategory = button.dataset.weeklyCategory;
-  renderWeeklySummary();
+  selectedSummaryCategories[activeSummaryPeriod] = button.dataset.summaryCategory;
+  renderSummaries();
+});
+
+summaryPeriodTabs?.addEventListener("click", event => {
+  const button = event.target.closest("[data-summary-period]");
+  if (button) selectSummaryPeriod(button.dataset.summaryPeriod);
+});
+
+summaryPeriodTabs?.addEventListener("keydown", event => {
+  const button = event.target.closest("[data-summary-period]");
+  if (!button || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+  const tabs = [...summaryPeriodTabs.querySelectorAll("[data-summary-period]")];
+  let index = tabs.indexOf(button);
+  if (event.key === "Home") index = 0;
+  else if (event.key === "End") index = tabs.length - 1;
+  else index = (index + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+  event.preventDefault();
+  selectSummaryPeriod(tabs[index].dataset.summaryPeriod);
+  tabs[index].focus();
 });
 
 function bindSummaryHistorySelect(select, history, updateAddress, loadSummary) {

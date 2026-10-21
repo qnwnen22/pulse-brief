@@ -4,6 +4,7 @@ async function initializeApp() {
 
   try {
     renderNavigation();
+    initializeSummaryTabs();
     initializeStatistics();
     await Promise.all([loadServerBriefs(), loadNewsStats()]);
     renderPublisherFilter();

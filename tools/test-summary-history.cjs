@@ -40,7 +40,7 @@ function fixture(fetch, query = "") {
     },
     document: {
       querySelector(selector) {
-        if (!elements.has(selector)) elements.set(selector, { innerHTML: "", value: "", disabled: false });
+        if (!elements.has(selector)) elements.set(selector, { innerHTML: "", value: "", disabled: false, querySelectorAll: () => [] });
         return elements.get(selector);
       },
       querySelectorAll: () => []
@@ -49,7 +49,7 @@ function fixture(fetch, query = "") {
   for (const file of ["state.js", "summaries.js", "api.js"]) {
     vm.runInContext(fs.readFileSync(path.join(__dirname, "../wwwroot/js", file), "utf8"), context);
   }
-  vm.runInContext("renderWeeklySummary = () => {};", context);
+  vm.runInContext("renderSummaries = () => {};", context);
   return {
     warnings,
     elements,
@@ -192,4 +192,29 @@ test("a late date-list response cannot trigger another summary request after a s
   await history;
   assert.equal(requests.length, 2);
   assert.equal(view.history("weekly").selectedDate, "2026-10-11");
+});
+
+test("summary tabs preserve date parameters without issuing requests", () => {
+  const view = fixture(() => { throw new Error("Tab switching must not fetch data"); }, "?summaryDate=2026-10-20&weeklyEndDate=2026-10-11");
+  view.evaluate('selectSummaryPeriod("weekly")');
+  assert.equal(view.evaluate("activeSummaryPeriod"), "weekly");
+  assert.equal(view.evaluate('new URLSearchParams(location.search).get("summaryPeriod")'), "weekly");
+  assert.equal(view.evaluate("getRequestedDailySummaryDate()"), "2026-10-20");
+  assert.equal(view.evaluate("getRequestedWeeklySummaryDate()"), "2026-10-11");
+  view.evaluate('selectSummaryPeriod("invalid")');
+  assert.equal(view.evaluate("activeSummaryPeriod"), "weekly");
+});
+
+test("tab initialization supports explicit mode and historical weekly deep links", () => {
+  for (const [query, expected] of [
+    ["", "daily"],
+    ["?summaryPeriod=weekly", "weekly"],
+    ["?weeklyEndDate=2026-10-11", "weekly"],
+    ["?summaryPeriod=daily&weeklyEndDate=2026-10-11", "daily"],
+    ["?summaryDate=2026-10-20&weeklyEndDate=2026-10-11", "daily"]
+  ]) {
+    const view = fixture(() => { throw new Error("Unexpected request"); }, query);
+    view.evaluate("initializeSummaryTabs()");
+    assert.equal(view.evaluate("activeSummaryPeriod"), expected);
+  }
 });

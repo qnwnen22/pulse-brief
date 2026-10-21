@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Pulse Brief</title>
     <link rel="icon" type="image/svg+xml" href="assets/pulse-brief-favicon.svg" />
-    <link rel="stylesheet" href="styles.css?v=0.10.0" />
+    <link rel="stylesheet" href="styles.css?v=0.11.0" />
   </head>
   <body>
     <div id="appLoading" class="app-loading" role="status" aria-live="polite" aria-label="사이트 로딩 중">
@@ -96,37 +96,43 @@
 
         <div class="content-grid">
           <div class="briefing-panel view-panel" data-panel="briefing">
-            <div id="weeklyStats" class="metric-grid briefing-metrics" aria-label="선택 카테고리 지표"></div>
-            <div id="weeklyCategoryTabs" class="weekly-tabs" aria-label="주간 이슈 카테고리"></div>
+            <div class="summary-toolbar">
+              <div id="summaryPeriodTabs" class="summary-period-tabs" role="tablist" aria-label="요약 유형">
+                <button id="dailySummaryTab" type="button" role="tab" data-summary-period="daily" aria-controls="dailySummaryPanel" aria-selected="true">일간 요약</button>
+                <button id="weeklySummaryTab" type="button" role="tab" data-summary-period="weekly" aria-controls="weeklySummaryPanel" aria-selected="false" tabindex="-1">주간 요약</button>
+              </div>
+              <label class="summary-history-control" data-summary-history="daily" for="dailySummaryDateSelect">
+                <span>요약 날짜</span>
+                <select id="dailySummaryDateSelect" aria-label="저장된 일간 요약 날짜" disabled>
+                  <option value="">날짜 불러오는 중</option>
+                </select>
+              </label>
+              <label class="summary-history-control" data-summary-history="weekly" for="weeklySummaryDateSelect" hidden>
+                <span>요약 기간</span>
+                <select id="weeklySummaryDateSelect" aria-label="저장된 주간 요약 기간" disabled>
+                  <option value="">기간 불러오는 중</option>
+                </select>
+              </label>
+            </div>
+            <div id="summaryCategoryTabs" class="summary-category-tabs" aria-label="요약 카테고리"></div>
+            <div id="summaryStats" class="metric-grid briefing-metrics" aria-label="선택한 요약의 카테고리 지표"></div>
 
-            <section class="daily-box" aria-labelledby="daily-summary-title">
+            <section id="dailySummaryPanel" class="daily-box summary-panel" role="tabpanel" aria-labelledby="dailySummaryTab" data-summary-panel="daily" tabindex="0">
               <div class="section-head compact">
                 <div>
                   <p class="eyebrow">Daily Brief</p>
                   <h2 id="daily-summary-title">일간 이슈 요약</h2>
                 </div>
-                <label class="summary-history-control" for="dailySummaryDateSelect">
-                  <span>요약 날짜</span>
-                  <select id="dailySummaryDateSelect" aria-label="저장된 일간 요약 날짜" disabled>
-                    <option value="">날짜 불러오는 중</option>
-                  </select>
-                </label>
               </div>
               <div id="categorySummary" class="daily-summary category-summary" aria-live="polite"></div>
             </section>
 
-            <section class="weekly-box" aria-labelledby="weekly-summary-title">
+            <section id="weeklySummaryPanel" class="weekly-box summary-panel" role="tabpanel" aria-labelledby="weeklySummaryTab" data-summary-panel="weekly" tabindex="0" hidden>
               <div class="section-head compact">
                 <div>
                   <p class="eyebrow">Weekly Pulse</p>
                   <h2 id="weekly-summary-title">주간 이슈 요약</h2>
                 </div>
-                <label class="summary-history-control" for="weeklySummaryDateSelect">
-                  <span>요약 기간</span>
-                  <select id="weeklySummaryDateSelect" aria-label="저장된 주간 요약 기간" disabled>
-                    <option value="">기간 불러오는 중</option>
-                  </select>
-                </label>
               </div>
               <div id="weeklySummary" class="weekly-summary" aria-live="polite"></div>
             </section>
@@ -276,18 +282,18 @@
       </main>
     </div>
 
-  <script defer src="js/state.js?v=0.10.0"></script>
-  <script defer src="js/views.js?v=0.10.0"></script>
-  <script defer src="js/format.js?v=0.10.0"></script>
-  <script defer src="js/related-articles.js?v=0.10.0"></script>
-  <script defer src="js/news-feed.js?v=0.10.0"></script>
-  <script defer src="js/summaries.js?v=0.10.0"></script>
-  <script defer src="js/news-controls.js?v=0.10.0"></script>
-  <script defer src="js/navigation.js?v=0.10.0"></script>
-  <script defer src="js/api.js?v=0.10.0"></script>
-  <script defer src="js/statistics.js?v=0.10.0"></script>
-  <script defer src="js/events.js?v=0.10.0"></script>
-  <script defer src="js/main.js?v=0.10.0"></script>
+  <script defer src="js/state.js?v=0.11.0"></script>
+  <script defer src="js/views.js?v=0.11.0"></script>
+  <script defer src="js/format.js?v=0.11.0"></script>
+  <script defer src="js/related-articles.js?v=0.11.0"></script>
+  <script defer src="js/news-feed.js?v=0.11.0"></script>
+  <script defer src="js/summaries.js?v=0.11.0"></script>
+  <script defer src="js/news-controls.js?v=0.11.0"></script>
+  <script defer src="js/navigation.js?v=0.11.0"></script>
+  <script defer src="js/api.js?v=0.11.0"></script>
+  <script defer src="js/statistics.js?v=0.11.0"></script>
+  <script defer src="js/events.js?v=0.11.0"></script>
+  <script defer src="js/main.js?v=0.11.0"></script>
   </body>
 </html>
 

@@ -34,7 +34,7 @@ function render(feed, dailySummary, weeklySummary, category = "") {
   const document = {
     querySelector(selector) {
       if (!elements.has(selector)) elements.set(selector, {
-        innerHTML: "", value: "", addEventListener() {},
+        innerHTML: "", value: "", addEventListener() {}, querySelectorAll: () => [],
       });
       return elements.get(selector);
     },
@@ -54,8 +54,12 @@ function render(feed, dailySummary, weeklySummary, category = "") {
     issues = testFeed;
     dailyBrief = testDaily;
     weeklyBrief = testWeekly;
-    activeWeeklyCategory = testCategory;
-    renderWeeklySummary();
+    selectedSummaryCategories.daily = testCategory;
+    selectedSummaryCategories.weekly = testCategory;
+    activeSummaryPeriod = "daily";
+    renderSummaries();
+    activeSummaryPeriod = "weekly";
+    renderSummaries();
   `, context);
   return {
     context,
@@ -78,22 +82,22 @@ for (const feed of [[], currentFeed]) {
     const page = render(feed, daily, weekly, category);
     assert.ok(page.text("#categorySummary").includes(dailyData.categories.find((item) => item.category === category).summary), `daily ${category}`);
     assert.ok(page.text("#weeklySummary").includes(weeklyData.categories.find((item) => item.category === category).summary), `weekly ${category}`);
-    assert.equal((page.html("#weeklyCategoryTabs").match(/data-weekly-category=/g) || []).length, 9);
-    assert.ok(!page.html("#weeklyStats").includes("NaN"));
+    assert.equal((page.html("#summaryCategoryTabs").match(/data-summary-category=/g) || []).length, 9);
+    assert.ok(!page.html("#summaryStats").includes("NaN"));
   }
 }
 
 const dailyOnly = render([], daily, null);
 assert.ok(dailyOnly.html("#categorySummary").includes(dailyData.categories.find((item) => item.category === "정치/정책").summary));
-assert.ok(dailyOnly.html("#weeklySummary").includes("선택한 카테고리의 주간 이슈가 없습니다."));
+assert.ok(dailyOnly.html("#weeklySummary").includes("주간 이슈 데이터가 없습니다."));
 
 const weeklyOnly = render([], null, weekly);
 assert.ok(weeklyOnly.html("#weeklySummary").includes(weeklyData.categories.find((item) => item.category === "정치/정책").summary));
-assert.ok(weeklyOnly.html("#categorySummary").includes("선택한 카테고리의 요약 정보가 없습니다."));
+assert.ok(weeklyOnly.html("#categorySummary").includes("요약할 이슈 데이터가 없습니다."));
 
 const empty = render([], null, null);
 assert.ok(empty.html("#categorySummary").includes("요약할 이슈 데이터가 없습니다."));
-assert.equal(empty.html("#weeklyCategoryTabs"), "");
+assert.equal(empty.html("#summaryCategoryTabs"), "");
 
 const loading = render([], daily, weekly, "정치/정책");
 vm.runInContext('dailySummaryHistory.status = "loading"; renderCategorySummary();', loading.context);
@@ -102,19 +106,41 @@ vm.runInContext('dailySummaryHistory.status = "missing"; dailySummaryHistory.sel
 assert.ok(loading.html("#categorySummary").includes("2026년 9월 5일에 저장된 일간 요약이 없습니다."));
 
 const weeklyStates = render([], daily, weekly, "정치/정책");
-vm.runInContext('weeklySummaryHistory.status = "loading"; renderWeeklySummary();', weeklyStates.context);
+vm.runInContext('weeklySummaryHistory.status = "loading"; renderSummaries();', weeklyStates.context);
 assert.ok(weeklyStates.html("#weeklySummary").includes("주간 요약을 불러오는 중"));
-assert.equal(weeklyStates.html("#weeklyStats"), "");
+assert.equal(weeklyStates.html("#summaryStats"), "");
 assert.ok(weeklyStates.html("#categorySummary").includes(dailyData.categories.find(item => item.category === "정치/정책").summary));
-vm.runInContext('weeklySummaryHistory.status = "missing"; weeklySummaryHistory.selectedDate = "2026-09-06"; renderWeeklySummary();', weeklyStates.context);
+vm.runInContext('weeklySummaryHistory.status = "missing"; weeklySummaryHistory.selectedDate = "2026-09-06"; renderSummaries();', weeklyStates.context);
 assert.ok(weeklyStates.html("#weeklySummary").includes("2026.08.31 ~ 2026.09.06에 저장된 주간 요약이 없습니다."));
-vm.runInContext('weeklySummaryHistory.status = "error"; renderWeeklySummary();', weeklyStates.context);
+vm.runInContext('weeklySummaryHistory.status = "error"; renderSummaries();', weeklyStates.context);
 assert.ok(weeklyStates.html("#weeklySummary").includes("주간 이슈 요약을 불러오지 못했습니다."));
 
-// A later weekly response must not hide a daily-only category.
+// Categories belong to their selected period, even when the other response arrives later.
 const union = render([], { categories: [{ category: "Daily only", summary: "Daily text" }] }, weekly, "Daily only");
 assert.ok(union.html("#categorySummary").includes("Daily text"));
-assert.ok(union.html("#weeklyCategoryTabs").includes("Daily only"));
+assert.ok(!union.html("#summaryCategoryTabs").includes("Daily only"));
+vm.runInContext('activeSummaryPeriod = "daily"; renderSummaries();', union.context);
+assert.ok(union.html("#summaryCategoryTabs").includes("Daily only"));
+
+const modes = render([], daily, weekly, "정치/정책");
+vm.runInContext('selectSummaryPeriod("daily");', modes.context);
+assert.ok(modes.html("#summaryStats").includes("일간 이슈"));
+assert.ok(!modes.html("#summaryStats").includes("주간 이슈"));
+assert.equal((modes.html("#summaryStats").match(/class="metric"/g) || []).length, 3);
+assert.ok(modes.html("#summaryStats").includes(dailyData.categories.find(item => item.category === "정치/정책").articleCount.toLocaleString("ko-KR")));
+vm.runInContext('selectedSummaryCategories.daily = "사회"; renderSummaries(); selectSummaryPeriod("weekly");', modes.context);
+assert.equal(vm.runInContext('selectedSummaryCategories.weekly', modes.context), "정치/정책");
+assert.ok(modes.html("#summaryStats").includes("주간 이슈"));
+vm.runInContext('selectSummaryPeriod("daily");', modes.context);
+assert.equal(vm.runInContext('selectedSummaryCategories.daily', modes.context), "사회");
+assert.ok(modes.text("#categorySummary").includes("사회 일간 이슈 요약"));
+
+const zeroCounts = render([], {
+  categories: [{ category: "사회", summary: "기사 없음", issueCount: 0, articleCount: 0 }],
+  topIssues: []
+}, weekly, "사회");
+vm.runInContext('selectSummaryPeriod("daily");', zeroCounts.context);
+assert.equal((zeroCounts.html("#summaryStats").match(/>0<\/strong>/g) || []).length, 3);
 
 const related = render([], daily, weekly);
 related.context.testIssue = {

@@ -107,7 +107,7 @@ function renderTrackedIssueItem(issue, targetItems, pickerClass, ariaLabel) {
   return `
     <li>
       <div class="weekly-issue-content">
-        <strong>${escapeHtml(issue.category || trackedIssue?.category || activeWeeklyCategory)}</strong>
+        <strong>${escapeHtml(issue.category || trackedIssue?.category || selectedSummaryCategories[activeSummaryPeriod])}</strong>
         <span>${escapeHtml(issue.title)}</span>
       </div>
       <details class="${pickerClass}">
