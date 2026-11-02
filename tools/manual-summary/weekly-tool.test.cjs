@@ -80,11 +80,61 @@ test("unrelated events sharing a keyword are not merged; evidence is deduplicate
   assert.equal(result.TopIssues.length, 2);
   assert.equal(result.TopIssues.reduce((sum, issue) => sum + issue.ArticleCount, 0), 6);
 });
-test("corrupt evidence or overlapping references across unrelated issues fail closed", () => {
+test("corrupt daily evidence still fails closed", () => {
   const values = inputs(); values[0].TopIssues[0].ArticleCount = 10;
   assert.throws(() => weekly.buildWeekly(week, values), /근거 ID/);
-  const overlap = inputs(); overlap[1].TopIssues[0].Title = "다른 사건"; overlap[1].TopIssues[0].ArticleIds = overlap[0].TopIssues[0].ArticleIds;
+  const overlap = inputs();
+  overlap[0].ArticleCount = 2;
+  overlap[0].IssueCount = 2;
+  overlap[0].Categories[0].ArticleCount = 2;
+  overlap[0].Categories[0].IssueCount = 2;
+  overlap[0].TopIssues.push({ ...overlap[0].TopIssues[0], Title: "다른 사건" });
   assert.throws(() => weekly.buildWeekly(week, overlap), /중복/);
+});
+test("overlapping candidates on different days are selected once without changing daily totals", () => {
+  const overlap = inputs(); overlap[1].TopIssues[0].Title = "다른 사건"; overlap[1].TopIssues[0].ArticleIds = overlap[0].TopIssues[0].ArticleIds;
+  const original = JSON.stringify(overlap);
+  const result = weekly.buildWeekly(week, overlap);
+  assert.equal(result.ArticleCount, 7);
+  assert.equal(result.IssueCount, 7);
+  assert.equal(result.TopIssues.length, 1);
+  assert.equal(result.TopIssues[0].Title, "시립 도서관 개관");
+  assert.equal(result.TopIssues[0].ArticleCount, 6);
+  assert.equal(JSON.stringify(overlap), original);
+});
+test("cross-category overlap keeps global ranking and uses the next intact candidate", () => {
+  const values = inputs().map((value, index) => ({
+    ...value,
+    ArticleCount: 2,
+    IssueCount: 2,
+    Categories: ["정치/정책", "지역"].map(Category => ({
+      Category, ArticleCount: 1, IssueCount: 1, Summary: "시험 요약"
+    })),
+    TopIssues: ["정치/정책", "지역"].map(Category => ({
+      ...value.TopIssues[0], Category, Title: `${Category} 사건 ${index}`,
+      Score: Category === "지역" ? 100 - index : 90 - index,
+      ArticleIds: [`${Category}-${index}`]
+    }))
+  }));
+  values[0].TopIssues[0].ArticleIds = values[1].TopIssues[1].ArticleIds;
+  const result = weekly.buildWeekly(week, values);
+  const ids = result.TopIssues.flatMap(issue => issue.ArticleIds);
+  assert.equal(new Set(ids).size, ids.length);
+  assert.equal(result.ArticleCount, 14);
+  assert.equal(result.IssueCount, 14);
+  assert.equal(result.TopIssues.length, 6);
+  assert.ok(result.TopIssues.some(issue => issue.Title === "지역 사건 1"));
+  assert.ok(!result.TopIssues.some(issue => issue.Title === "정치/정책 사건 0"));
+  assert.ok(result.TopIssues.some(issue => issue.Title === "정치/정책 사건 3"));
+  for (const issue of result.TopIssues) assert.equal(issue.ArticleCount, issue.ArticleIds.length);
+});
+test("a category without independent evidence still blocks weekly publication", () => {
+  const values = inputs();
+  values[0].ArticleCount = 2;
+  values[0].IssueCount = 2;
+  values[0].Categories.push({ Category: "사회", ArticleCount: 1, IssueCount: 1, Summary: "사회 요약" });
+  values[0].TopIssues.push({ ...values[0].TopIssues[0], Title: "사회 사건", Category: "사회", ArticleIds: values[1].TopIssues[0].ArticleIds });
+  assert.throws(() => weekly.buildWeekly(week, values), /근거 대표 이슈가 없습니다/);
 });
 test("existing seven summaries require no Codex, article export or daily generation", async t => {
   let reads = 0;

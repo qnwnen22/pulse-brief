@@ -31,11 +31,25 @@ function buildWeekly(week, values, now = new Date()) {
       Sources: [...new Set(group.flatMap(item => item.issue.Sources))],
       Keywords: [...new Set(group.flatMap(item => item.issue.Keywords))].slice(0, 15), days, lastDate: latest.date };
   }).sort((a, b) => b.Score - a.Score || b.days - a.days || b.Sources.length - a.Sources.length || b.ArticleCount - a.ArticleCount || b.lastDate.localeCompare(a.lastDate) || a.Title.localeCompare(b.Title, "ko"));
+  const featuredByCategory = new Map();
+  const usedArticleIds = new Set();
+  for (const issue of merged) {
+    const featured = featuredByCategory.get(issue.Category) || [];
+    if (featured.length >= 3) continue;
+    // Later days can cite an earlier article under a different title or category.
+    // Select the higher-ranked whole candidate without merging prose or trimming evidence.
+    if (issue.ArticleIds.some(id => usedArticleIds.has(id))) continue;
+    featured.push(issue);
+    featuredByCategory.set(issue.Category, featured);
+    for (const id of issue.ArticleIds) {
+      usedArticleIds.add(id);
+    }
+  }
   const categories = [], topIssues = [];
   for (const category of core.categories) {
     const rows = summaries.flatMap(summary => summary.Categories).filter(row => row.Category === category);
     if (!rows.length) continue;
-    const chosen = merged.filter(issue => issue.Category === category).slice(0, 3);
+    const chosen = featuredByCategory.get(category) || [];
     requireThat(chosen.length, `${category}: 근거 대표 이슈가 없습니다.`);
     categories.push({ Category: category,
       ArticleCount: rows.reduce((sum, row) => sum + row.ArticleCount, 0),
