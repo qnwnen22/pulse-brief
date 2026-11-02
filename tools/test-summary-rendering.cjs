@@ -155,6 +155,14 @@ const local = render(currentFeed, null, null, "사회");
 assert.ok(local.html("#weeklySummary").includes("Current news"));
 const labels = render([], daily, weekly);
 assert.equal(
+  vm.runInContext('getSummaryProviderLabel({ provider: "manual", model: "Local daily rollup" })', labels.context),
+  "일간 요약 기반 · 주간 종합",
+);
+const rolledUpWeekly = render([], daily, { ...weekly, Provider: "manual", Model: "Local daily rollup" });
+assert.ok(rolledUpWeekly.text("#weeklySummary").includes("일간 요약 기반 · 주간 종합"));
+assert.ok(!rolledUpWeekly.text("#weeklySummary").includes("수동 요약"));
+assert.ok(!rolledUpWeekly.text("#weeklySummary").includes("Local daily rollup"));
+assert.equal(
   vm.runInContext('getSummaryProviderLabel({ provider: "manual", model: "\\uB2F7\\uCE20 \\uD074\\uB77C\\uC6B0\\uB4DC" })', labels.context),
   "AI \uC694\uC57D \u00B7 \uB2F7\uCE20 \uD074\uB77C\uC6B0\uB4DC",
 );
