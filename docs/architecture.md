@@ -98,6 +98,8 @@ PulseBrief.sln
 
 `PulseBrief.Collector/Program.cs` → `CollectorWorker.cs` → `PulseBrief.Core/Services/Pipeline/NewsPipeline.cs` 순서입니다. 파이프라인은 RSS 수집, 본문 보강, 로컬 임베딩, 유사 기사 그룹화, 저장, 금일 지표 갱신을 조정합니다.
 
+수집기의 `ReadRecentArticlesAsync`는 기존 `PublishedAt` 내림차순과 동일 발행 시각의 `FirstSeenAt` 내림차순을 유지합니다. 정렬과 `PublishedAt_-1_FirstSeenAt_-1` 복합 인덱스에 같은 필드 정의를 쓰며, 조회에 인덱스 힌트와 30초 제한을 적용합니다. 처리 건수와 기사·요약 스키마는 바꾸지 않습니다. 운영에서는 서비스 배포 전에 인덱스를 하나만 미리 준비해 시작 시점에 큰 인덱스 빌드가 겹치지 않게 합니다.
+
 ### 수집 통계
 
 `wwwroot/js/statistics.js` → `Controllers/StatisticsController.cs` → `CollectionStatisticsService` → `ICollectionStatisticsStore` 순서입니다. 공개 조회는 날짜별 캐시만 조합합니다. 응답 모델은 Core의 `Models/Responses/CollectionStatisticsResponse.cs`, 저장 모델은 `Models/Documents/CollectionDayStatistics.cs`에 있습니다.

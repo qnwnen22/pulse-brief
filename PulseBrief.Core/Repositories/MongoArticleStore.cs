@@ -6,6 +6,13 @@ namespace PulseBrief;
 /// <summary>MongoDB를 기본 저장소로 사용해 기사, 이슈 그룹, 요약 데이터를 읽고 씁니다.</summary>
 public sealed partial class MongoArticleStore : IArticleStore, ICollectionStatisticsStore
 {
+    private const string RecentArticlesIndexName = "PublishedAt_-1_FirstSeenAt_-1";
+    private static readonly BsonDocument RecentArticlesOrder = new()
+    {
+        { nameof(Article.PublishedAt), -1 },
+        { nameof(Article.FirstSeenAt), -1 }
+    };
+
     private readonly IMongoCollection<Article> _articles;
     private readonly IMongoCollection<ArticleGroup> _groups;
     private readonly IMongoCollection<DailyIssueSummary> _summaries;
@@ -46,9 +53,13 @@ public sealed partial class MongoArticleStore : IArticleStore, ICollectionStatis
     public async Task<List<Article>> ReadRecentArticlesAsync(int limit)
     {
         await EnsureInitializedAsync();
-        return await _articles.Find(Builders<Article>.Filter.Empty)
-            .SortByDescending(article => article.PublishedAt)
-            .ThenByDescending(article => article.FirstSeenAt)
+        var options = new FindOptions
+        {
+            Hint = new BsonString(RecentArticlesIndexName),
+            MaxTime = TimeSpan.FromSeconds(30)
+        };
+        return await _articles.Find(Builders<Article>.Filter.Empty, options)
+            .Sort(RecentArticlesOrder)
             .Limit(Math.Max(1, limit))
             .ToListAsync();
     }
@@ -386,6 +397,7 @@ public sealed partial class MongoArticleStore : IArticleStore, ICollectionStatis
                 new CreateIndexModel<Article>(Builders<Article>.IndexKeys.Ascending(article => article.Id)),
                 new CreateIndexModel<Article>(Builders<Article>.IndexKeys.Ascending(article => article.Url)),
                 new CreateIndexModel<Article>(Builders<Article>.IndexKeys.Descending(article => article.PublishedAt)),
+                new CreateIndexModel<Article>(RecentArticlesOrder, new CreateIndexOptions { Name = RecentArticlesIndexName }),
                 new CreateIndexModel<Article>(Builders<Article>.IndexKeys.Descending("PublishedAt.DateTime"), new CreateIndexOptions { Name = "PublishedAt_DateTime_-1" }),
                 new CreateIndexModel<Article>(Builders<Article>.IndexKeys.Ascending(article => article.Source)),
                 new CreateIndexModel<Article>(Builders<Article>.IndexKeys.Ascending(article => article.ContentFetchStatus))

@@ -528,6 +528,17 @@ curl.exe -fsS https://news.pulse-brief.co.kr/api/daily-summary
 
 수동 요약은 화면에서 `수동 요약 · Codex`로 표시된다.
 
+### 수집기 최근 기사 인덱스
+
+`0.11.2`부터 최근 기사 조회는 `PublishedAt`, `FirstSeenAt` 내림차순과 같은 `PublishedAt_-1_FirstSeenAt_-1` 인덱스를 명시적으로 사용한다. 기존 단일 필드·통계 인덱스는 유지한다.
+
+1. 웹·수집기 파일과 환경 설정을 백업하고 최근 MongoDB 백업을 확인한다. 수집 완료 직후, 백업이나 다른 대량 작업과 겹치지 않는 시간대에 메모리·디스크 여유를 확인한다.
+2. 배포 전에 `tools/cloud/recent-articles-index.mongosh.js`를 대상 서버에 전송하고, 운영 DB 이름을 지정한 `mongosh`에서 `--eval 'globalThis.recentArticlesIndexMode = "prepare"; load("<스크립트 경로>")'`로 실행한다. 이 모드는 없을 때만 복합 인덱스 하나를 생성한다. 검증만 할 때는 `--file <스크립트 경로>`로 실행한다.
+3. 5,000건의 실제 정렬은 `queryPlanner`만 확인한다. 실행 검증은 인덱스 힌트와 5초 제한으로 최신 100건의 날짜·ID만 읽으며 `IXSCAN`, 검사 건수, 별도 정렬 및 전체 스캔이 없는지 확인한다. 이전 전체 스캔을 다시 실행해 비교하지 않는다.
+4. 인덱스 확인 후 웹과 수집기를 배포한다. 공개 health, 수집 완료 로그와 금일 기사 캐시 갱신을 확인한다. 문제 발생 시 파일을 롤백하며 새 복합 인덱스는 구버전과도 호환되므로 그대로 둔다.
+
+로컬에서 별도 MongoDB를 `127.0.0.1:37127`로 시작한 뒤 `dotnet run --project PulseBrief.Tests/PulseBrief.Tests.csproj --no-launch-profile -- --recent-articles-index`로 실제 조회의 최신순, 동률 시 정렬, 건수 상한, 인덱스 생성 동작을 검증할 수 있다. 테스트는 고유한 테스트 DB만 사용한다.
+
 ### 디스크 용량 부족
 
 ```bash

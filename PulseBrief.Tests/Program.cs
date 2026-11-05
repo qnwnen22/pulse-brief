@@ -15,6 +15,12 @@ using MongoDB.Bson.Serialization;
 using PulseBrief;
 using PulseBrief.Tests;
 
+if (args.SequenceEqual(new[] { "--recent-articles-index" }))
+{
+    await MongoRecentArticlesTests.RunAsync();
+    return;
+}
+
 var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../.."));
 var testRoot = Path.Combine(Path.GetTempPath(), "pulsebrief-contract-tests-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(Path.Combine(testRoot, "config"));
